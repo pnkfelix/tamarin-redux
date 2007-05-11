@@ -44,13 +44,10 @@ namespace avmplus
 	struct Sample
 	{
 		uint64 micros;
-		uint32 sampleType;
+		uint32 type;
 		uint32 depth;
-		void *trace; // not filled in for sampleType==DELETED_OBJECT_SAMPLE
-		uint64 id; // filled for DELETED_OBJECT_SAMPLE + NEW_OBJECT_SAMPLE
-		// these are only filled in for sampleType==NEW_OBJECT_SAMPLE
-		Atom  typeOrVTable;
-		MMgc::GCWeakRef *weakRef;
+		void *trace;
+		ClassClosure *allocType;
 	};
 
 	class Sampler
@@ -72,16 +69,14 @@ namespace avmplus
 		// if true we call startSampling as early as possible during startup
 		bool autoStartSampling;
 
-		// should use opaque Cursor type instead of byte*
 		byte *getSamples(uint32 &num);
-		void readSample(byte *&p, Sample &s);
 		
 		void setCore(AvmCore *core) { this->core = core; }
 		void init(bool sampling, bool autoStart);
 		StackTrace *getStackTrace();
 		void sampleCheck() { if(takeSample) sample(); }
 
-		uint64 recordAllocationSample(AvmPlusScriptableObject *obj, Atom typeOrVTable);
+		uint64 recordAllocationSample(AvmPlusScriptableObject *obj, Traits *t);
 		void recordDeallocationSample(uint64 id);
 
 		void startSampling();
@@ -99,9 +94,7 @@ namespace avmplus
 
 		StackTrace *getStackTrace(void/*StackTrace::Element*/ *e, int depth);
 
-
-	private:	
-
+		void readRawSample(byte *&p, Sample &s);
 		static void inline align(byte*&b)
 		{
 			if((sintptr)b & 4)
@@ -127,6 +120,7 @@ namespace avmplus
 			p += sizeof(T);
 		}
 		
+	private:	
 		
 		AvmCore *core;
 
@@ -156,7 +150,7 @@ namespace avmplus
 			b -= amount;
 		}
 
-		int sampleSpaceCheck();
+		void sampleSpaceCheck();
 		
 		void writeRawSample(SampleType sampleType);
 		ScriptObject *buildSample(Toplevel *tl, uint64 ticks, String *trace);

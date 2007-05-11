@@ -66,7 +66,7 @@ namespace avmplus
 				samples = new (core->GetGC()) GrowableBuffer(core->GetGC()->GetGCHeap());
 				fakeMethodInfos = new (core->GetGC()) Hashtable(core->GetGC());
 				stackTraces = (StackTrace**)core->GetGC()->Alloc(sizeof(StackTrace*) * 1024, GC::kZero);
-				currentSample = samples->reserve(128 * 1024 * 1024);
+				currentSample = samples->reserve(64 * 4096 * 4096);
 			}
 		}
 	}
@@ -87,31 +87,26 @@ namespace avmplus
 		numSamples++;
 	}
 
-	int Sampler::sampleSpaceCheck()
+	void Sampler::sampleSpaceCheck()
 	{
 		uint32 sampleSize = sizeof(Sample);
 		uint32 callStackDepth = core->callStack ? core->callStack->depth : 0;
 		sampleSize += callStackDepth * sizeof(StackTrace::Element);
 		sampleSize += sizeof(uint64) * 2;
-		while(currentSample + sampleSize > samples->uncommitted()) {
+		if(currentSample + sampleSize > samples->uncommitted()) {
 			samples->grow();
 			if(currentSample + sampleSize > samples->uncommitted()) {
 				// exhausted buffer
-				samplingNow = false;
-				return 0;
+				return;
 			}
 		}
-		return 1;
 	}
 
 	void Sampler::writeRawSample(SampleType sampleType)
 	{
 		if(!sampling || !samplingNow)
 			return;
-
-		if(!sampleSpaceCheck())
-			return;
-	
+		sampleSpaceCheck();
 		CallStackNode *csn = core->callStack;
 		uint32 depth = csn ? csn->depth : 0;
 		byte *p = currentSample;
@@ -137,15 +132,12 @@ namespace avmplus
 		takeSample = 0;
 	}
 
-	void Sampler::readSample(byte *&p, Sample &s)
+	void Sampler::readRawSample(byte *&p, Sample &s)
 	{
-		memset(&s, 0, sizeof(Sample));
 		read(p, s.micros);
-		read(p, s.sampleType);
-		AvmAssertMsg(s.sampleType == RAW_SAMPLE || 
-				s.sampleType == NEW_OBJECT_SAMPLE || 
-				s.sampleType == DELETED_OBJECT_SAMPLE, "Sample stream corruption.\n");
-		if(s.sampleType != DELETED_OBJECT_SAMPLE)
+		read(p, s.type);
+		AvmAssertMsg(s.type == RAW_SAMPLE || s.type == NEW_OBJECT_SAMPLE || s.type == DELETED_OBJECT_SAMPLE, "Sample stream corruption.\n");
+		if(s.type != DELETED_OBJECT_SAMPLE)
 		{
 			read(p, s.depth);
 			s.trace = p;
@@ -153,36 +145,25 @@ namespace avmplus
 		}
 		// padding to keep 8 byte alignment
 		align(p);
-		if(s.sampleType != Sampler::RAW_SAMPLE)
-		{
-			read(p, s.id);
-			if(s.sampleType == Sampler::NEW_OBJECT_SAMPLE)
-			{
-				read(p, s.weakRef);
-				read(p, s.typeOrVTable);
-			}
-		}
 	}
 
-	uint64 Sampler::recordAllocationSample(AvmPlusScriptableObject *obj, Atom  typeOrVTable)
+	uint64 Sampler::recordAllocationSample(AvmPlusScriptableObject *obj, Traits *traits)
 	{
 		if(!sampling || !samplingNow)
 			return 0;
 
-		if(!sampleSpaceCheck())
-			return 0;
-
-		// disable sampling across weak ref alloc
-		// TODO: investigate not pounding on weak refs
-		sampling=false;
-		GCWeakRef *weakRef = obj->GetWeakRef();
-		AvmAssertMsg(weakRef != NULL, "Null weak reference when recording allocation sample.\n");
-		sampling = true;
-
+		sampleSpaceCheck();
 		writeRawSample(NEW_OBJECT_SAMPLE);
 		write(currentSample, allocId++);
+		// disable sampling across weak ref alloc
+		// TODO: investigate not pounding on weak refs
+		AvmAssert(sampling);
+		sampling = false;
+		GCWeakRef *weakRef = obj->GetWeakRef();
+		AvmAssertMsg(weakRef != NULL, "Null weak reference when recording allocation sample.\n");
 		write(currentSample, weakRef);
-		write(currentSample, typeOrVTable);
+		sampling = true;
+		write(currentSample, traits);
 		AvmAssertMsg((uintptr)currentSample % 4 == 0, "Alignment should have occurred at end of raw sample.\n");
 		numSamples++;
 
@@ -192,9 +173,6 @@ namespace avmplus
 	void Sampler::recordDeallocationSample(uint64 id)
 	{
 		if(!sampling || !samplingNow)
-			return;
-
-		if(!sampleSpaceCheck())
 			return;
 	
 		sampleSpaceCheck();
@@ -215,13 +193,11 @@ namespace avmplus
 		if(!sampling || samplingNow)
 			return;
 
-		if (!samples)
-		{
-			init(sampling, autoStartSampling);
-		}
-		
 		numSamples = 0;
 		samplingNow = true;
+		if(!samples->start()) {
+			currentSample = samples->reserve(64 * 4096 * 4096);
+		}
 		timerHandle = OSDep::startIntWriteTimer(1, &takeSample);
 	}
 
@@ -347,7 +323,7 @@ namespace avmplus
 		AbstractFunction *af = (AbstractFunction*)AvmCore::atomToGCObject(a);
 		if(!af)
 		{
-			af = new (core->GetGC()) FakeAbstractFunction();			
+			af = new (core->GetGC()) FakeAbstractFunction();
 			a = AvmCore::gcObjectToAtom(af);
 			fakeMethodInfos->add(s->atom(), a);
 			af->name = s;
@@ -390,26 +366,35 @@ namespace avmplus
 		byte *p = getSamples(num);
 		for(uint32 i=0; i < num ; i++)
 		{
-			Sample s;
-			readSample(p, s);			
-			if(s.sampleType == NEW_OBJECT_SAMPLE) {
-				if (s.weakRef && s.weakRef->get() && GC::GetMark(s.weakRef->get()))
-				{
-					GC::SetMark(s.weakRef);
-				}
-				else
-				{
-					rewind(p, sizeof(GCWeakRef*)*2);
-					write(p, (uint32)0);
-					p += sizeof(GCWeakRef*);
-				}
-
-				if (s.typeOrVTable > 7 && !GC::GetMark((void*)s.typeOrVTable))
-				{
-					GCWorkItem item((void*)s.typeOrVTable, GC::Size((void*)s.typeOrVTable), true);
-					core->gc->PushWorkItem(item);
+			Sample sample;
+			readRawSample(p, sample);
+			uint64 id;
+			GCWeakRef *weakRef;
+			Traits* type;
+			if(sample.type != RAW_SAMPLE)
+			{
+				read(p, id);
+				AvmAssert(id < allocId);
+				if(id >= allocId) AvmAssert(false);
+				if(sample.type == NEW_OBJECT_SAMPLE) {
+					read(p, weakRef);
+					// keep weak refs to objects still around
+					if(weakRef)
+					{
+						if (weakRef->get() && GC::GetMark(weakRef->get()))
+						{
+							GC::SetMark(weakRef);
+						}
+						else
+						{
+							rewind(p, sizeof(GCWeakRef*));
+							write(p, (uint32)0);
+						}
+					}
+					read(p, type);
 				}
 			}
+			align(p);
 		}
 
 		if(stackTraces)
@@ -432,21 +417,34 @@ namespace avmplus
 
 	void Sampler::postsweep()
 	{
-#ifdef _DEBUG
 		uint32 num;
 		byte *p = getSamples(num);
 
 		for(uint32 i=0; i < num ; i++)
 		{
-			Sample s;
-			readSample(p, s);
-			if(s.sampleType == NEW_OBJECT_SAMPLE) {
-				if(s.weakRef && !s.weakRef->get()) {
-					AvmDebugMsg(false, "Sampler::postsweep: found weak ref with null object.\n");
+			Sample sample;
+			readRawSample(p, sample);
+			uint64 id;
+			GCWeakRef *weakRef;
+			Traits* type;
+			if(sample.type != RAW_SAMPLE)
+			{
+				read(p, id);
+				AvmAssert(id < allocId);
+				if(id >= allocId) AvmAssert(false);
+				if(sample.type == NEW_OBJECT_SAMPLE) {
+					read(p, weakRef);
+					if(weakRef && !weakRef->get())
+					{
+						AvmDebugMsg(false, "Sampler::postsweep: found weak ref with null object.\n");
+						rewind(p, sizeof(GCWeakRef*));
+						write(p, (uint32)0);
+					}
+					read(p, type);
 				}
 			}
+			align(p);
 		}
-#endif
 	}
 }
 #endif
