@@ -18,7 +18,7 @@
 #./esc1-r.sh ../src/parse-stmt.es
 #./esc1-r.sh ../src/parse-defn.es
 #./esc1-r.sh ../src/parse-prgm.es
-#./esc1-r.sh ../src/bytes.es
+#./esc1-r.sh ../src/bytes-tamarin.es
 #./esc1-r.sh ../src/asm.es
 #./esc1-r.sh ../src/abc.es
 #./esc1-r.sh ../src/emit.es

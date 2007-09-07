@@ -72,7 +72,7 @@ namespace Emit;
 
     use namespace Ast;
 
-    public class ABCEmitter
+    class ABCEmitter
     {
         public var file, constants;
         /*private*/ var scripts = [];
@@ -154,7 +154,6 @@ namespace Emit;
             return constants.Multiname(constants.namespaceset(flattenNamespaceSet(nss)), constants.stringUtf8(ident), is_attr);
         }
         public function qname(qn, is_attr ) {
-print("qn.ns=",qn.ns);
             let {ns:ns, id:id} = qn;
             return constants.QName(namespace(ns), constants.stringUtf8(id), is_attr);
         }
@@ -221,7 +220,7 @@ print("qn.ns=",qn.ns);
                     }
                 }
                 case (x:*) { 
-                    print ("warning: Unimplemented: typeFromTypeExpr " + t + ", using *");
+                    // print ("warning: Unimplemented: typeFromTypeExpr " + t + ", using *");
                 }
             }
             return 0;
@@ -334,7 +333,7 @@ print("qn.ns=",qn.ns);
         }
     }
 
-    public class Script
+    class Script
     {
         public var e, init, traits=[];
 
@@ -344,7 +343,7 @@ print("qn.ns=",qn.ns);
         }
 
         public function newClass(name, basename) {
-            return new Class(this, name, basename);
+            return new Emit::Class(this, name, basename);
         }
 
         /* All functions are in some sense global because the
@@ -370,7 +369,7 @@ print("qn.ns=",qn.ns);
         }
     }
     
-    public class Class
+    class Class
     {
         public var s, name, basename, traits=[], instance=null, cinit;
 
@@ -436,7 +435,7 @@ print("qn.ns=",qn.ns);
     }
     
     
-    public class Instance {
+    class Instance {
         // FIXME: interfaces
         
         public var s, name, basename, traits = [], iinit;
@@ -467,7 +466,7 @@ print("qn.ns=",qn.ns);
         }
     }
 
-    public class Method // extends AVM2Assembler
+    class Method // extends AVM2Assembler
     {
         public var e, formals, name, asm, traits = [], finalized=false, defaults = null, exceptions=[];
 	var initScopeDepth;
