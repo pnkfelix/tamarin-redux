@@ -36,7 +36,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-use namespace Release;
+use namespace Debug;
 use namespace intrinsic;
 
 public namespace Parse;
@@ -137,6 +137,7 @@ public namespace Parse;
     type PRAGMAS = Pragmas;
     class Pragmas 
     {
+        use default namespace public;
         var openNamespaces //: [[Ast::NAMESPACE]];
         var defaultNamespace: Ast::NAMESPACE;
         function Pragmas (pragmas) 
@@ -164,6 +165,7 @@ public namespace Parse;
 
     class Context
     {
+        use default namespace public;
         var env: ENV;
         var varHeads  //: [Ast::HEAD];
         var letHeads  //: [Ast::HEAD];
@@ -317,15 +319,17 @@ public namespace Parse;
             use namespace Ast;
 
             enter ("hasName ",id);
-            if (fxtrs.length===0) 
+            if (fxtrs.length==0)
             {
                 exit ("hasName false");
                 return false;
             }
 
             let pn = fxtrs[0][0];
-            // print ("pn..id=",pn.Ast::name.id," id=",id);
-            // print ("pn..ns=",pn.Ast::name.ns.Ast::hash()," ns=",ns.Ast::hash());
+            //print ("pn",pn," is PropName",pn is PropName);
+            //print ("pn.name",pn.name);
+            //print ("pn..id=",pn.name.id," id=",id);
+            //print ("pn..ns=",pn.name.ns.hash()," ns=",ns.hash());
             if (pn.name.id==id && pn.name.ns.hash()==ns.hash())  // FIXME: need ns compare
             {
                 exit ("hasName true");
@@ -492,6 +496,7 @@ public namespace Parse;
 
     class TokenStream {
         var ts: Array;
+        /// var ts: ByteArray
         var n: int;
         function TokenStream (ts,n)
             : ts = ts
@@ -499,6 +504,10 @@ public namespace Parse;
         
         function head () : int{
             return ts[n];
+            //if (ts.position == n) {
+            //    current_char = ts.readUnsignedInt ();
+            //}
+            //return current_char;
         }
         
         function next () : void {

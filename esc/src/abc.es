@@ -56,10 +56,19 @@ namespace Abc;
      * Performance ought to be good; nothing is serialized more than
      * once and no data are copied except during serialization.
      */
+
     public class ABCFile
     {
         public const major_version = 46;
         public const minor_version = 16;
+
+        const methods = [];
+        const metadatas = [];
+        const instances = [];
+        const classes = [];
+        const scripts = [];
+        const bodies = [];
+        var constants : ABCConstantPool;
 
         public function getBytes(): * /* same type as ABCByteStream.getBytes() */ {
             function emitArray(a, len) {
@@ -77,7 +86,7 @@ namespace Abc;
             Util::assert(bodies.length != 0);
             Util::assert(classes.length == instances.length);
 
-            // print ("emitting magic");
+            // print ("emitting version");
             bytes.uint16(minor_version);
             bytes.uint16(major_version);
             // print ("emitting constants");
@@ -131,14 +140,6 @@ namespace Abc;
         public function addMethodBody(b: ABCMethodBodyInfo)/*: uint*/ {
             return bodies.push(b)-1;
         }
-
-        /*private*/ const methods = [];
-        /*private*/ const metadatas = [];
-        /*private*/ const instances = [];
-        /*private*/ const classes = [];
-        /*private*/ const scripts = [];
-        /*private*/ const bodies = [];
-        /*private*/ var constants;
     }
 
     /* FIXME: we should be using hash tables here, not linear searching. */
@@ -185,7 +186,7 @@ namespace Abc;
 
         public function stringUtf8(s/*FIXME ES4: string*/)/*:uint*/ {
             function temp_func(x) { utf8_bytes.uint30(x.length); utf8_bytes.utf8(x) }
-            return findOrAdd( s,
+            return findOrAdd( ""+s,  // FIXME need to make sure its a string
                               utf8_pool,
                               cmp,
                               temp_func )

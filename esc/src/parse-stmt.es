@@ -84,15 +84,15 @@ use namespace intrinsic;
                 var [ts2,nd2] = forStatement (ts,omega);
                 break;
             case Token::Return:
-                var [ts1,nd1] = returnStatement (ts,omega);
+                var [ts1,nd1] = returnStatement (ts);
                 var [ts2,nd2] = [semicolon (ts1,omega),nd1];
                 break;
             case Token::Break:
-                var [ts1,nd1] = breakStatement (ts,omega);
+                var [ts1,nd1] = breakStatement (ts);
                 var [ts2,nd2] = [semicolon (ts1,omega),nd1];
                 break;
             case Token::Continue:
-                var [ts1,nd1] = continueStatement (ts,omega);
+                var [ts1,nd1] = continueStatement (ts);
                 var [ts2,nd2] = [semicolon (ts1,omega),nd1];
                 break;
             case Token::LeftBrace:
@@ -110,11 +110,11 @@ use namespace intrinsic;
                 }
                 break;
             case Token::Throw:
-                var [ts1,nd1] = throwStatement (ts,omega);
+                var [ts1,nd1] = throwStatement (ts);
                 var [ts2,nd2] = [semicolon (ts1,omega),nd1];
                 break;
             case Token::Try:
-                var [ts2,nd2] = tryStatement (ts,omega);
+                var [ts2,nd2] = tryStatement (ts);
                 break;
             default:
                 let [ts1,nd1] = expressionStatement (ts);
@@ -151,12 +151,13 @@ use namespace intrinsic;
 
         function printLn (ts:TokenStream) {
             enter ("printLn ",ts.n);
-            if (coordList.length <= ts.n)
-                print("line eos");
+            if (coordList.length <= ts.n) {
+                //print("line eos");
+            }
             else {
                 let coord = coordList[ts.n];
                 //print ("ln ",coord[0]+1," ",logicalLn);
-                print ("ln "+(coord[0]+1));
+                //print ("ln "+(coord[0]+1));
             }
             exit ("printLn");
         }
