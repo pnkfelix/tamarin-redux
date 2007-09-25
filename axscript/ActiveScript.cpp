@@ -35,7 +35,6 @@
  * ***** END LICENSE BLOCK ***** */
 #include "axtam.h"
 #include "mscom.h"
-#include "Profiler.h"
 #include "ActiveScriptError.h"
 
 // we use std stream IO for now.
@@ -61,19 +60,23 @@ public:
 	// Our AvmCore instance.
 	AXTam *core;
 
-DECLARE_REGISTRY_RESOURCEID(IDR_ACTIVESCRIPT)
+	// we hold a pointer to a script object for delegation, but can't subclass
+	// as the MMgc did not allocate our mem.
+	MMgc::GCRoot *root; 
 
-BEGIN_COM_MAP(CActiveScript)
-	COM_INTERFACE_ENTRY(IActiveScript)
-	COM_INTERFACE_ENTRY(IActiveScriptParseProcedure2)
-	COM_INTERFACE_ENTRY(IActiveScriptParse)
-	COM_INTERFACE_ENTRY(IObjectSafety)
-END_COM_MAP()
+	DECLARE_REGISTRY_RESOURCEID(IDR_ACTIVESCRIPT)
 
-BEGIN_CATEGORY_MAP(CActiveScript)
-    IMPLEMENTED_CATEGORY(AXT_CATID_ActiveScript)
-    IMPLEMENTED_CATEGORY(AXT_CATID_ActiveScriptParse)
-END_CATEGORY_MAP()
+	BEGIN_COM_MAP(CActiveScript)
+		COM_INTERFACE_ENTRY(IActiveScript)
+		COM_INTERFACE_ENTRY(IActiveScriptParseProcedure2)
+		COM_INTERFACE_ENTRY(IActiveScriptParse)
+		COM_INTERFACE_ENTRY(IObjectSafety)
+	END_COM_MAP()
+
+	BEGIN_CATEGORY_MAP(CActiveScript)
+		IMPLEMENTED_CATEGORY(AXT_CATID_ActiveScript)
+		IMPLEMENTED_CATEGORY(AXT_CATID_ActiveScriptParse)
+	END_CATEGORY_MAP()
 
 	// IActiveScript
     STDMETHOD(SetScriptSite)( 
@@ -177,13 +180,17 @@ END_CATEGORY_MAP()
             /* [in] */ DWORD dwEnabledOptions);
 protected:
 	CComPtr<IActiveScriptSite> m_site;
-	SCRIPTSTATE m_ss;
+	SCRIPTSTATE scriptState;
+	DWORD safetyOptions;
 };
 
 OBJECT_ENTRY_AUTO(CLSID_ActiveScript, CActiveScript)
 
 // Constructor
-CActiveScript::CActiveScript()
+CActiveScript::CActiveScript() : 
+	root(NULL), 
+	safetyOptions(0), 
+	scriptState(SCRIPTSTATE_UNINITIALIZED)
 {
 		// move this to DLL init?
 	if (!fm) {
@@ -198,6 +205,10 @@ CActiveScript::CActiveScript()
 	// XXX - memory exceptions?
 	MMgc::GC *gc = new MMgc::GC(heap); // XXX - delete this pointer??
 	core = new AXTam(gc);
+
+	// hrmph - this doesn't look correct...
+	// XXX - surely I must delete this root?
+	root = new MMgc::GCRoot(gc, this, sizeof(*this));
 }
 
 // Implementation methods.
@@ -224,41 +235,63 @@ STDMETHODIMP CActiveScript::GetScriptSite(
 STDMETHODIMP CActiveScript::SetScriptState( 
             /* [in] */ SCRIPTSTATE ss)
 {
-	m_ss = ss;
+	ATLTRACE2("CActiveScript::SetScriptState(0x%x)\n", ss);
+	scriptState = ss;
 	return S_OK;
 }
 
 STDMETHODIMP CActiveScript::GetScriptState( 
             /* [out] */ SCRIPTSTATE *pssState)
 {
-	ATLTRACENOTIMPL(_T("CActiveScript::GetScriptState"));
+	if (!pssState)
+		return E_POINTER;
+	ATLTRACE2("CActiveScript::GetScriptState (is 0x%x)\n", scriptState);
+	*pssState = scriptState;
+	return S_OK;
 }
 
 STDMETHODIMP CActiveScript::Close(void)
 {
-	ATLTRACENOTIMPL(_T("CActiveScript::Close"));
+	ATLTRACE2("CActiveScript::Close()\n");
+	if (!core)
+		return S_OK;
+	return core->Close();
 }
 
 STDMETHODIMP CActiveScript::AddNamedItem( 
             /* [in] */ LPCOLESTR pstrName,
             /* [in] */ DWORD dwFlags)
 {
-	ATLTRACE2("CActiveScript::AddNamedItem(\"%S\", 0x%x)", pstrName, dwFlags);
+	ATLTRACE2("CActiveScript::AddNamedItem(\"%S\", 0x%x)\n", pstrName, dwFlags);
 
-	if (!m_site)
+	if (!m_site || !core)
 		return E_FAIL;
 	CComPtr<IUnknown> punk;
-	HRESULT hr = m_site->GetItemInfo(pstrName, SCRIPTINFO_IUNKNOWN, &punk, NULL);
-	if (FAILED(hr))
-		return hr;
 
-	// ack - I'm making this up as I go :)
-	String *name = new (core->GetGC()) String((const avmplus::wchar *)pstrName, wcslen(pstrName));
-	name->setInterned(core);
-//	Multiname mname(core->publicNamespace, name);
+	TRY(core, kCatchAction_ReportAsError) {
 
-	MSCom *d = core->mscomClass->create(punk, name->atom());
-	core->toplevel->setAtomProperty (name->atom(), d->atom());
+		// Call AddNamedItem on our AS implemented engine
+		// Get the object named 'engine'.
+		Multiname multiname(core->publicNamespace, core->constantString("engine"));
+		ScriptEnv *se = (ScriptEnv *)core->toplevel->domainEnv()->getScriptInit(&multiname);
+		Atom a = core->toplevel->getproperty(se->global->atom(), &multiname, core->toplevel->toVTable(se->global->atom()));
+		// Now call the method.
+		Multiname multiname_ani(core->publicNamespace, core->constantString("AddNamedItem"));
+		Atom ani = core->toplevel->getproperty(a, &multiname_ani, core->toplevel->toVTable(a));
+		Atom atomv[3];
+		atomv[0] = a;
+		atomv[1] = core->internAlloc((const avmplus::wchar *)pstrName, wcslen(pstrName))->atom();
+		atomv[2] = core->internUint32(dwFlags)->atom();
+		AvmCore::atomToScriptObject(ani)->call(2, atomv);
+
+	} CATCH(Exception * exception) {
+		// ack - error setting up our environment.
+		core->dumpException(exception);
+		return E_FAIL;
+
+	}
+	END_CATCH
+	END_TRY
 	return S_OK;
 }
 
@@ -332,10 +365,21 @@ STDMETHODIMP CActiveScript::ParseProcedureText(
 STDMETHODIMP CActiveScript::InitNew(void)
 {
 	if (!core) {
-		ATLTRACE2("Engine failing to initialize - no core!");
+		ATLTRACE2("CActiveScript Engine failing to initialize - no core!");
 		return E_OUTOFMEMORY;
 	}
-	return core->InitNew();
+	TRY(core, kCatchAction_ReportAsError) {
+		return core->InitNew(this);
+	}
+	CATCH(Exception * exception) {
+		// ack - error setting up our environment.
+		core->dumpException(exception);
+		return E_FAIL;
+
+	}
+	END_CATCH
+	END_TRY
+
 }
 
 STDMETHODIMP CActiveScript::AddScriptlet( 
@@ -368,6 +412,7 @@ STDMETHODIMP CActiveScript::ParseScriptText(
 	// until we get a compiler, assume the text passed to us contains
 	// the name of a file with the .abc!  This will do in the short
 	// term.
+	ATLTRACE2("CActiveScript::ParseScriptText\n");
 	TRY(core, kCatchAction_ReportAsError) {
 		std::fstream file(pstrCode, std::ios_base::in | std::ios_base::binary | std::ios_base::ate);
 		std::ifstream::pos_type size(file.tellg());
@@ -375,40 +420,21 @@ STDMETHODIMP CActiveScript::ParseScriptText(
 		file.seekg(0);
 		file.read((char *)code.getBuffer(), size);
 
-		// Return a new DomainEnv for the user code
-		DomainEnv* domainEnv = new (core->GetGC()) DomainEnv(core,
-															 core->domain,
-															 core->toplevel->domainEnv());
-
-		axtam::CodeContext* codeContext = new (core->GetGC()) axtam::CodeContext();
-		codeContext->domainEnv = domainEnv;
+		axtam::CodeContext* codeContext = new (core->GetGC()) axtam::CodeContext(core->toplevel->domainEnv());
 
 		// parse new bytecode
-		core->handleActionBlock(code, 0, domainEnv, core->toplevel, NULL, NULL, NULL, codeContext);
+		core->handleActionBlock(code, 0, core->toplevel->domainEnv(), core->toplevel, NULL, NULL, NULL, codeContext);
 
 	}
 	CATCH(Exception * exception)
 	{
-		#ifdef DEBUGGER
-		if (!(exception->flags & Exception::SEEN_BY_DEBUGGER))
-		{
-			ATLTRACE2("*sob* - how to get exception??" /*(const wchar_t *)exception->atom */);
-			ATLTRACE2("\n");
-		}
-		if (exception->getStackTrace()) {
-			ATLTRACE2((const wchar_t *)exception->getStackTrace()->format(core));
-			ATLTRACE2("\n");
-		}
-		#else
-			ATLTRACE2("*sob*");//string(exception->atom));
-			ATLTRACE2("\n");
-		#endif
-
+		core->dumpException(exception);
 		// Notify script site of error
 		CGCRootComObject<CActiveScriptError> *err;
-		ATLTRY(err = new CGCRootComObject<CActiveScriptError>(core->gc));
+		ATLTRY(err = new CGCRootComObject<CActiveScriptError>(core));
 		if (m_site && err) {
 			err->exception = exception; // can we really just copy the pointer here?
+			err->dwSourceContextCookie = dwSourceContextCookie;
 			CComQIPtr<IActiveScriptError, &IID_IActiveScriptError> ase(err);
 			m_site->OnScriptError(ase);
 		}
@@ -416,15 +442,6 @@ STDMETHODIMP CActiveScript::ParseScriptText(
 	}
 	END_CATCH
 	END_TRY
-
-	#ifdef DEBUGGER
-	delete core->profiler;
-	#endif
-
-	#ifdef AVMPLUS_PROFILE
-		core->dump();
-	#endif
-
 	return S_OK;
 }
 
@@ -434,7 +451,13 @@ STDMETHODIMP CActiveScript::GetInterfaceSafetyOptions(
             /* [out] */ DWORD *pdwSupportedOptions,
             /* [out] */ DWORD *pdwEnabledOptions)
 {
-	ATLTRACENOTIMPL(_T("CActiveScript::GetInterfaceSafetyOptions"));
+	// XXX - we must look at this in detail!
+	ATLTRACE2("CActiveScript::GetInterfaceSafetyOptions\n");
+	if (!pdwSupportedOptions || !pdwEnabledOptions)
+		return E_POINTER;
+	*pdwSupportedOptions = (DWORD)-1;//INTERFACESAFE_FOR_UNTRUSTED_DATA | INTERFACESAFE_FOR_UNTRUSTED_CALLER;
+	*pdwEnabledOptions = safetyOptions;
+	return S_OK;
 }
 
 STDMETHODIMP CActiveScript::SetInterfaceSafetyOptions( 
@@ -442,5 +465,9 @@ STDMETHODIMP CActiveScript::SetInterfaceSafetyOptions(
             /* [in] */ DWORD dwOptionSetMask,
             /* [in] */ DWORD dwEnabledOptions)
 {
-	ATLTRACENOTIMPL(_T("CActiveScript::SetInterfaceSafetyOptions"));
+	ATLTRACE2("CActiveScript::SetInterfaceSafetyOptions(...,0x%x, 0x%x)\n", dwOptionSetMask, dwEnabledOptions);
+	// XXX - check interfaces
+	safetyOptions &= ~dwOptionSetMask;
+	safetyOptions |= dwEnabledOptions;
+	return S_OK;
 }
