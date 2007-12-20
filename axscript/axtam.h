@@ -70,6 +70,10 @@
 
 #include "resource.h"
 
+// Useful #defines before including atl:
+// Send info about QI calls to the debugger.
+// #define _ATL_DEBUG_QI
+
 // ATL, COM, ActiveScripting etc related headers.
 #include <atlbase.h>
 #include <atlcom.h>
@@ -189,6 +193,7 @@ namespace axtam
 		COMConsumerErrorClass *comConsumerErrorClass;
 		COMProviderErrorClass *comProviderErrorClass;
 
+		// Ownership of EXCEPINFO is taken by this function.
 		void throwCOMConsumerError(HRESULT hr, EXCEPINFO *pei = NULL);
 
 		// Used by objects which delegate COM interfaces to script code, but
@@ -201,6 +206,9 @@ namespace axtam
 		bool isCOMConsumerError(Exception *exc);
 		// fill an EXCEPINFO with a tamarin exception
 		void fillEXCEPINFO(const Exception *exception, EXCEPINFO *pexcepinfo);
+
+		// handle an exception by a "top-level" COM entry-point.
+		HRESULT handleException(Exception *exc, EXCEPINFO *pei = NULL, int depth=0);
 
 		Toplevel* initAXTamBuiltins();
 		// Create IDispatch wrappers around script objects (dispatch providers)
@@ -222,6 +230,8 @@ namespace axtam
 		// ack - we shadow these... - XXX - todo - get the above in the core!
 		Atom constant(const char *s) {return AvmCore::constant(s);}
 		Stringp constantString(const char *s) {return AvmCore::constantString(s);}
+
+		CComPtr<IActiveScriptSite> activeScriptSite;
 
 	private:
 		DECLARE_NATIVE_CLASSES()

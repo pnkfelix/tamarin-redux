@@ -49,6 +49,7 @@
 #include "SystemClass.h"
 #include "IActiveScriptSiteConsumer.h"
 #include "COMErrorClass.h"
+#include "ActiveScriptError.h"
 
 // files cloned from the shell
 namespace axtam {
@@ -380,6 +381,16 @@ namespace axtam
 	}
 
 	void AXTam::throwCOMConsumerError(HRESULT hr, EXCEPINFO *pei /* = NULL */){
+		// TODO: actually *use* this EXCEPINFO
+		if (pei) {
+			AvmDebugMsg(false, "COMError has EXCEPINFO which is ignored: desc is %S", pei->bstrDescription);
+			if (pei->bstrDescription)
+				::SysFreeString(pei->bstrDescription);
+			if (pei->bstrHelpFile)
+				::SysFreeString(pei->bstrHelpFile);
+			if (pei->bstrSource)
+				::SysFreeString(pei->bstrSource);
+		}
 		comConsumerErrorClass->throwError(hr);
 		AvmAssert(0); // not reached
 	}
@@ -389,6 +400,60 @@ namespace axtam
 	}
 	bool AXTam::isCOMConsumerError(Exception *exc) {
 		return exc->isValid() && istype(exc->atom, comConsumerErrorClass->traits()->itraits);
+	}
+
+	HRESULT AXTam::handleException(Exception *exception, EXCEPINFO *pei /*=NULL*/, int depth /* = 0 */)
+	{
+		if (depth > 1) {
+			// give up in disgust
+			AvmDebugMsg(true, "The exception handlers keep throwing exceptions!\r\n");
+			return E_FAIL;
+		}
+		HRESULT hr;
+		TRY(this, kCatchAction_ReportAsError) { // An exception in our exception handler would otherwise be fatal!
+			if (isCOMProviderError(exception)) {
+				// This is an error explicitly thrown by script code.  It 
+				// means that the HRESULT just be returned - its not a 
+				// "script error".
+				COMErrorObject *eob = (COMErrorObject *)atomToScriptObject(exception->atom);
+				hr = eob->getHRESULT();
+			} else {
+				// dump the exception for diagnostic purposes
+				dumpException(exception);
+				// report the exception to the site.
+				// XXX - later, we will want to move this error handling into
+				// AS, leaving the C++ code to only deal with 'internal' errors
+				// in the engine itself.  For now though, report all errors to 
+				// the site
+				// We may not have a site if we are calling InitNew, or after we
+				// have closed...
+				if (activeScriptSite != 0) {
+					CGCRootComObject<CActiveScriptError> *err;
+					ATLTRY(err = new CGCRootComObject<CActiveScriptError>(this));
+					if (err) {
+						err->exception = exception;
+						// XXX - must get passed dwSourceContextCookie, if available
+						//err->dwSourceContextCookie = dwSourceContextCookie;
+						CComQIPtr<IActiveScriptError, &IID_IActiveScriptError> ase(err);
+						activeScriptSite->OnScriptError(ase);
+					}
+				}
+				if (pei) {
+					fillEXCEPINFO(exception, pei);
+					hr = DISP_E_EXCEPTION;
+				} else {
+					hr = E_FAIL;
+				}
+			}
+		}
+		CATCH(Exception * exception) {
+			AvmDebugMsg(false, "Error in exception handler\r\n");
+			hr = handleException(exception, pei, depth+1);
+		}
+
+		END_CATCH
+		END_TRY
+		return hr;
 	}
 
 	Atom AXTam::toAtom(VARIANT &var)
@@ -449,12 +514,12 @@ namespace axtam
 
 	Atom AXTam::toAtom(IDispatch *pDisp)
 	{
-		return dispatchClass->create(pDisp)->atom();
+		return pDisp ? dispatchClass->create(pDisp)->atom() : nullObjectAtom;
 	}
 
 	Atom AXTam::toAtom(IUnknown *pUnk, const IID &iid /*= __uuidof(0)*/)
 	{
-		return unknownClass->create(pUnk, iid)->atom();
+		return pUnk ? unknownClass->create(pUnk, iid)->atom() : nullObjectAtom;
 	}
 
 	CComVariant AXTam::atomToVARIANT(Atom val)
