@@ -41,3 +41,7 @@ esc/safebin
 esc/src/*.es.abc
 *.bak
 *.cod
+*.orig
+*.user
+esc/safebin*
+esc/src/*.es.abc
