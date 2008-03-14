@@ -106,7 +106,7 @@ namespace avmplus
 		int local_count = AvmCore::readU30(pos);
 		int init_scope_depth = AvmCore::readU30(pos);
 		int max_scope_depth = AvmCore::readU30(pos);
-		int max_scope = MethodInfo::maxScopeDepth(info, max_scope_depth - init_scope_depth);
+		int volatile max_scope = MethodInfo::maxScopeDepth(info, max_scope_depth - init_scope_depth);
 		AvmCore::readU30(pos); // code_length
 		const byte * volatile code_start = pos;
 		
@@ -221,7 +221,7 @@ namespace avmplus
 		#endif
 
 		const byte* pc = code_start;
-		sintptr volatile expc;
+		sintptr volatile expc=0;
 
 		#ifdef DEBUGGER
 		callStackNode.eip = &expc;
@@ -254,8 +254,8 @@ namespace avmplus
 			#ifdef AVMPLUS_VERBOSE
 			if (pool->verbose)
             {
-                showState(info, opcode, pc - 1 - code_start, framep, sp-framep,
-					scopeBase+scopeDepth-1-framep, scopeBase-framep, scopeBase+max_scope-framep,
+                showState(info, opcode, (int)(pc - 1 - code_start), framep, (int)(sp-framep),
+					(int)(scopeBase+scopeDepth-1-framep), (int)(scopeBase-framep), (int)(scopeBase+max_scope-framep),
 					code_start);
             }
 			#endif
@@ -1398,6 +1398,14 @@ namespace avmplus
 				continue;
 			}
 
+            case OP_getouterscope:
+            {
+                int scope_index = readU30(pc);
+				sp++;
+                sp[0] = scope->getScope(scope_index);
+                continue;
+            }
+
             case OP_getglobalscope:
 			{
 				sp++;
@@ -1496,7 +1504,9 @@ namespace avmplus
 				if (interruptable && core->interrupted)
 					env->interrupt();
 				#ifdef AVMPLUS_64BIT
-				const byte *target = (const byte *) (AvmCore::readU30(pc) | (uintptr(AvmCore::readU30(pc)) << 32));
+				uint32 base = AvmCore::readU30(pc);
+				byte *target = (byte *) ((uintptr(AvmCore::readU30(pc)) << 32));
+				target = (byte*)((uintptr)target | base);
 				#else
 				const byte *target = (const byte *) AvmCore::readU30(pc);
 				#endif

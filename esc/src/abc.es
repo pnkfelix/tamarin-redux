@@ -1,4 +1,4 @@
-/* -*- mode: java; mode: font-lock; tab-width: 4; insert-tabs-mode: nil; indent-tabs-mode: nil -*- */
+/* -*- mode: java; tab-width: 4; insert-tabs-mode: nil; indent-tabs-mode: nil -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,6 +41,7 @@ namespace Abc;
 {
     use default namespace Abc;
     use namespace Asm;
+    use namespace Util;
     //import util.*;
     //import assembler.*;
     //import bytestream.*;
@@ -143,144 +144,215 @@ namespace Abc;
         
     }
 
-    /* FIXME: we should be using hash tables here, not linear searching. */
     public class ABCConstantPool
     {
         function ABCConstantPool() {
-            // All pools start at 1.
-            int_pool.length = 1;
-            uint_pool.length = 1;
-            double_pool.length = 1;
-            utf8_pool.length = 1;
-            namespace_pool.length = 1;
-            namespaceset_pool.length = 1;
+            function eq_numbers(n1, n2) {
+                return n1 == n2;
+            }
+
+            function eq_strings(s1, s2) { 
+                return s1 == s2; 
+            }
+
+            function hash_namespace(ns) {
+                return ns.kind ^ ns.name;          // Fairly arbitrary
+            }
+
+            function eq_namespaces(ns1, ns2) {
+                return ns1.kind == ns2.kind && ns1.name == ns2.name;
+            }
+
+            function hash_multiname(m) {
+                return m.kind ^ m.name ^ m.ns;     // Fairly arbitrary
+            }
+
+            function eq_multinames(m1, m2) {
+                return m1.kind == m2.kind && m1.ns == m2.ns && m1.name == m2.name;
+            }
+
+            function hash_namespaceset(nss) {
+                var hash = nss.length;
+                for ( var i=0, limit=nss.length ; i < limit ; i++ )
+                    hash = ((hash << 5) + hash) + nss[i];
+                return hash;
+            }
+
+            function eq_namespacesets(nss1, nss2) {
+                if (nss1.length != nss2.length)
+                    return false;
+                for ( var i=0, limit=nss1.length ; i < limit ; i++ )
+                    if (nss1[i] != nss2[i])
+                        return false;
+                return true;
+            }
+
+            // All pools and counts start at 1.  Counts are
+            // initialized in the property definitions.
+
             multiname_pool.length = 1;
+
+            int_map = new Hashtable(Util::hash_number, eq_numbers, 0);
+            uint_map = new Hashtable(Util::hash_number, eq_numbers, 0);
+            double_map = new Hashtable(Util::hash_number, eq_numbers, 0);
+            utf8_map = new Hashtable(Util::hash_string, eq_strings, 0);
+            namespace_map = new Hashtable(hash_namespace, eq_namespaces, 0);
+            namespaceset_map = new Hashtable(hash_namespaceset, eq_namespacesets, 0);
+            multiname_map = new Hashtable(hash_multiname, eq_multinames, 0);
         }
-
-        /**/ function findOrAdd(x, pool, cmp, emit) {
-            var i;
-            for ( i=1 ; i < pool.length ; i++ )
-                if (cmp(pool[i], x))
-                    return i;
-
-            emit(x);
-            pool.push(x);
-            return i;
-        }
-
-        /*private*/ function cmp(a, b) { return a === b }
 
         public function int32(n:int):uint {
-            function temp_func (x) { int_bytes.int32(x) };
-            return findOrAdd( n, int_pool, cmp, temp_func );
+            var probe = int_map.read(n);
+            if (probe == 0) {
+                probe = int_count++;
+                int_map.write(n, probe);
+                int_bytes.int32(n);
+            }
+            return probe;
         }
 
         public function uint32(n:uint):uint {
-            function temp_func(x) { uint_bytes.uint32(x) }
-            return findOrAdd( n, uint_pool, cmp, temp_func );
+            var probe = uint_map.read(n);
+            if (probe == 0) {
+                probe = uint_count++;
+                uint_map.write(n, probe);
+                uint_bytes.uint32(n);
+            }
+            return probe;
         }
 
         public function float64(n: Number):uint {
-            function temp_func(x) { double_bytes.float64(x) } 
-            return findOrAdd( n, double_pool, cmp, temp_func);
+            var probe = double_map.read(n);
+            if (probe == 0) {
+                probe = double_count++;
+                double_map.write(n, probe);
+                double_bytes.float64(n);
+            }
+            return probe;
         }
 
         public function stringUtf8(s/*FIXME ES4: string*/)/*:uint*/ {
-            function temp_func(x) { utf8_bytes.uint30(x.length); utf8_bytes.utf8(x) }
-            return findOrAdd( ""+s,  // FIXME need to make sure its a string
-                              utf8_pool,
-                              cmp,
-                              temp_func )
+            if (!(s is String))
+                s = s+"";
+            var probe = utf8_map.read(s);
+            if (probe == 0) {
+                probe = utf8_count++;
+                utf8_map.write(s, probe);
+                utf8_bytes.uint30(s.length);
+                utf8_bytes.utf8(s);
+            }
+            return probe;
         }
 
-        /*private*/ function cmpname(a, b) {
-            return a.kind == b.kind && a.ns == b.ns && a.name == b.name;
-        }
+        var tmp_namespace = {"kind": 0, "name": 0 };  // avoids allocation when we don't need it
 
         public function namespace(kind/*:uint*/, name/*:uint*/) {
-            function temp_func(x) {
-              namespace_bytes.uint8(x.kind);
-              namespace_bytes.uint30(x.name); }
-            return findOrAdd( { "kind": kind, "name": name },
-                              namespace_pool,
-                              cmpname,
-                              temp_func );
-        }
-
-        /*private*/ function cmparray(a, b) {
-            var i;
-            if (a.length != b.length)
-                return false;
-            for ( i=0 ; i < a.length ; i++ )
-                if (a[i] != b[i])
-                    return false;
-            return true;
+            tmp_namespace.kind = kind;
+            tmp_namespace.name = name;
+            var probe = namespace_map.read(tmp_namespace);
+            if (probe == 0) {
+                probe = namespace_count++;
+                namespace_map.write({"kind": tmp_namespace.kind, "name": tmp_namespace.name}, probe);
+                namespace_bytes.uint8(tmp_namespace.kind);
+                namespace_bytes.uint30(tmp_namespace.name);
+            }
+            return probe;
         }
 
         public function namespaceset(namespaces:Array) {
-            function temp_func (x) {
-              namespaceset_bytes.uint30(x.length);
-              for ( var i=0 ; i < x.length ; i++ )
-                  namespaceset_bytes.uint30(x[i]);
+            var probe = namespaceset_map.read(namespaces);
+            if (probe == 0) {
+                probe = namespaceset_count++;
+                namespaceset_map.write(Util::copyArray(namespaces), probe);
+                namespaceset_bytes.uint30(namespaces.length);
+                for ( var i=0, limit=namespaces.length ; i < limit ; i++ )
+                    namespaceset_bytes.uint30(namespaces[i]);
             }
-            return findOrAdd( Util::copyArray(namespaces),
-                              namespaceset_pool,
-                              cmparray,
-                              temp_func );
+            return probe;
+        }
+
+        /* Look up a multiname entry with kind, name, and namespace
+         * set.  Allocate an entry for it if it does not exist.  If an
+         * entry were allocated, then the negative of the entry index
+         * is returned (and the caller should emit data to the
+         * multiname_bytes stream), otherwise the entry index is
+         * returned.  (If this seems a little contorted, it reduces
+         * allocation of closures in the caller.)
+         */
+
+        // Temporary structure (avoids allocation of structures that already exist).
+        var tmp_multiname = { "kind": 0, "name": 0, "ns": 0 };
+
+        function multinameLookup(kind, name, ns) {
+            tmp_multiname.kind = kind;
+            tmp_multiname.name = name;
+            tmp_multiname.ns = ns;
+            var probe = multiname_map.read(tmp_multiname);
+            if (probe != 0)
+                return probe;
+
+            // Allocate
+            probe = multiname_pool.length;
+            var entry = {"kind":tmp_multiname.kind, "name":tmp_multiname.name, "ns":tmp_multiname.ns}
+            multiname_pool.push(entry);           // need "kind" for later, could optimize here --
+            multiname_map.write(entry, probe);    //   but need to save the whole entry anyway
+            return -probe;
         }
 
         public function QName(ns/*: uint*/, name/*: uint*/, is_attr: Boolean /*FIXME ES4: boolean*/) {
-            function temp_func(x) {
-              multiname_bytes.uint8(x.kind);
-              multiname_bytes.uint30(x.ns);
-              multiname_bytes.uint30(x.name); 
+            var kind = is_attr ? CONSTANT_QNameA : CONSTANT_QName;
+            var idx = multinameLookup( kind, name, ns );
+            if (idx < 0) {
+                multiname_bytes.uint8(kind);
+                multiname_bytes.uint30(ns);
+                multiname_bytes.uint30(name);
+                idx = -idx;
             }
-            return findOrAdd( { "kind": is_attr ? CONSTANT_QNameA : CONSTANT_QName, "ns": ns, "name": name },
-                              multiname_pool,
-                              cmpname,
-                              temp_func );
+            return idx;
         }
 
         public function RTQName(name/*: uint*/, is_attr: Boolean /*FIXME ES4: boolean*/) {
-            function temp_func(x) {
-              multiname_bytes.uint8(x.kind);
-              multiname_bytes.uint30(x.name); 
+            var kind = is_attr ? CONSTANT_RTQNameA : CONSTANT_RTQName;
+            var idx = multinameLookup( kind, name, 0 );
+            if (idx < 0) {
+                multiname_bytes.uint8(kind);
+                multiname_bytes.uint30(name); 
+                idx = -idx;
             }
-            return findOrAdd( { "kind": is_attr ? CONSTANT_RTQNameA : CONSTANT_RTQName, "name": name },
-                              multiname_pool,
-                              cmpname,
-                              temp_func );
+            return idx;
         }
 
         public function RTQNameL(is_attr: Boolean /*FIXME ES4: boolean*/) {
-            function temp_func (x) { multiname_bytes.uint8(x.kind) } 
-            return findOrAdd( { "kind": is_attr ? CONSTANT_RTQNameLA : CONSTANT_RTQNameL },
-                              multiname_pool,
-                              cmpname,
-                              temp_func);
+            var kind = is_attr ? CONSTANT_RTQNameLA : CONSTANT_RTQNameL;
+            var idx = multinameLookup( kind, 0, 0 );
+            if (idx < 0) {
+                multiname_bytes.uint8(kind);
+                idx = -idx;
+            }
+            return idx;
         }
 
         public function Multiname(nsset/*: uint*/, name/*: uint*/, is_attr: Boolean /*FIXME ES4: boolean*/ ) {
-            function temp_func(x) {
-                  multiname_bytes.uint8(x.kind);
-                  multiname_bytes.uint30(x.name);
-                  multiname_bytes.uint30(x.ns); 
-            } 
-            return findOrAdd( { "kind": is_attr ? CONSTANT_MultinameA : CONSTANT_Multiname, "name": name, "ns":nsset },
-                              multiname_pool,
-                              cmpname,
-                              temp_func);
+            var kind = is_attr ? CONSTANT_MultinameA : CONSTANT_Multiname;
+            var idx = multinameLookup(kind, name, nsset );
+            if (idx < 0) {
+                multiname_bytes.uint8(kind);
+                multiname_bytes.uint30(name);
+                multiname_bytes.uint30(nsset); 
+                idx = -idx;
+            }
+            return idx;
         }
 
         public function MultinameL(nsset/*: uint*/, is_attr: Boolean /*FIXME ES4: boolean*/) {
-            function temp_func (x) {
-              multiname_bytes.uint8(x.kind);
-              multiname_bytes.uint30(x.ns); 
+            var kind = is_attr ? CONSTANT_MultinameLA : CONSTANT_MultinameL;
+            var idx = multinameLookup(kind, 0, nsset);
+            if (idx < 0) {
+                multiname_bytes.uint8(kind);
+                multiname_bytes.uint30(nsset);
+                idx = -idx;
             }
-            return findOrAdd( { "kind": is_attr ? CONSTANT_MultinameLA : CONSTANT_MultinameL, "ns":nsset },
-                              multiname_pool,
-                              cmpname,
-                              temp_func );
+            return idx;
         }
 
         public function hasRTNS(index) {
@@ -313,37 +385,49 @@ namespace Abc;
             return result;
         }
 
+        function printPoolStats() {
+            print("  Ints: n=" + int_count + ", bytes=" + int_bytes.length);
+            print("  Uints: n=" + uint_count + ", bytes=" + uint_bytes.length);
+            print("  Doubles: n=" + double_count + ", bytes=" + double_bytes.length);
+            print("  Strings: n=" + utf8_count + ", bytes=" + utf8_bytes.length);
+            print("  Namespaces: n=" + namespace_count + ", bytes=" + namespace_bytes.length);
+            print("  Namespace sets: n=" + namespaceset_count + ", bytes=" + namespaceset_bytes.length);
+            print("  Multinames: n=" + multiname_pool.length + ", bytes=" + multiname_bytes.length);
+        }
+
         public function serialize(bs) {
-            bs.uint30(int_pool.length);
+            bs.uint30(int_count);
             bs.byteStream(int_bytes);
 
-            bs.uint30(uint_pool.length);
+            bs.uint30(uint_count);
             bs.byteStream(uint_bytes);
 
-            bs.uint30(double_pool.length);
+            bs.uint30(double_count);
             bs.byteStream(double_bytes);
 
-            bs.uint30(utf8_pool.length);
+            bs.uint30(utf8_count);
             bs.byteStream(utf8_bytes);
 
-            bs.uint30(namespace_pool.length);
+            bs.uint30(namespace_count);
             bs.byteStream(namespace_bytes);
 
-            bs.uint30(namespaceset_pool.length);
+            bs.uint30(namespaceset_count);
             bs.byteStream(namespaceset_bytes);
 
             bs.uint30(multiname_pool.length);
             bs.byteStream(multiname_bytes);
 
+            //printPoolStats();
+
             return bs;
         }
-        /*private*/ const int_pool = new Array;
-        /*private*/ const uint_pool = new Array;
-        /*private*/ const double_pool = new Array;
-        /*private*/ const utf8_pool = new Array;
-        /*private*/ const namespace_pool = new Array;
-        /*private*/ const namespaceset_pool = new Array;
-        /*private*/ const multiname_pool = new Array;
+        /*private*/ var   int_count = 1;
+        /*private*/ var   uint_count = 1;
+        /*private*/ var   double_count = 1;
+        /*private*/ var   utf8_count = 1;
+        /*private*/ var   namespace_count = 1;
+        /*private*/ var   namespaceset_count = 1;
+        /*private*/ const multiname_pool = new Array; // its length is the count
 
         /*private*/ const int_bytes = new ABCByteStream;
         /*private*/ const uint_bytes = new ABCByteStream;
@@ -352,6 +436,11 @@ namespace Abc;
         /*private*/ const namespace_bytes = new ABCByteStream;
         /*private*/ const namespaceset_bytes = new ABCByteStream;
         /*private*/ const multiname_bytes = new ABCByteStream;
+
+        var utf8_map;
+        var multiname_map;
+        var namespace_map;
+        var namespaceset_map;
     }
 
     public class ABCMethodInfo
@@ -366,7 +455,12 @@ namespace Abc;
         function ABCMethodInfo(name/*:uint*/, param_types:Array, return_type/*:uint*/, flags/*:uint*/,
                                options:Array, param_names:Array) {
             this.name = name;
-            this.param_types = param_types;
+            if (flags & METHOD_Needrest) {
+                this.param_types = copyArray(param_types);
+                this.param_types.pop();
+            }
+            else
+                this.param_types = param_types;
             this.return_type = return_type;
             this.flags = flags;
             this.options = options;
@@ -689,340 +783,4 @@ namespace Abc;
 
         /*private*/ var first_pc, last_pc, target_pc, exc_type, var_name;
     }
-    
-    // Construct an ABCFile instance from a bytestream representing an abc block.
-    function parseAbcFile(b : ABCByteStream) : ABCFile {
-		b.position = 0;
-		magic = b.readInt();
-        
-		if (magic != (46<<16|16))
-			throw new Error("not an abc file.  magic=" + magic.toString(16));
-        
-        var abc : ABCFile = new ABCFile();
-
-        abc.constants = parseCpool(b);
-        
-        var i;
-        var n;
-        // MethodInfos
-        n = b.readU32();
-        for(i = 0; i < n; i++)
-        {
-            abc.addMethod(parseMethodInfo(b));
-        }
-
-        // MetaDataInfos
-        n = b.readU32();
-        for(i = 0; i < n; i++)
-        {
-            abc.addMetadata(parseMetadata(b));
-        }
-
-        // InstanceInfos
-        n = b.readU32();
-        for(i = 0; i < n; i++)
-        {
-            abc.addInstance(parseInstanceInfo(b));
-        }
-        // ClassInfos
-        for(i = 0; i < n; i++)
-        {
-            abc.addClass(parseClassInfo(b));
-        }
-
-        // ScriptInfos
-        n = b.readU32();
-        for(i = 0; i < n; i++)
-        {
-            abc.addScript(parseScriptInfo(b));
-        }
-
-        // MethodBodies
-        n = b.readU32();
-        for(i = 0; i < n; i++)
-        {
-            abc.addMethodBody(parseMethodBody(b));
-        }
-
-
-        return abc;            
-    }
-
-    function parseCpool(b : ABCByteStream) : ABCConstantPool {
-        var i:int;
-        var n:int;
-        
-        var pool : ABCConstantPool = new ABCConstantPool;
-        
-		// ints
-		n = b.readU32();
-		for (i=1; i < n; i++)
-			pool.int32(b.readU32());
-        
-		// uints
-		n = b.readU32();
-		for (i=1; i < n; i++)
-			pool.uint32(uint(b.readU32()));
-        
-		// doubles
-		n = b.readU32();
-		doubles = [NaN];
-		for (i=1; i < n; i++)
-			pool.float64(b.readDouble());
-
-        // strings
-		n = b.readU32();
-		for (i=1; i < n; i++)
-			pool.stringUtf8(b.readUTFBytes(b.readU32()));
-        
-		// namespaces
-		n = b.readU32()
-		for (i=1; i < n; i++)
-        {
-            var nskind = b.readByte();
-            var uri = b.readU32();
-            pool.namespace(nskind, uri);
-        }
-        
-		// namespace sets
-		n = b.readU32();
-		for (i=1; i < n; i++)
-		{
-			var count:int = b.readU32();
-			var nsset = [];
-			for (j=0; j < count; j++)
-				nsset[j] = b.readU32();
-            pool.namespaceset(nsset);
-		}
-        
-		// multinames
-		n = b.readU32()
-		for (i=1; i < n; i++)
-        {
-            var kind = b.readByte();
-			switch (kind)
-			{
-			case CONSTANT_QName:
-			case CONSTANT_QNameA:
-				pool.QName(b.readU32(), b.readU32(), kind==CONSTANT_QNameA)
-				break;
-			
-			case CONSTANT_RTQName:
-			case CONSTANT_RTQNameA:
-				pool.RTQName(b.readU32(), kind==CONSTANT_RTQNameA)
-				break;
-			
-			case CONSTANT_RTQNameL:
-			case CONSTANT_RTQNameLA:
-                pool.RTQNameL(kind==CONSTANT_RTQNameLA);
-				names[i] = null
-				break;
-			
-			case CONSTANT_Multiname:
-			case CONSTANT_MultinameA:
-				var name = b.readU32()
-                pool.Multiname(b.readU32(), name, kind==CONSTANT_MultinameA);
-				break;
-
-			case CONSTANT_MultinameL:
-			case CONSTANT_MultinameLA:
-				pool.MultinameL(b.readU32(), kind==CONSTANT_MultinameLA)
-				break;
-				
-			}
-        }
-        
-        return pool;
-    }
-
-    function parseMethodInfo(b : ABCByteStream) : ABCMethodInfo {
-        
-        var paramcount = b.readU32();
-        var returntype = b.readU32();
-        var params = [];
-        for(let i = 0; i < paramcount; ++i)
-        {
-            params[i] = b.readU32();
-        }
-        
-        var name = b.readU32();
-        var flags = b.readByte();
-        
-        var optionalcount = 0;
-        var optionals = null;
-        if( flags & METHOD_HasOptional )
-        {
-            optionalcount = b.readU32();
-            optionals = [];
-            for(let i = 0; i < optionalcount; ++i )
-            {
-                optionals[i] = [b.readU32(), b.readByte()];
-            }
-        }
-        
-        var paramnames = null;
-        if( flags & METHOD_HasParamNames )
-        {
-            paramnames=[];
-            for(let i = 0; i < paramcount; ++i)
-                paramnames[i] = b.readU32();
-        }    
-        
-        return new ABCMethodInfo(name, params, returntype, flags, optionals, paramnames);
-    }
-    
-    function parseMetadataInfo(b : ABCByteStream) : ABCMetadataInfo {
-        var name = b.readU32();
-        var itemcount = b.readU32();
-        
-        var items = [];
-        for( let i = 0; i < itemcount; i++ )
-        {
-            let key = b.readU32();
-            let value = b.readU32();
-            items[i] = { key:key, value:value };
-        }
-        
-        return new ABCMetadataInfo(name, items);
-        
-    }
-    
-    function parseInstanceInfo(b : ABCByteStream) : ABCInstanceInfo {
-        var name = b.readU32();
-        var superclass = b.readU32();
-        var flags = b.readByte();
-        var protectedNS = 0;
-        if( flags & 8 ) 
-            protectedNS = b.readU32();
-        
-        var interfacecount = b.readU32();
-        var interfaces = [];
-        for(let i = 0; i < interfacecount; ++i)
-        {
-            interfaces[i] = b.readU32();
-        }
-        var iinit = b.readU32();
-        
-        var instance_info = new ABCInstanceInfo(name, superclass, flags, protectedNS, interfaces);
-        
-        instance_info.setIInit(iinit);
-        
-        parseTraits(instance_info, b);
-        
-        return instance_info;
-    }
-    
-    function parseClassInfo(b : ABCByteStream) : ABCClassInfo {
-        var cinit = b.readU32();
-
-        var class_info = new ABCClassInfo();
-        class_info.cinit = cinit;
-        
-        parseTraits(class_info, b);
-        
-        return class_info;
-    }
-    
-    function parseScriptInfo(b : ABCByteStream) : ABCScriptInfo {
-        
-        var script = new ABCScriptInfo(b.readU32());
-        parseTraits(script, b);
-        return script;
-    }
-    
-    function parseMethodBody(b : ABCByteStream) : ABCMethodBodyInfo {
-        var mb:ABCMethodBodyInfo = new ABCMethodBodyInfo(b.readU32());
-        
-        mb.max_stack = b.readU32();
-        mb.local_count = b.readU32();
-        mb.init_scope_depth = b.readU32();
-        mb.max_scope_depth = b.readU32();
-        
-        let code_len = b.readU32();
-        mb.code = new ABCByteStream;
-        for(let i = 0; i < code_len; ++i)
-        {
-            mb.code.uint8(b.readByte());
-        }
-        
-        var excount = b.readU32();
-        for( let i = 0; i < excount; ++i )
-        {
-            mb.addException(parseException(b));
-        }
-        
-        parseTraits(mb, b);
-        
-        return mb;
-    }
-    
-    function parseException(b : ABCByteStream) : ABCException {
-        var start = b.readU32();
-        var end = b.readU32();
-        var target = b.readU32();
-        var typename = b.readU32();
-        var name = b.readU32();
-        
-        // WTF is wrong with this????
-        var ex;
-        ex = new ABCException(start, end, target, typename, name);
-        return ex;
-    }
-    
-    function parseTraits(target, b : ABCByteStream) {
-        var traitcount = b.readU32();
-        for(let i =0 ; i < traitcount; ++i)
-        {
-            target.addTrait(parseTrait(b));
-        }
-    }
-
-    function parseTrait(b : ABCByteStream) //: ABCTrait should be ABCTrait once inheritance is supported
-    {
-        var name = b.readU32();
-        
-        var tag = b.readByte();
-        var kind = tag&0x04;
-        var attrs = (tag>>4) & 0x04;
-        
-        var trait;
-        
-        switch(kind)
-        {
-            case TRAIT_Slot:
-            case TRAIT_Const:
-                let slotid = b.readU32();
-                let typename = b.readU32();
-                let value = b.readU32();
-                let kind = null;
-                if( value != 0 )
-                    kind = b.readByte();
-                trait = new ABCSlotTrait(name, attrs, kind==TRAIT_Const, slotid, typename, value, kind);
-                break;
-            case TRAIT_Method:
-            case TRAIT_Setter:
-            case TRAIT_Getter:
-                let dispid = b.readU32();
-                let methinfo = b.readU32();
-                trait = new ABCOtherTrait(name, attrs, kind, dispid, methinfo);
-                break;
-            case TRAIT_Class:
-                let slotid = b.readU32();
-                let classinfo = b.readU32();
-                trait = new ABCOtherTrait(name, attrs, kind, slotid, classinfo);
-                break;
-        }
-        
-        if( attrs & ATTR_Metadata )
-        {
-            let metadatacount = b.readU32();
-            for(let i = 0; i < metadatacount; ++i)
-            {
-                trait.addMetadata(b.readU32());
-            }
-        }
-        
-        return trait;
-    }
-    
 }

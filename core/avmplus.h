@@ -85,7 +85,6 @@
 #include "avmbuild.h"
 
 #if defined(_MAC)
-//#include <stdlib.h>
 #include <alloca.h>
 #endif
 
@@ -99,7 +98,20 @@
 
 #ifdef WIN32
 #include <malloc.h>
+#include <math.h>
+#ifdef AVMPLUS_ARM
+typedef unsigned int uintptr_t;
+#else
+#ifdef AVMPLUS_AMD64
+#include <setjmpex.h>
 #endif
+#include <intrin.h>
+#include <emmintrin.h>
+#ifdef VTUNE
+#include "JITProfiling.h"
+#endif
+#endif // AVMPLUS_ARM
+#endif // WIN32
 
 #include <stdarg.h>
 
@@ -167,6 +179,10 @@ namespace avmplus
 	class Hashtable;
 	class HeapMultiname;
 	class Interpreter;
+	class IntVectorObject;
+	class DoubleVectorObject;
+	class UIntVectorObject;
+	class ObjectVectorObject;
 	class Java;
 	class MathClass;
 	class MathUtils;
@@ -239,6 +255,7 @@ namespace avmplus
 
 #include "MMgc.h"
 
+#include "GrowableBuffer.h"
 #include "DecimalRep.h"
 #include "MathUtils.h"
 #include "UnicodeUtils.h"
@@ -264,7 +281,6 @@ namespace avmplus
 #include "AtomWriteBarrier.h"
 #include "avmplusHashtable.h"
 #include "CodeContext.h"
-#include "GrowableBuffer.h"
 #include "PoolObject.h"
 #include "AbcEnv.h"
 #include "AbstractFunction.h"
@@ -303,6 +319,7 @@ namespace avmplus
 #include "NumberClass.h"
 #include "IntClass.h"
 #include "ArrayClass.h"
+#include "VectorClass.h"
 #include "StringClass.h"
 #include "Date.h"
 #include "DateClass.h"
@@ -327,6 +344,5 @@ namespace avmplus
 #include "avmplusDebugger.h"
 #include "E4XNode.h"
 #include "AbcGen.h"
-#include "GrowableBuffer.h"
 
 #endif /* __avmplus__ */ 

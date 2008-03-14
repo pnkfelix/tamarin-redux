@@ -38,6 +38,10 @@
 
 #include "avmplus.h"
 
+#if defined(_MSC_VER) && defined(AVMPLUS_AMD64)
+#include <emmintrin.h>
+#endif
+
 namespace avmplus
 {
 	using namespace MMgc;
@@ -77,6 +81,12 @@ namespace avmplus
 		NATIVE_CLASS(abcclass_RegExp,				RegExpClass,	RegExpObject)
 		NATIVE_CLASS(abcclass_Date,				DateClass,		DateObject)
 
+		// Vector
+		NATIVE_CLASS(abcclass_Vector_int,     IntVectorClass,      IntVectorObject)		
+		NATIVE_CLASS(abcclass_Vector_uint,    UIntVectorClass,     UIntVectorObject)		
+		NATIVE_CLASS(abcclass_Vector_double,  DoubleVectorClass,   DoubleVectorObject)	
+		NATIVE_CLASS(abcclass_Vector_object,  ObjectVectorClass,  ObjectVectorObject)		
+
 		// E4X
 		NATIVE_CLASS(abcclass_XML,				XMLClass,		XMLObject)
 		NATIVE_CLASS(abcclass_XMLList,			XMLListClass,	XMLListObject)
@@ -90,6 +100,9 @@ namespace avmplus
 
 	AvmCore::AvmCore(GC *g) : GCRoot(g), console(NULL), gc(g), mirBuffers(g, 4), 
 		gcInterface(g)
+#ifdef DEBUGGER
+		,_sampler(g)
+#endif
     {
 		// sanity check for all our types
 		AvmAssert (sizeof(int8) == 1);
@@ -116,11 +129,7 @@ namespace avmplus
 		#endif
 
 		#ifdef AVMPLUS_INTERP
-		#ifdef AVMPLUS_64BIT // turbo disabled by default since MIR not working yet
-		turbo = false;
-		#else
  		turbo = true;
-		#endif
 		#endif
 
 		#ifdef AVMPLUS_VERIFYALL
@@ -147,6 +156,10 @@ namespace avmplus
 
 		#endif // AVMPLUS_MIR
 
+	#ifdef VTUNE
+			VTuneStatus = CheckVTuneStatus();
+	#endif // VTUNE
+
 		interrupts = false;
 
 		gcInterface.SetCore(this);
@@ -168,6 +181,27 @@ namespace avmplus
 		profiler		   = NULL;
 		callStack          = NULL;
         #endif /* DEBUGGER */
+
+		interrupted        = false;
+
+		codeContextAtom    = CONTEXT_NONE;
+		dxnsAddr		   = NULL;
+		
+		strings			= NULL;
+		numStrings		= 0;
+		namespaces		= NULL;
+		numNamespaces	= 0;
+		stringCount		= 0;
+		deletedCount	= 0;
+		nsCount			= 0;
+
+		numStrings = 1024; // power of 2
+		strings = new DRC(Stringp)[numStrings];
+		memset(strings, 0, numStrings*sizeof(Stringp));
+
+		numNamespaces = 1024;  // power of 2
+		namespaces = new DRC(Namespacep)[numNamespaces];
+		memset(namespaces, 0, numNamespaces*sizeof(Namespace*));
 
 		// some useful decimal constants
 
@@ -231,27 +265,6 @@ namespace avmplus
 		decContextDefault(&mutableDecContext, DEC_INIT_DECIMAL128); // set the unchanging fields
 
 		dnNaNatom = decimalToAtom(special_decimal[sd_NaN]);
-
-		interrupted        = false;
-
-		codeContextAtom    = CONTEXT_NONE;
-		dxnsAddr		   = NULL;
-		
-		strings			= NULL;
-		numStrings		= 0;
-		namespaces		= NULL;
-		numNamespaces	= 0;
-		stringCount		= 0;
-		deletedCount	= 0;
-		nsCount			= 0;
-
-		numStrings = 1024; // power of 2
-		strings = new DRC(Stringp)[numStrings];
-		memset(strings, 0, numStrings*sizeof(Stringp));
-
-		numNamespaces = 1024;  // power of 2
-		namespaces = new DRC(Namespacep)[numNamespaces];
-		memset(namespaces, 0, numNamespaces*sizeof(Namespace*));
 
 		console.setCore(this);
 		
@@ -675,8 +688,8 @@ return the result of the comparison ToPrimitive(x) == y.
 		if (isNull(lhs)) lhs = 0;
 		if (isNull(rhs)) rhs = 0;
 
-		int ltype = lhs & 7;
-        int rtype = rhs & 7;
+		int ltype = (int)(lhs & 7);
+        int rtype = (int)(rhs & 7);
 
 		// See E4X 11.5.1, pg 53.  
 		if ((ltype == kObjectType) && (isXMLList(lhs)))
@@ -1370,7 +1383,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			{
 			case kIntegerType:
             {
-                int i = atom>>3;
+                Atom i = atom>>3;
                 if (i == 0)
                     return falseAtom;
                 else
@@ -1489,7 +1502,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		int kind = atom&7;
 
 		if (kind == kIntegerType)
-			return (double) ((sint32)atom>>3);
+			return (double) ((sintptr)atom>>3);
 		if (kind == kDoubleType)
 			return atomToDouble(atom);
 		if (kind == kDecimalType) {
@@ -1586,13 +1599,13 @@ return the result of the comparison ToPrimitive(x) == y.
 		}
 		if (kind == kIntegerType || kind == kSpecialType) {
             if (kind == kIntegerType) {
-                ival = atom >> 3;
+                ival = (int)(atom >> 3);
             } else {
                 // special is undefined or boolean
                 if (atom == undefinedAtom)
                     return special_decimal[sd_NaN];
                 // it's a boolean
-                ival = atom >> 4;
+                ival = (int)(atom >> 4);
             }
 			SpecialDecimalIndex index;
 			if (isSpecialDecimal(ival, index)) {
@@ -1655,7 +1668,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			case kObjectType:
 				return intern(atomToScriptObject(atom)->toString());
 			case kIntegerType:
-				return internInt(atom>>3);
+				return internInt((int)(atom>>3));
 			case kDecimalType:
 				return internDecimal(atomToDecimal(atom));
 			case kDoubleType:
@@ -1736,6 +1749,9 @@ return the result of the comparison ToPrimitive(x) == y.
 					buffer << " " << s;
 				break;
 			}
+        case OP_pushbyte:
+            buffer << opNames[opcode] << " " << int(int8(*pc));
+            break;
 		case OP_pushint:
 			{
 				buffer << opNames[opcode];
@@ -1871,7 +1887,7 @@ return the result of the comparison ToPrimitive(x) == y.
 				unsigned int imm30 = 0, imm30b = 0;
 				const byte* p2 = pc-1;
 				readOperands(p2, imm30, imm24, imm30b, imm8);
-				int insWidth = p2-pc;
+				int insWidth = (int)(p2-pc);
 
 				int target = off + insWidth + imm24 + 1;
 				buffer << opNames[opcode] << " " << (double)target;
@@ -2008,7 +2024,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		switch ((AvmCore::NumberUsage)(decimalParam & 0x7)) {
         case use_Number:
             if (isInteger(*ap)) {
-                *ap = intToAtom(delta+((sint32)*ap>>3));
+                *ap = intToAtom(delta+((sint32)((sintptr)*ap>>3)));
                 break;
             }
             if (!isDecimal(*ap)) {
@@ -2041,7 +2057,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		switch (*ap & 7)
 		{
 		case kIntegerType:
-			*ap = intToAtom(delta+((sint32)*ap>>3));
+			*ap = intToAtom(delta+(sint32((sintptr)*ap>>3)));
 			return;
 		case kDoubleType:
 			*ap = intToAtom((int)((sint32)atomToDouble(*ap)+delta));
@@ -2096,6 +2112,14 @@ return the result of the comparison ToPrimitive(x) == y.
 			{
 				return (atom>>3) >= 0;
 			}
+#ifdef AVMPLUS_64BIT
+			if (itraits == traits.int_itraits)
+			{
+				// this might be a uint
+				if ((int64)(atom>>3)!=(int)(atom>>3))
+					return false;
+			}
+#endif
 			break;
 
 		case kDecimalType:
@@ -2269,7 +2293,11 @@ return the result of the comparison ToPrimitive(x) == y.
 					return kundefined;
 				return booleanStrings[atom>>4];
 			case kIntegerType:
+#ifdef AVMPLUS_64BIT
 				return intToString (int(atom>>3));
+#else
+				return intToString (int(sint32(atom)>>3));
+#endif
 			case kDecimalType:
 				return decimalToString(atomToDecimal(atom));
 			case kDoubleType:
@@ -3166,7 +3194,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		}
 
         // compute the hash function
-		int hashCode = ((uintptr)ns->getURI())>>3;
+		int hashCode = (int)(((uintptr)ns->getURI())>>3);
 
 		int bitMask = m - 1;
 
@@ -3323,7 +3351,9 @@ return the result of the comparison ToPrimitive(x) == y.
 	{
 		int len16 = UnicodeUtils::Utf8Count((const uint8*)cs, len8);
 		// use alloca to avoid heap allocations where possible
-		wchar *buffer = (wchar*) alloca((len16+1)*sizeof(wchar));
+		wchar *buffer = 0;
+		if (len16 < 1024)
+			buffer = (wchar*) alloca((len16+1)*sizeof(wchar));
 		
 		Stringp s = NULL;
 		if(!buffer) {
@@ -3592,26 +3622,36 @@ return the result of the comparison ToPrimitive(x) == y.
 
 	Atom AvmCore::uintToAtom(uint32 n)
 	{
+#ifdef AVMPLUS_64BIT
+		// We can always fit the value in an Atom
+		return (((Atom)n)<<3) | kIntegerType;
+#else
 		// As kIntegerType is signed, we can only represent a 28-bit uint in it
 		if (!(n&0xF0000000)) {
-			return (n<<3) | kIntegerType;
+			return uint32((n<<3) | kIntegerType);
 		} else {
 			return allocDouble(n);
 		}
+#endif
 	}
 			
 	Atom AvmCore::intToAtom(int n)
 	{
+#ifdef AVMPLUS_64BIT
+		// We can always fit the value in an Atom
+		return (((Atom)n)<<3) | kIntegerType;
+#else
 		// handle integer values w/out allocation
 		int i29 = n << 3;
 		if ((i29>>3) == n)
 		{
-			return i29 | kIntegerType;
+			return uint32(i29 | kIntegerType);;
 		}
 		else 
 		{
 			return allocDouble(n);
 		}
+#endif
 	}
 
 	Atom AvmCore::decNumberToAtom(decNumber *n) {
@@ -3646,6 +3686,22 @@ return the result of the comparison ToPrimitive(x) == y.
 		// this logic rounds in the wrong direction for E3, but
 		// we never use a rounded value, only cleanly converted values.
 		#ifdef WIN32 
+		#ifdef AVMPLUS_AMD64
+		int id = _mm_cvttsd_si32(_mm_set_sd(n));
+		if (((id<<3)>>3) == n) {
+			// make sure its not -0
+			if (id == 0 && MathUtils::isNegZero(n)) {
+				return allocDouble(n);
+			} else {
+#ifdef AVMPLUS_64BIT
+				return (id<<3) | kIntegerType;
+#else
+				return uint32((id<<3) | kIntegerType);
+#endif
+			}
+		}
+		return allocDouble(n);
+		#else
 		int id3;
 		_asm {
 			movsd xmm0,n
@@ -3670,6 +3726,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			_asm d2a_alloc:
 			return allocDouble(n);
 		}
+		#endif
 		#elif defined(_MAC) && (defined(AVMPLUS_IA32) || defined(AVMPLUS_AMD64))
 		int id = _mm_cvttsd_si32(_mm_set_sd(n));
 		// MacTel is luckily always using SSE2, there
@@ -3681,7 +3738,12 @@ return the result of the comparison ToPrimitive(x) == y.
 			if (id == 0 && MathUtils::isNegZero(n)) {
 				return allocDouble(n);
 			} else {
+#ifdef AVMPLUS_64BIT
 				return (id<<3) | kIntegerType;
+#else
+				return uint32((id<<3) | kIntegerType);
+#endif
+
 			}
 		}
 		return allocDouble(n);
@@ -3704,8 +3766,8 @@ return the result of the comparison ToPrimitive(x) == y.
 		}
 
 		asm("d2a_alloc:");
-		#endif
 		return allocDouble(n);
+		#endif
 	}
 #endif
 
@@ -3721,7 +3783,10 @@ return the result of the comparison ToPrimitive(x) == y.
         // they are regular numeric values.
 
 		// handle integer values w/out allocation
-		#ifdef WIN32
+		#if defined(WIN32) && !defined(_ARM_)
+		#ifdef AVMPLUS_AMD64
+		int id = _mm_cvttsd_si32(_mm_set_sd(n));
+		#else
 		// this logic rounds in the wrong direction for E3, but
 		// we never use a rounded value, only cleanly converted values.
 		int id;
@@ -3729,6 +3794,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			fld [n];
 			fistp [id];
 		}
+		#endif
 		#elif defined(_MAC) && (defined (AVMPLUS_IA32) || defined(AVMPLUS_AMD64))
 		int id = _mm_cvttsd_si32(_mm_set_sd(n));
 		#else
@@ -3742,7 +3808,13 @@ return the result of the comparison ToPrimitive(x) == y.
 			if (id == 0 && MathUtils::isNegZero(n))
 				return allocDouble(n);
 			else
+			{
+#ifdef AVMPLUS_64BIT
 				return (id<<3) | kIntegerType;
+#else
+				return uint32((id<<3) | kIntegerType);
+#endif
+			}
 		}
 		else
 		{
@@ -3782,7 +3854,11 @@ return the result of the comparison ToPrimitive(x) == y.
 					return kundefined;
 				return booleanStrings[atom>>4];
 			case kIntegerType:
+#ifdef AVMPLUS_64BIT
 				return intToString((int)(atom>>3));
+#else
+				return intToString((int)(sint32(atom)>>3));
+#endif
 			case kDoubleType:
 				AvmAssert(atom != kDoubleType); // this would be a null pointer to double
 				return doubleToString(atomToDouble(atom));
@@ -4004,16 +4080,20 @@ return the result of the comparison ToPrimitive(x) == y.
 	int AvmCore::integer(Atom atom)
 	{
 		if ((atom & 7) == kIntegerType) {
-			return atom >> 3;
+#ifdef AVMPLUS_64BIT
+			return (int)(atom >> 3);
+#else
+			return (int)(sint32(atom) >> 3);
+#endif
 		} else if (isBoolean(atom)) {
-            return atom >> 4;
+            return (int)(atom >> 4);
 		} else if ((atom & 7) == kDecimalType) {
 			DecimalRep *drep = decimalNumber(atom);
 			return decimalToInt32(drep);
 		} else {
 			// TODO optimize the code below.
 			double d = doubleNumber(atom);
-			return integer_d(d);
+			return (int)integer_d(d);
 		}
 	}
 
@@ -4038,12 +4118,18 @@ return the result of the comparison ToPrimitive(x) == y.
 	{
 		int id;
 		#ifdef WIN32 
+		#ifdef AVMPLUS_AMD64
+		id = _mm_cvttsd_si32(_mm_set_sd(d));
+		if (id != (int)0x80000000)
+			return id;
+		#else
 		_asm {
 			cvttsd2si eax,d
 			mov id,eax
 		}
 		if (id != 0x80000000)
 			return id;
+		#endif
 		#elif defined(_MAC) && (defined(AVMPLUS_IA32) || defined(AVMPLUS_AMD64))		
 		id = _mm_cvttsd_si32(_mm_set_sd(d));
 		if (id != (int)0x80000000)
@@ -4238,13 +4324,8 @@ return the result of the comparison ToPrimitive(x) == y.
 	 * MIR needs a large intermediate buffer for codegen.
 	 * These routines allow reuse of this buffer(s)
 	 */				  
-	// @todo make this static and work with gc
-	//List<GrowableBuffer*> AvmCore::mirBuffers(0);  // mir buffer pool
-	//GCSpinLock AvmCore::mirBufferLock; // lock for pool
-
 	GrowableBuffer* AvmCore::requestMirBuffer()
 	{
-		//GCAcquireSpinlock spinlock(mirBufferLock);
 		GrowableBuffer* buffer = 0;
 		if (mirBuffers.size() > 0)
 			buffer = mirBuffers.removeFirst();
@@ -4255,12 +4336,12 @@ return the result of the comparison ToPrimitive(x) == y.
 
 	GrowableBuffer* AvmCore::requestNewMirBuffer()
 	{
-		return new (GetGC()) GrowableBuffer(GetGC()->GetGCHeap());
+		return new (GetGC()) GrowableBuffer(GetGC()->GetGCHeap(),true);
 	}
 
 	void AvmCore::releaseMirBuffer(GrowableBuffer* buffer)
 	{
-		//GCAcquireSpinlock spinlock(mirBufferLock);
+		 buffer->free();  // free the underlying space
 		mirBuffers.add(buffer);
 	}
 

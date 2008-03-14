@@ -1,4 +1,4 @@
-/* -*- mode: java; mode: font-lock; tab-width: 4; insert-tabs-mode: nil; indent-tabs-mode: nil -*- */
+/* -*- mode: java; tab-width: 4; insert-tabs-mode: nil; indent-tabs-mode: nil;  -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -63,9 +63,8 @@
     //import abcfile.*;
     //import assembler.*;
     //import emitter.*;
-    use default namespace public;
-
     use default namespace Gen;
+
     use namespace Util;
     use namespace Abc;
     use namespace Asm;
@@ -73,6 +72,9 @@
     use namespace Ast;
 
     function cgExpr(ctx, e) {
+        if( e.pos != null ) {
+            cgDebugInfo(ctx, e.pos);
+        }
         switch type (e) {
         case (e:TernaryExpr) { cgTernaryExpr(ctx, e) }
         case (e:BinaryExpr) { cgBinaryExpr(ctx, e) }
@@ -81,7 +83,9 @@
         case (e:TypeExpr) { cgTypeExpr(ctx, e) }
         case (e:ThisExpr) { cgThisExpr(ctx, e) }
         case (e:YieldExpr) { cgYieldExpr(ctx, e) }
-        case (e:SuperExpr) { throw "Internal error: SuperExpr can't appear here" }
+        case (e:SuperExpr) { 
+            Gen::syntaxError(ctx, "SuperExpr can't appear here");
+        }
         case (e:LiteralExpr) { cgLiteralExpr(ctx, e) }
         case (e:CallExpr) { cgCallExpr(ctx, e) }
         case (e:ApplyTypeExpr) { cgApplyTypeExpr(ctx, e) }
@@ -95,10 +99,25 @@
         case (e:SliceExpr) { cgSliceExpr(ctx, e) }
         case (e:GetTemp) { cgGetTempExpr(ctx, e) }
         case (e:GetParam) { cgGetParamExpr(ctx, e) }
-        case (e:*) { throw ("Internal error: Unimplemented expression type " + e) }
+        case (e:EvalScopeInitExpr) { cgEvalScopeInitExpr(ctx,e) }
+        case (e:*) { 
+            Gen::internalError(ctx, "Unimplemented expression type " + e);
+        }
         }
     }
 
+    var lastline = -1;
+    function cgDebugInfo(ctx, p) {
+        //do debugging stuff
+        if( p && emit_debug) {
+            let asm = ctx.asm;
+            if( p.line >= 0  && p.line != lastline) {
+                asm.I_debugline(p.line);
+                lastline = p.line;
+            }
+        }
+    }
+    
     function cgTernaryExpr(ctx, { e1: test, e2: consequent, e3: alternate }) {
         let asm = ctx.asm;
         cgExpr(ctx, test);
@@ -159,7 +178,9 @@
             case (e:LessOrEqual) { asm.I_lessequals() }
             case (e:Greater) { asm.I_greaterthan() }
             case (e:GreaterOrEqual) { asm.I_greaterequals() }
-            case (e:*) { throw "Internal error: Unimplemented binary operator" }
+            case (e:*) { 
+                Gen::internalError(ctx, "Unimplemented binary operator " + e);
+            }
             }
         }
     }
@@ -172,6 +193,8 @@
         case (op:CastOp) { asm.I_coerce() }
         case (op:IsOp) { asm.I_istypelate() }
         case (op:ToOp) {
+            // FIXME: Neither ES3 nor ES4.
+            //
             // If the type expression object has a property meta::convert then invoke that
             // method and return its result.  Otherwise, behave as cast.
             asm.I_dup();
@@ -188,7 +211,9 @@
             asm.I_coerce();
             asm.I_label(L2);
         }
-        case (op:*) { throw "Internal error: Unimplemented binary type operator" }
+        case (op:*) { 
+            Gen::internalError(ctx, "Unimplemented binary type operator " + op);
+        }
         }
     }
 
@@ -206,7 +231,7 @@
         }
         case (ty:*) {
             /* FIXME */
-            throw ("Unimplemented: type expression type " + ty);
+            Gen::internalError(ctx, "Unimplemented type expression type " + ty);
         }
         }
     }
@@ -224,7 +249,9 @@
                 //name = cgIdentExpr(ctx, or.ident);
                 cgExpr(ctx, or.base);
             }
-            case (x:*) { throw "Internal error: invalid lvalue" }
+            case (x:*) { 
+                Gen::syntaxError(ctx, "Expression is not an lvalue");
+            }
             }
             asm.I_dup();
             asm.I_getproperty(cgIdentExpr(ctx, e.e1.ident));
@@ -273,23 +300,12 @@
         }
         case (op:Typeof) {
             if (e.e1 is LexicalRef) {
-                //let name = cgIdentExpr(ctx, e.e1.ident);
-                ctx.asm.I_findproperty(cgIdentExpr(ctx, e.e1.ident));
-                ctx.asm.I_getproperty(cgIdentExpr(ctx, e.e1.ident));
+                asm.I_findproperty(cgIdentExpr(ctx, e.e1.ident));
+                asm.I_getproperty(cgIdentExpr(ctx, e.e1.ident));
             }
-            else {
+            else 
                 cgExpr(ctx, e.e1);
-                // I_typeof is not compatible with ES4, so do something elaborate to work around that.
-                asm.I_dup();
-                asm.I_pushnull();
-                asm.I_strictequals();
-                let L0 = asm.I_iffalse(undefined);
-                asm.I_pushstring(ctx.cp.stringUtf8("null"));
-                let L1 = asm.I_jump(undefined);
-                asm.I_label(L0);
-                asm.I_typeof();
-                asm.I_label(L1);
-            }
+            asm.I_typeof();
         }
         case (op:PreIncr) { incdec(true, true) }
         case (op:PreDecr) { incdec(true, false) }
@@ -311,7 +327,9 @@
             cgExpr(ctx, e.e1);
             asm.I_not();
         }
-        case (op:*) { throw "Internal error: Unimplemented unary operation" }
+        case (op:*) {
+            Gen::internalError(ctx, "Unimplemented unary operation " + op);
+        }
         }
     }
 
@@ -321,38 +339,209 @@
 
     function cgYieldExpr(ctx, e) {
         // FIXME
-        throw "Unimplemented 'yield' expression";
+        Gen::internalError(ctx, "Unimplemented 'yield' expression");
     }
 
     function cgCallExpr(ctx, e) {
         let {asm:asm, emitter:emitter} = ctx;
-        let name = null;
+        let nargs = e.args.length;
+        let evalTmp = 0;
+        let isEval = false;
+
         switch type (e.expr) {
         case (or:ObjectRef) {
-            name = or.ident; // = cgIdentExpr(ctx, or.ident);
             cgExpr(ctx, or.base);
         }
         case (lr:LexicalRef) {
             asm.I_findpropstrict(cgIdentExpr(ctx, lr.ident));
-            name = lr.ident;
+            if (lr.ident is Identifier && lr.ident.ident === "eval") {
+                isEval = true;
+                evalTmp = asm.getTemp();   // save the
+                asm.I_dup();               //   object
+                asm.I_setlocal(evalTmp);   //     for later
+            }
         }
         case (x:*) {
             cgExpr(ctx, e.expr);
             asm.I_pushnull();
         }
         }
-        let nargs = e.args.length;
+
         for ( let i=0 ; i < nargs ; i++ )
             cgExpr(ctx, e.args[i]);
-        if (name != null)
-            asm.I_callproperty(cgIdentExpr(ctx, name),nargs);
-        else
+
+        var L_skipcall;
+
+        if (isEval) {
+            // Code performs 'eval', cleans the stack, and jumps to L0
+            // if the eval operator kicks in, otherwise falls through
+            // to the regular call code below.
+            L_skipcall = cgEvalPrefix(ctx, evalTmp, nargs);
+        }
+
+        switch type (e.expr) {
+        case (or:ObjectRef) {
+            asm.I_callproperty(cgIdentExpr(ctx, or.ident), nargs);
+        }
+        case (lr:LexicalRef) {
+            // This is not right if the function is bound by "with".  In that
+            // case, I_callproperty would be more right.  That's the outlier, though.
+            asm.I_callproplex(cgIdentExpr(ctx, lr.ident), nargs);
+        }
+        case (x:*) {
             asm.I_call(nargs);
+        }
+        }
+
+        if (isEval) {
+            asm.I_label(L_skipcall);
+            asm.killTemp(evalTmp);
+        }
+    }
+
+    // First check that 'eval' really gets us the global eval binding.
+    //
+    // Assuming it really is the eval operator:
+    //
+    // Since the form of the call is eval(...) we know there are no
+    // late-bound name components on the evaluation stack, just the
+    // receiver object (which is the global object).  Clean up the
+    // stack by consing up an array of all the arguments.
+    //
+    // Call ESC::eval() on the argument array, a descriptor of the
+    // scopes (a string), and an array of scopes, outermost-first.
+    // The descriptor and the scope array have the same length.  A
+    // letter in the descriptor is "s" if the object is a regular
+    // scope object (to be pushed by "pushscope") and "w" if it is is
+    // a "with" object (to be pushed by "pushwith").
+    //
+    // ESC::evalCompiler() returns the result of the evaluation.
+
+    function cgEvalPrefix(ctx, evalTmp, nargs) {
+        var asm = ctx.asm;
+        var nons = [[new Ast::ReservedNamespace(Ast::noNS)]];
+        var id_ESC = new Ast::Identifier("ESC", nons); // Needs to be open namespaces??
+        var id_evaluateInScopeArray = new Ast::QualifiedIdentifier(new Ast::LexicalRef(id_ESC), "evaluateInScopeArray");
+
+        // Check it: Is this *really* the eval operator?
+
+        var L_normalcall = undefined;
+
+        /* FIXME: The following sanity tests only work when getglobalscope returns the object 
+           that actually holds the global variables.  Bugzilla 417342.
+
+        // The container must be === to the global object
+        asm.I_getlocal(evalTmp);
+        asm.I_getglobalscope();
+        asm.I_ifstrictne(L_normalcall);
+
+        // Property must be === to the predefined eval function, stored in the constant ESC::eval
+        asm.I_getlocal(evalTmp);
+        asm.I_getproperty(cgIdentExpr(ctx, lr.ident));
+        asm.I_getglobalscope();
+        asm.i_getproperty(cgIdentExpr(ctx, new Ast::QualifiedIdentifier(id_ESC,
+                                                                        new Ast::Identifier("eval", [[Ast::NoNS]]))));
+        asm.I_ifstrictne(L_normalcall);
+        */
+
+        asm.I_newarray(nargs);             // collapse the arguments
+        asm.I_setlocal(evalTmp);           // save it...
+        asm.I_pop();                       // get rid of the object
+        asm.I_findpropstrict(cgIdentExpr(ctx, id_evaluateInScopeArray));
+        asm.I_getlocal(evalTmp);           // argument array
+
+        // pushScopes() generates code that leaves an array of scope
+        // objects on the stack, followed by the scope descriptor
+        // string.
+
+        let numscopes = pushScopes(ctx);
+
+        asm.I_callproplex(cgIdentExpr(ctx, id_evaluateInScopeArray), 3);
+
+        L_skipcall = asm.I_jump(undefined);
+
+        if (L_normalcall != undefined)
+            asm.I_label(L_normalcall);
+
+        return L_skipcall;
+
+        function pushScopes(ctx) {
+
+            let scopedesc = "";
+
+            function rec(stk, inner) {
+                let level;
+
+                // Do not capture the global scope
+                if (stk.tag == "script")
+                    return 1;
+
+                if (stk.tag == "function") {
+                    level = rec(stk.link, false);
+                    if (inner)
+                        level = 0;
+                }
+                else
+                    level = rec(stk.link, inner);
+
+                // FIXME: There may be two scope objects per ctx rib,
+                // because push_this may be true too.
+                push = false;
+                switch (stk.tag) {
+                case "function":
+                case "catch":
+                    scopedesc = "s" + scopedesc;
+                    push = true;
+                    break;
+                case "with":
+                    scopedesc = "w" + scopedesc;
+                    push = true;
+                    break;
+                case "class":
+                case "instance":
+                case "break":
+                case "continue":
+                case "finally":
+                    break;
+                case "let":
+                default:
+                    Gen::internalError(ctx, "Unknown context tag: " + stk.tag);
+                }
+
+                if (push) {
+                    if (inner)
+                        asm.I_getscopeobject(level);
+                    else
+                        asm.I_getouterscope(level);
+                }
+                return level + 1;
+            }
+
+            rec(ctx.stk, true);
+
+            let numscopes = scopedesc.length;
+
+            ctx.asm.I_newarray(numscopes);
+            ctx.asm.I_pushstring(ctx.cp.stringUtf8(scopedesc));
+
+            return numscopes;
+        }
+    }
+
+    function cgEvalScopeInitExpr(ctx, e) {
+        let asm = ctx.asm;
+        asm.I_getlocal(1);
+        asm.I_getproperty(cgIdentExpr(ctx, new Ast::Identifier(String(e.index), [[Ast::noNS]])));
+        if (e.how == "w")
+            asm.I_pushwith();
+        else
+            asm.I_pushscope();
+        asm.I_pushundefined();
     }
 
     function cgApplyTypeExpr(ctx, e) {
         // FIXME
-        throw "Unimplemented type application expression";
+        Gen::internalError(ctx, "Unimplemented type application expression");
     }
 
     function cgLetExpr(ctx, e) {
@@ -397,7 +586,9 @@
             else
                 asm.I_findpropstrict(cgIdentExpr(ctx, lhs.ident));
         }
-        case (lhs:*) { throw "Internal error: illegal ref type" }
+        case (lhs:*) { 
+            Gen::syntaxError(ctx, "Illegal lvalue");
+        }
         }
 
         if (e.op is AssignLogicalAnd) {
@@ -419,17 +610,32 @@
             asm.I_setproperty(cgIdentExpr(ctx, name));  // Always store it; the effect is observable
         }
         else {
-            let use_once_name = cgIdentExpr(ctx, name);
-            cgExpr(ctx, e.re);
             let t = asm.getTemp();
             if (e.op is Assign) {
+                let use_once_name = cgIdentExpr(ctx, name);
+                cgExpr(ctx, e.re);
                 asm.I_dup();
                 asm.I_setlocal(t);
                 asm.I_setproperty(use_once_name);
             }
             else {
-                asm.I_dup();
-                asm.I_getproperty(cgIdentExpr(ctx, name));
+                let propname = null;
+                let subtmp = null;     // stores indexing expression value
+                let subname = null;    // multiname to store under
+                asm.I_dup();           // object expr
+                if (name is ExpressionIdentifier) {
+                    subtmp = asm.getTemp();
+                    cgExpr(ctx, name.expr);
+                    asm.I_dup();
+                    asm.I_setlocal(subtmp);
+                    subname = emitter.multinameL(name,false);
+                    asm.I_getproperty(subname);
+                }
+                else {
+                    asm.I_getproperty(cgIdentExpr(ctx, name));
+                    propname = cgIdentExpr(ctx, name);
+                }
+                cgExpr(ctx, e.re);
                 switch type (e.op) {
                 case (op:AssignPlus) { asm.I_add() }
                 case (op:AssignMinus) { asm.I_subtract() }
@@ -442,11 +648,20 @@
                 case (op:AssignBitwiseAnd) { asm.I_bitand() }
                 case (op:AssignBitwiseOr) { asm.I_bitor() }
                 case (op:AssignBitwiseXor) { asm.I_bitxor() }
-                case (op:*) { throw "Internal error: ASSIGNOP not supported" }
+                case (op:*) { 
+                    Gen::internalError(ctx, "ASSIGNOP not supported " + op);
+                }
                 }
                 asm.I_dup();
                 asm.I_setlocal(t);
-                asm.I_setproperty(use_once_name);
+                if (name is ExpressionIdentifier) {
+                    asm.I_getlocal(subtmp);
+                    asm.I_swap();
+                    asm.I_setproperty(subname);
+                    asm.killTemp(subtmp);
+                }
+                else
+                    asm.I_setproperty(propname);
             }
             asm.I_getlocal(t);
             asm.killTemp(t);
@@ -474,7 +689,7 @@
         }
         }
         cgInits(ctx, e.inits, baseOnStk);
-    	asm.I_pushundefined(); // exprs need to leave something on the stack
+        asm.I_pushundefined(); // exprs need to leave something on the stack
         // FIXME: should this be the value of the last init?
     }
 
@@ -482,27 +697,38 @@
 
         function cgArrayInitializer(ctx, {exprs:exprs}) {
             let asm = ctx.asm;
-            for ( let i=0 ; i < exprs.length ; i++ ) {
-                cgExpr(ctx, exprs[i]);
+            let i = 0;
+
+            // Use newarray to construct the dense prefix
+            for ( ; i < exprs.length ; i++ ) {
+                let e = exprs[i];
+                if (e is Ast::LiteralExpr && e.literal is Ast::LiteralUndefined)
+                    break;
+                cgExpr(ctx, e);
             }
-            asm.I_newarray(exprs.length);
-/*            asm.I_getglobalscope();
-            asm.I_getproperty(ctx.emitter.Array_name);
-            asm.I_construct(0);
-            asm.I_dup();
-            let t = asm.getTemp();
-            asm.I_setlocal(t);
-            for ( let i=0 ; i < exprs.length ; i++ ) {
-                if (exprs[i] !== undefined) {
-                    asm.I_getlocal(t);
-                    asm.I_pushuint(cg.uint32(i));
-                    cgExpr(ctx, exprs[i]);
-                    asm.I_setproperty(genMultinameL());
+            asm.I_newarray(i);
+
+            // Then init the other defined slots one by one
+            if (i < exprs.length) {
+                let last_was_undefined = false;
+                for ( ; i < exprs.length ; i++ ) {
+                    let e = exprs[i];
+                    if (!(e is Ast::LiteralExpr && e.literal is Ast::LiteralUndefined)) {
+                        asm.I_dup();
+                        cgExpr(ctx, e);
+                        asm.I_setproperty(cgIdentExpr(ctx, new Ast::Identifier(String(i), [[Ast::noNS]])));
+                        last_was_undefined = false;
+                    }
+                    else
+                        last_was_undefined = true;
+                }
+                if (last_was_undefined) {
+                    asm.I_dup();
+                    asm.I_pushint(ctx.cp.int32(exprs.length));
+                    asm.I_setproperty(cgIdentExpr(ctx, new Ast::Identifier("length", [[Ast::noNS]])));
                 }
             }
-            asm.I_getlocal(t);
-            asm.killTemp(t);
-*/        }
+        }
 
         function cgObjectInitializer(ctx, {fields:fields}) {
             let {asm:asm, emitter:emitter} = ctx;
@@ -524,56 +750,83 @@
 
         function cgRegExpLiteral({asm:asm, cp:cp}, {src:src}) {
             // src is "/.../flags"
-            // Slow...
+            //
+            // Note, ES4 semantics: recreate RE object every time.
+            // FIXME: re-compiles the RE every time.
             let p = src.lastIndexOf('/');
-            asm.I_getglobalscope();
-            asm.I_getproperty(ctx.emitter.RegExp_name);
+            // FIXME: We don't want findpropstrict because it can be used to spoof RegExp.
+            // But getglobalscope produces an object that does not have "RegExp" bound.
+            asm.I_findpropstrict(ctx.emitter.RegExp_name);
             asm.I_pushstring(cp.stringUtf8(src.substring(1,p)));
             asm.I_pushstring(cp.stringUtf8(src.substring(p+1)));
-            asm.I_construct(2);
+            asm.I_constructprop(ctx.emitter.RegExp_name, 2);
         }
 
-        let asm = ctx.asm;
+        let {asm:asm, emitter:emitter} = ctx;
         switch type (e.literal) {
         case (e:LiteralNull) { asm.I_pushnull() }
         case (e:LiteralUndefined) { asm.I_pushundefined() }
-        case (e:LiteralInt) { asm.I_pushint(ctx.cp.int32(e.intValue)) }
-        case (e:LiteralUInt) { asm.I_pushuint(ctx.cp.uint32(e.uintValue)) }
-        case (e:LiteralDouble) { asm.I_pushdouble(ctx.cp.float64(e.doubleValue)) }
+        case (e:LiteralInt) { 
+            let val = e.intValue;
+            if (val >= -128 && val < 128)
+                asm.I_pushbyte(val & 0xFF);  // pushbyte sign-extends
+            else
+                asm.I_pushint(ctx.cp.int32(val));
+        }
+        case (e:LiteralUInt) { 
+            asm.I_pushuint(ctx.cp.uint32(e.uintValue));
+        }
+        case (e:LiteralDouble) { 
+            let val = e.doubleValue;
+            if (isNaN(val))
+                asm.I_pushnan();
+            else
+                asm.I_pushdouble(ctx.cp.float64(val));
+        }
         case (e:LiteralDecimal) { 
-            let i : int = int(e.decimalValue);
-            let n : Number = Number(e.decimalValue);
-            if( e.decimalValue == String(i) ) {
-                asm.I_pushint(ctx.cp.int32(i));
-            }
-            else if( e.decimalValue == String(n) ) {
-                asm.I_pushdouble(ctx.cp.float64(Number(n))) 
-            }
-            else {
-                // Work around RI bug - converts all hex strings to 0
-                asm.I_pushstring(ctx.cp.stringUtf8(e.decimalValue));
-                asm.I_convert_d();
-            }
-        } // FIXME - the AVM2 can't handle decimal yet
-        case (e:LiteralString) { asm.I_pushstring(ctx.cp.stringUtf8(e.strValue)) }
+            // FIXME: proper decimal support when the AVM can handle it!
+            asm.I_pushdouble(ctx.cp.float64(parseFloat(e.decimalValue)));
+        }
+        case (e:LiteralString) {
+            asm.I_pushstring(ctx.cp.stringUtf8(e.strValue));
+        }
         case (e:LiteralBoolean) {
             if (e.booleanValue)
                 asm.I_pushtrue();
             else
                 asm.I_pushfalse();
         }
-        case (e:LiteralFunction) { asm.I_newfunction(cgFunc(ctx, e.func)) }
+        case (e:LiteralFunction) { 
+            if (e.func.name != null) {
+                // FIXME: correct for ES3 but not for ES4
+                let t = asm.getTemp();
+                asm.I_newobject(0);
+                asm.I_dup();
+                asm.I_setlocal(t);
+                asm.I_pushwith();
+                asm.I_newfunction(cgFunc(ctx, e.func));
+                asm.I_dup();
+                asm.I_getlocal(t);
+                asm.I_swap();
+                asm.I_setproperty(emitter.nameFromIdent(e.func.name.ident));
+                asm.killTemp(t);
+            }
+            else
+                asm.I_newfunction(cgFunc(ctx, e.func));
+        }
         case (e:LiteralArray) { cgArrayInitializer(ctx, e) }
         case (e:LiteralObject) { cgObjectInitializer(ctx, e) }
         case (e:LiteralRegExp) { cgRegExpLiteral(ctx, e) }
-            // case (e:LiteralNamesace) { cgNamespaceLiteral(ctx, e) }
-        case (e:*) { throw "Unimplemented LiteralExpr " + e }
+            // case (e:LiteralNamespace) { cgNamespaceLiteral(ctx, e) }
+        case (e:*) { 
+            Gen::internalError(ctx, "Unimplemented LiteralExpr " + e);
+        }
         }
     }
 
     function cgSliceExpr(ctx, e) {
         // FIXME
-        throw "Unimplemented slice expression";
+        Gen::internalError(ctx, "Unimplemented slice expression");
     }
 
     function cgGetTempExpr(ctx, e) {
@@ -609,11 +862,13 @@
                     case( e:* ) {
                         /// cgExpr(ctx, qi.qual);
                         /// return emitter.rtqname(qi);
-                        throw "unsupported form of qualified identifier " + qi.ident;
+                        Gen::internalError(ctx, "Unsupported form of qualified identifier " + qi.ident);
                     }
                 }
             }
-            case (x:*) { throw ("Unimplemented cgIdentExpr " + e) }
+            case (x:*) { 
+                Gen::internalError(ctx, "Unimplemented cgIdentExpr " + e);
+            }
         }
     }
 }

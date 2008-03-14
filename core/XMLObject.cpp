@@ -335,13 +335,13 @@ namespace avmplus
 					while (!String::isSpace(nameEnd[0]) && (nameEnd[0]))
 						nameEnd++;
 
-					Stringp name = core->internString (new (core->GetGC()) String(nameStart, nameEnd - nameStart));
+					Stringp name = core->internString (new (core->GetGC()) String(nameStart, (int)(nameEnd - nameStart)));
 
 					// Skip over any white space between name and rest of PI
 					while (String::isSpace(nameEnd[0]) && nameEnd[0])
 						nameEnd++;
 
-					String *val = new (gc) String(nameEnd, tag.text->length()-(nameEnd-nameStart));
+					String *val = new (gc) String(nameEnd, tag.text->length()-(int)(nameEnd-nameStart));
 					pNewElement = new (gc) PIE4XNode(0, val); 
 					pNewElement->setQName (core, name, core->publicNamespace);
 					if (!m_node)
@@ -605,19 +605,24 @@ namespace avmplus
 			return; 
 
 		Atom c;
-		if (!core->isXML(V) && !core->isXMLList(V))
+		if (core->atomToXMLList(V))
 		{
-#ifdef STRING_DEBUG
-			String *foo = core->string(V);
-#endif // STRING_DEBUG
+			XMLListObject *src = core->atomToXMLList (V);
+			if ((src->_length() == 1) && src->_getAt(0)->getClass() & (E4XNode::kText | E4XNode::kAttribute))
+		{
 			c = core->string(V)->atom();
-
 		}
-		else if (core->isXML(V))
+			else
+			{
+				c = src->_deepCopy()->atom();									
+			}
+		}
+		else if (core->atomToXML (V))
 		{
 			XMLObject *x = core->atomToXMLObject (V);
-			if (x->getClass() & (E4XNode::kText | E4XNode::kCDATA | E4XNode::kAttribute))
+			if (x->getClass() & (E4XNode::kText | E4XNode::kAttribute))
 			{
+				// This string is converted into a XML object below in step 2(g)(iii)
 				c = core->string(V)->atom();
 			}
 			else
@@ -627,8 +632,10 @@ namespace avmplus
 		}
 		else
 		{
-			XMLListObject *xl = core->atomToXMLList (V);
-			c = xl->_deepCopy()->atom();
+#ifdef STRING_DEBUG
+			String *foo = core->string(V);
+#endif // STRING_DEBUG
+			c = core->string(V)->atom();
 		}
 
 		// step 5
@@ -2977,7 +2984,7 @@ namespace avmplus
 			for (uint32 i = 0; i < nsArray->getLength(); i++)
 			{
 				Namespace *ns = AvmCore::atomToNamespace (nsArray->getAt(i));
-				AvmAssert(uintptr(ns));
+				AvmAssert(ns!=NULL);
 #ifdef STRING_DEBUG
 				Stringp s1 = ns->getURI();
 				Stringp s2 = uri;

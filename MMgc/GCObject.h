@@ -106,6 +106,7 @@ namespace MMgc
 	{
 	public:
 		virtual ~GCFinalizable() { }
+		virtual void Finalize() { this->~GCFinalizable(); }
 	};
 
 	/**
@@ -117,7 +118,7 @@ namespace MMgc
 	{
 	public:
 		GCWeakRef *GetWeakRef() const;
-
+		
 		static void *operator new(size_t size, GC *gc, size_t extra = 0);
 		static void operator delete (void *gcObject);
 	};
@@ -221,6 +222,7 @@ namespace MMgc
 				GCAssert(RefCount() == 1);
 				GC::GetGC(this)->RemoveFromZCT(this);
 			}
+			
 #ifdef _DEBUG
 			if(gc->keepDRCHistory)
 				history.Push(GetStackTraceIndex(2));
@@ -231,6 +233,7 @@ namespace MMgc
 		{ 
 			if(Sticky() || composite == 0)
 				return;
+
 #ifdef _DEBUG
 			GC* gc = GC::GetGC(this);
 			GCAssert(gc->IsRCObject(this));
@@ -275,11 +278,13 @@ namespace MMgc
 			if(gc->keepDRCHistory)
 				history.Push(GetStackTraceIndex(1));
 #endif
+
 			// composite == 1 is the same as (rc == 1 && !notSticky && !notInZCT)
 			if(RefCount() == 0) {
 				GC::GetGC(this)->AddToZCT(this);
 			}
 		}
+		
 #ifdef _DEBUG
 		void DumpHistory();
 #endif
@@ -302,6 +307,8 @@ namespace MMgc
 		}
 
 	private:
+		friend class ZCT;
+		
 		// 1 bit for inZCT flag (0x80000000)
 		// 1 bit for sticky flag (0x40000000)
 		// 20 bits for ZCT index

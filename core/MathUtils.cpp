@@ -438,9 +438,13 @@ namespace avmplus
 	double MathUtils::toInt(double value)
 	{
 #ifdef WIN32
+		#ifdef AVMPLUS_AMD64
+		int intValue = _mm_cvttsd_si32(_mm_set_sd(value));
+		#else
 		int intValue;
 		_asm fld [value];
 		_asm fistp [intValue];
+		#endif
 #elif defined(_MAC) && (defined(AVMPLUS_IA32) || defined(AVMPLUS_AMD64))
 		int intValue = _mm_cvttsd_si32(_mm_set_sd(value));
 #else
@@ -529,6 +533,18 @@ namespace avmplus
 		double original_base = base;
 		int original_exponent = exponent;
 
+		if (MathUtils::isInfinite(base))
+		{
+			if (exponent < 0) // return -0 or 0 depending on sign of base
+				return (base < 0) ? 1.0/base : 0.0;
+
+			// if base is -Infinity, return Infinity or -Infinity depending whether the exponent is even or not.
+			if (base < 0) 
+				return (MathUtils::mod(exponent, 2) != 0) ? base : 0-base;
+
+			return base;
+		}
+
 		if (exponent < 0) {
 			exponent = -exponent;
 			while (exponent) {
@@ -538,7 +554,7 @@ namespace avmplus
 				    // That means we can't invert the exponent when the base ten value exponent is < 307.  
 				    //  We could first check if powerOfTwo(base)*exp > 1074, but that would
 				    //  slow down all powInts calls.  This limits the xtra work to just very small numbers.
-					if (value == 0 && base != 0 && !MathUtils::isInfinite(base)) // double check by calling the real thing
+					if (value == 0 && base != 0) // double check by calling the real thing
 						return MathUtils::powInternal(original_base,(double)original_exponent);
 				}
 				exponent >>= 1;
@@ -651,11 +667,15 @@ namespace avmplus
 	{
 		int digit;
 		#ifdef WIN32
+		#ifdef AVMPLUS_AMD64
+		digit = _mm_cvttsd_si32(_mm_set_sd(*value));
+		#else
 		// WARNING! nextDigit assumes that rounding mode is
 		// set to truncate.
 		_asm mov eax,[value];
 		_asm fld qword ptr [eax];
 		_asm fistp [digit];
+		#endif
 		#elif defined(_MAC) && (defined(AVMPLUS_IA32) || defined(AVMPLUS_AMD64))
 		digit = _mm_cvttsd_si32(_mm_set_sd(*value));
 		#else
@@ -745,7 +765,7 @@ namespace avmplus
 				*src-- = '-';
 		}
 
-		len = srcEnd-src-1;
+		len = (int)(srcEnd-src-1);
 		memcpy(buffer, src+1, (srcEnd-src)*sizeof(wchar));
 
 		AvmAssert(len==String::Length(buffer));
@@ -770,7 +790,7 @@ namespace avmplus
 			return convertDoubleToStringRadix(core, dblval, radix);
 		}
 		else {
-			len = strlen(decNumberToString(value, buf));
+			len = (int)strlen(decNumberToString(value, buf));
 			}
 
 		return new (core->GetGC()) String(buf, len, len); // know there are not UTF8 escapes in buf
@@ -822,7 +842,7 @@ namespace avmplus
 				*src-- = '-';
 		}
 
-		int len = srcEnd-src-1;
+		int len = (int)(srcEnd-src-1);
 		return new (core->GetGC()) String(src+1, len);
 	}
 
@@ -895,7 +915,7 @@ namespace avmplus
 		char buf[50];
 		wchar wbuf[50];
 		decNumberToString(dn, buf);
-		int len = strlen(buf);
+		int len = (int)strlen(buf);
 		UnicodeUtils::Utf8ToUtf16((uint8*)buf, len, wbuf, 50);
 		double ret;
 		convertStringToDouble(wbuf, len, &ret, false);
@@ -996,7 +1016,7 @@ namespace avmplus
 			decNumberPlus(&pvalue, value, &pctx);
 			value = &pvalue;
 		}
-		len = strlen(decNumberToString(value, buf));
+		len = (int)strlen(decNumberToString(value, buf));
 		UnicodeUtils::Utf8ToUtf16((uint8 *)buf, len+1, buffer, 50);
 		return;
 	}
@@ -1046,9 +1066,13 @@ namespace avmplus
 		// which are slow).
 		if (mode == DTOSTR_NORMAL) {
 #ifdef WIN32
+			#ifdef AVMPLUS_AMD64
+			int intValue = _mm_cvttsd_si32(_mm_set_sd(value));
+			#else
 			int intValue;
 			_asm fld [value];
 			_asm fistp [intValue];
+			#endif
 #elif defined(_MAC) && (defined(AVMPLUS_IA32) || defined(AVMPLUS_AMD64))
 			int intValue = _mm_cvttsd_si32(_mm_set_sd(value));
 #else
@@ -1331,7 +1355,7 @@ namespace avmplus
 		}
   
 		*s = '\0';
-		len = s-buffer;
+		len = (int)(s-buffer);
 
 		if (sentinel && sentinel[0] == '0' && sentinel[1] != '.') {
 			wchar *s = sentinel;

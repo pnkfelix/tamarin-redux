@@ -173,6 +173,8 @@
 		1E607F9709733ED1007D0E1E /* MathUtilsUnix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E607F9409733ED1007D0E1E /* MathUtilsUnix.cpp */; };
 		1E607F9809733ED1007D0E1E /* OSDepUnix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E607F9509733ED1007D0E1E /* OSDepUnix.cpp */; };
 		1EC50991097391B400040CAB /* Date.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EC50990097391B400040CAB /* Date.cpp */; };
+		47D44EB60D37D56B008368EC /* VectorClass.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 47D44EB40D37D56B008368EC /* VectorClass.cpp */; };
+		47D44EB70D37D56B008368EC /* VectorClass.h in Headers */ = {isa = PBXBuildFile; fileRef = 47D44EB50D37D56B008368EC /* VectorClass.h */; };
 		7CD864E60AC47805004C73CB /* AbcData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7CD864E50AC47805004C73CB /* AbcData.cpp */; };
 		85125ADF0A5C648300502345 /* AvmPlusScriptableObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85125ADD0A5C648300502345 /* AvmPlusScriptableObject.cpp */; };
 		85125AE00A5C648300502345 /* AvmPlusScriptableObject.h in Headers */ = {isa = PBXBuildFile; fileRef = 85125ADE0A5C648300502345 /* AvmPlusScriptableObject.h */; };
@@ -380,6 +382,8 @@
 		1E607F9409733ED1007D0E1E /* MathUtilsUnix.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = MathUtilsUnix.cpp; path = ../../unix/MathUtilsUnix.cpp; sourceTree = SOURCE_ROOT; };
 		1E607F9509733ED1007D0E1E /* OSDepUnix.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = OSDepUnix.cpp; path = ../../unix/OSDepUnix.cpp; sourceTree = SOURCE_ROOT; };
 		1EC50990097391B400040CAB /* Date.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = Date.cpp; path = ../../../core/Date.cpp; sourceTree = SOURCE_ROOT; };
+		47D44EB40D37D56B008368EC /* VectorClass.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = VectorClass.cpp; path = ../../../core/VectorClass.cpp; sourceTree = SOURCE_ROOT; };
+		47D44EB50D37D56B008368EC /* VectorClass.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = VectorClass.h; path = ../../../core/VectorClass.h; sourceTree = SOURCE_ROOT; };
 		7CD864E50AC47805004C73CB /* AbcData.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = AbcData.cpp; path = ../../../core/AbcData.cpp; sourceTree = SOURCE_ROOT; };
 		85125ADD0A5C648300502345 /* AvmPlusScriptableObject.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = AvmPlusScriptableObject.cpp; path = ../../../core/AvmPlusScriptableObject.cpp; sourceTree = SOURCE_ROOT; };
 		85125ADE0A5C648300502345 /* AvmPlusScriptableObject.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = AvmPlusScriptableObject.h; path = ../../../core/AvmPlusScriptableObject.h; sourceTree = SOURCE_ROOT; };
@@ -468,6 +472,8 @@
 		1E607A9F09733787007D0E1E /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				47D44EB40D37D56B008368EC /* VectorClass.cpp */,
+				47D44EB50D37D56B008368EC /* VectorClass.h */,
 				942BC4330BB991690088A47F /* Sampler.cpp */,
 				942BC4340BB991690088A47F /* Sampler.h */,
 				7CD864E50AC47805004C73CB /* AbcData.cpp */,
@@ -824,6 +830,7 @@
 				D98B56880CB2CC8B00B95F8C /* decNumber.h in Headers */,
 				D98B56890CB2CC8B00B95F8C /* decNumberLocal.h in Headers */,
 				D98B568B0CB2CC8B00B95F8C /* DoubleClass.h in Headers */,
+				47D44EB70D37D56B008368EC /* VectorClass.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -856,7 +863,6 @@
 			hasScannedForEncodings = 1;
 			mainGroup = 08FB7794FE84155DC02AAC07 /* avmplus */;
 			projectDirPath = "";
-			projectRoot = "";
 			targets = (
 				D2AAC045055464E500DB518D /* avmplus */,
 			);
@@ -971,6 +977,7 @@
 				D98B56840CB2CC8B00B95F8C /* DecimalClass.cpp in Sources */,
 				D98B56870CB2CC8B00B95F8C /* decNumber.cpp in Sources */,
 				D98B568A0CB2CC8B00B95F8C /* DoubleClass.cpp in Sources */,
+				47D44EB60D37D56B008368EC /* VectorClass.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -989,6 +996,8 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = avmplus_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"TARGET_API_MAC_CARBON=1",
 					_MAC,
@@ -1017,13 +1026,18 @@
 					ppc,
 					i386,
 				);
+				COPY_PHASE_STRIP = NO;
 				GCC_ALTIVEC_EXTENSIONS = YES;
+				GCC_DEBUGGING_SYMBOLS = full;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = YES;
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = s;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = avmplus_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					SOFT_ASSERTS,
 					"TARGET_API_MAC_CARBON=1",
@@ -1033,12 +1047,14 @@
 					USE_MMAP,
 					_MAC,
 				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
 				INSTALL_PATH = /usr/local/lib;
 				OTHER_CFLAGS = (
 					"-finline-functions",
 					"-finline-limit=65536",
 				);
 				PRODUCT_NAME = avmplus;
+				SEPARATE_STRIP = NO;
 				USER_HEADER_SEARCH_PATHS = "$(USER_HEADER_SEARCH_PATHS) ../../../MMgc";
 			};
 			name = Release;
@@ -1047,6 +1063,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = YES;
 				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
 				GCC_WARN_ABOUT_INVALID_OFFSETOF_MACRO = NO;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
@@ -1075,6 +1092,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = YES;
 				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
 				GCC_WARN_ABOUT_INVALID_OFFSETOF_MACRO = NO;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
@@ -1112,6 +1131,8 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = avmplus_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"TARGET_API_MAC_CARBON=1",
 					_MAC,
@@ -1141,13 +1162,18 @@
 					ppc,
 					i386,
 				);
+				COPY_PHASE_STRIP = NO;
 				GCC_ALTIVEC_EXTENSIONS = YES;
+				GCC_DEBUGGING_SYMBOLS = full;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = YES;
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = s;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = avmplus_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					SOFT_ASSERTS,
 					"TARGET_API_MAC_CARBON=1",
@@ -1158,12 +1184,14 @@
 					_MAC,
 					DEBUGGER,
 				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
 				INSTALL_PATH = /usr/local/lib;
 				OTHER_CFLAGS = (
 					"-finline-functions",
 					"-finline-limit=100000",
 				);
 				PRODUCT_NAME = avmplus;
+				SEPARATE_STRIP = NO;
 				USER_HEADER_SEARCH_PATHS = "$(USER_HEADER_SEARCH_PATHS) ../../../MMgc";
 			};
 			name = Release_Debugger;
@@ -1172,6 +1200,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = YES;
 				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
 				GCC_WARN_ABOUT_INVALID_OFFSETOF_MACRO = NO;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
@@ -1200,6 +1229,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = YES;
 				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
 				GCC_WARN_ABOUT_INVALID_OFFSETOF_MACRO = NO;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;

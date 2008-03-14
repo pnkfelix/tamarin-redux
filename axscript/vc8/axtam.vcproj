@@ -67,7 +67,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/FIXED:NO /SAFESEH:NO"
-				AdditionalDependencies="winmm.lib ..\..\..\tamarin-central\platform\win32\obj_8\avmplus\$(ConfigurationName)\avmplus_d.lib ..\..\..\tamarin-central\MMgc\obj_8\MMgc\$(ConfigurationName)\MMgc_d.lib"
+				AdditionalDependencies="winmm.lib ..\..\platform\win32\obj_8\avmplus\$(ConfigurationName)\avmplus_d.lib ..\..\..\tamarin-central\MMgc\obj_8\MMgc\$(ConfigurationName)\MMgc_d.lib"
 				ShowProgress="0"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories=""
@@ -153,7 +153,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/FIXED:NO /SAFESEH:NO"
-				AdditionalDependencies="winmm.lib ..\..\..\tamarin-central\platform\win32\obj_8\avmplus\$(ConfigurationName)\avmplus.lib ..\..\..\tamarin-central\MMgc\obj_8\MMgc\$(ConfigurationName)\MMgc.lib"
+				AdditionalDependencies="winmm.lib ..\..\platform\win32\obj_8\avmplus\$(ConfigurationName)\avmplus.lib ..\..\..\tamarin-central\MMgc\obj_8\MMgc\$(ConfigurationName)\MMgc.lib"
 				LinkIncremental="2"
 				ModuleDefinitionFile="..\axtam.def"
 				GenerateDebugInformation="true"
@@ -241,7 +241,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/FIXED:NO /SAFESEH:NO"
-				AdditionalDependencies="winmm.lib ..\..\..\tamarin-central\platform\win32\obj_8\avmplus\$(ConfigurationName)\avmplus_sd.lib ..\..\..\tamarin-central\MMgc\obj_8\MMgc\$(ConfigurationName)\MMgc_sd.lib"
+				AdditionalDependencies="winmm.lib ..\..\platform\win32\obj_8\avmplus\$(ConfigurationName)\avmplus_sd.lib ..\..\..\tamarin-central\MMgc\obj_8\MMgc\$(ConfigurationName)\MMgc_sd.lib"
 				ShowProgress="0"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories=""
@@ -309,7 +309,7 @@
 				AdditionalIncludeDirectories="..\..\core;..\..\MMgc;..\..\codegen;..\..\extensions"
 				PreprocessorDefinitions="WIN32;WIN32_LEAN_AND_MEAN;_WINDOWS;NDEBUG;_USRDLL;AXTAM_EXPORTS;DEBUGGER;USE_REAL2INT;AVMPLUS_IA32"
 				StringPooling="true"
-				ExceptionHandling="0"
+				ExceptionHandling="1"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				RuntimeTypeInfo="false"
@@ -329,7 +329,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/FIXED:NO /SAFESEH:NO"
-				AdditionalDependencies="winmm.lib ..\..\..\tamarin-central\platform\win32\obj_8\avmplus\$(ConfigurationName)\avmplus_s.lib ..\..\..\tamarin-central\MMgc\obj_8\MMgc\$(ConfigurationName)\MMgc_s.lib"
+				AdditionalDependencies="winmm.lib ..\..\platform\win32\obj_8\avmplus\$(ConfigurationName)\avmplus_s.lib ..\..\..\tamarin-central\MMgc\obj_8\MMgc\$(ConfigurationName)\MMgc_s.lib"
 				LinkIncremental="2"
 				ModuleDefinitionFile="..\axtam.def"
 				GenerateDebugInformation="true"
@@ -379,10 +379,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\AdaptActiveScriptSite.h"
-				>
-			</File>
-			<File
 				RelativePath="..\axtam.h"
 				>
 			</File>
@@ -403,11 +399,35 @@
 				>
 			</File>
 			<File
+				RelativePath="..\Debugger.h"
+				>
+			</File>
+			<File
 				RelativePath="..\DomainClass.h"
 				>
 			</File>
 			<File
-				RelativePath="..\mscom.h"
+				RelativePath="..\ExcepInfo.h"
+				>
+			</File>
+			<File
+				RelativePath="..\FileClass.h"
+				>
+			</File>
+			<File
+				RelativePath="..\IActiveScriptSiteConsumer.h"
+				>
+			</File>
+			<File
+				RelativePath="..\IDispatchConsumer.h"
+				>
+			</File>
+			<File
+				RelativePath="..\IDispatchProvider.h"
+				>
+			</File>
+			<File
+				RelativePath="..\IUnknownConsumer.h"
 				>
 			</File>
 			<File
@@ -448,10 +468,6 @@
 			</File>
 			<File
 				RelativePath="..\ActiveScriptError.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\AdaptActiveScriptSite.cpp"
 				>
 			</File>
 			<File
@@ -511,7 +527,27 @@
 				>
 			</File>
 			<File
-				RelativePath="..\mscom.cpp"
+				RelativePath="..\ExcepInfo.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\FileClass.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\IActiveScriptSiteConsumer.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\IDispatchConsumer.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\IDispatchProvider.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\IUnknownConsumer.cpp"
 				>
 			</File>
 			<File

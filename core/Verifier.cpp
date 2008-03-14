@@ -280,12 +280,12 @@ namespace avmplus
 			
 			AbcOpcode opcode = (AbcOpcode) *pc;
 			if (opOperandCount[opcode] == -1)
-				verifyFailed(kIllegalOpcodeError, core->toErrorString(info), core->toErrorString(opcode), core->toErrorString(pc-code_pos));
+				verifyFailed(kIllegalOpcodeError, core->toErrorString(info), core->toErrorString(opcode), core->toErrorString((int)(pc-code_pos)));
 
 			if (opcode == OP_label)
 			{
 				// insert a label here
-				getFrameState(pc-code_pos)->targetOfBackwardsBranch = true;
+				getFrameState((int)(pc-code_pos))->targetOfBackwardsBranch = true;
 			}
 
 			bool unreachable = false;
@@ -628,7 +628,7 @@ namespace avmplus
 			case OP_debugfile:
 			{
 				//checkStack(0,0)
-				#ifdef DEBUGGER
+				#if defined(DEBUGGER) || defined(VTUNE)
 				Atom filename = checkCpoolOperand(imm30, kStringType);
 				if (mir) mir->emit(state, opcode, (uintptr)AvmCore::atomToString(filename));
 				#endif
@@ -912,6 +912,15 @@ namespace avmplus
 				checkStack(0,1);
 				AbstractFunction* f = checkMethodInfo(imm30);
 
+				// Duplicate function definitions can happen with well formed ABC data.  We need
+				// to clear out data on AbstractionFunction so it can correctly be re-initialized.
+				// If our old function is ever used incorrectly, we throw an verify error in 
+				// MethodEnv::coerceEnter.
+				if (f->declaringTraits)
+				{
+					f->flags &= ~AbstractFunction::LINKED;
+					f->declaringTraits = NULL;
+				}
 				f->setParamType(0, NULL);
 				f->makeIntoPrototypeFunction(toplevel);
 				Traits* ftraits = f->declaringTraits;
@@ -1132,6 +1141,25 @@ namespace avmplus
 				#ifdef DEBUG_EARLY_BINDING
 				core->console << "verify setproperty " << obj.traits << " " << &multiname->getName() << " from within " << info << "\n";
 				#endif
+
+				if( obj.traits == VECTORINT_TYPE  || obj.traits == VECTORUINT_TYPE ||
+					obj.traits == VECTORDOUBLE_TYPE )
+				{
+					bool attr = multiname.isAttr();
+					Traits* indexType = state->value(state->sp()-1).traits;
+
+					bool maybeIntegerIndex = !attr && multiname.isRtname() && multiname.contains(core->publicNamespace);
+
+					if( maybeIntegerIndex && (indexType == UINT_TYPE || indexType == INT_TYPE) )
+					{
+						if(obj.traits == VECTORINT_TYPE)
+							emitCoerce(INT_TYPE, state->sp());
+						else if(obj.traits == VECTORUINT_TYPE)
+							emitCoerce(UINT_TYPE, state->sp());
+						else if(obj.traits == VECTORDOUBLE_TYPE)
+							emitCoerce(NUMBER_TYPE, state->sp());
+					}
+				}
 
 				// not a var binding or early bindable accessor
 				if (mir)
@@ -2033,6 +2061,14 @@ namespace avmplus
 				break;
 			}
 
+            case OP_getouterscope:
+            {
+				checkStack(0,1);
+				int scope_index = imm30;
+				emitGetOuterScope(scope_index);
+                break;
+            }
+
 			case OP_getglobalscope: 
 			{
 				checkStack(0,1);
@@ -2522,7 +2558,7 @@ namespace avmplus
 				break;
 
 			case OP_debugline:
-				#ifdef DEBUGGER
+				#if defined(DEBUGGER) || defined(VTUNE)
 				// we actually do generate code for these, in debugger mode
 				if (mir) mir->emit(state, opcode, imm30);
 				#endif
@@ -2571,7 +2607,7 @@ namespace avmplus
 				// first ensure the executing code isn't user code (only VM generated abc can use this op)
 				if(pool->isCodePointer(pc))
 				{
-					verifyFailed(kIllegalOpcodeError, core->toErrorString(info), core->toErrorString(OP_abs_jump), core->toErrorString(pc-code_pos));
+					verifyFailed(kIllegalOpcodeError, core->toErrorString(info), core->toErrorString(OP_abs_jump), core->toErrorString((int)(pc-code_pos)));
 				}
 
 				const byte* new_pc = (const byte*) imm30;
@@ -2585,7 +2621,7 @@ namespace avmplus
 				// now ensure target points to within pool's script buffer
 				if(!pool->isCodePointer(new_pc))
 				{
-					verifyFailed(kIllegalOpcodeError, core->toErrorString(info), core->toErrorString(OP_abs_jump), core->toErrorString(pc-code_pos));
+					verifyFailed(kIllegalOpcodeError, core->toErrorString(info), core->toErrorString(OP_abs_jump), core->toErrorString((int)(pc-code_pos)));
 				}
 
 				// FIXME: what other verification steps should we do here?
@@ -2849,6 +2885,29 @@ namespace avmplus
 		core->console << "verify getproperty " << obj.traits << " " << multiname->getName() << " from within " << info << "\n";
 		#endif
 
+		if( !propType )
+		{
+			if( obj.traits == VECTORINT_TYPE  || obj.traits == VECTORUINT_TYPE ||
+				obj.traits == VECTORDOUBLE_TYPE )//|| obj.traits == VECTOROBJ_TYPE)
+			{
+				bool attr = multiname.isAttr();
+				Traits* indexType = state->value(state->sp()).traits;
+
+				bool maybeIntegerIndex = !attr && multiname.isRtname() && multiname.contains(core->publicNamespace);
+
+				if( maybeIntegerIndex && (indexType == UINT_TYPE || indexType == INT_TYPE) )
+				{
+					if(obj.traits == VECTORINT_TYPE)
+						propType = INT_TYPE;
+					else if(obj.traits == VECTORUINT_TYPE)
+						propType = UINT_TYPE;
+					else if(obj.traits == VECTORDOUBLE_TYPE)
+						propType = NUMBER_TYPE;
+					else if(obj.traits == VECTOROBJ_TYPE)
+						propType = OBJECT_TYPE;
+				}
+			}
+		}
 		// default - do getproperty at runtime
 
 		if (mir)
@@ -2886,6 +2945,26 @@ namespace avmplus
 				#endif
 				verifyFailed(kGetScopeObjectBoundsError, core->toErrorString(0));
 			}
+		}
+	}
+
+	void Verifier::emitGetOuterScope(int scope_index)
+	{
+		ScopeTypeChain* scope = info->declaringTraits->scope;
+		int captured_depth = scope->size;
+		if (captured_depth > 0)
+		{
+			// enclosing scope
+			if (mir) mir->emitGetscope(state, scope_index, state->sp()+1);
+			state->push(scope->scopes[scope_index].traits, true);
+		}
+		else
+		{
+			#ifdef _DEBUG
+			if (pool->isBuiltin)
+				core->console << "getouterscope >= depth (" << scope_index << " >= " << state->scopeDepth << ")\n";
+			#endif
+			verifyFailed(kGetScopeObjectBoundsError, core->toErrorString(0));
 		}
 	}
 
@@ -3380,6 +3459,12 @@ namespace avmplus
 			t2 = temp;
 		}
 
+		// special case Number and double -- they have identical machine representations (IEEE 754)
+		// but findCommonBase will return Object which is incompatible due to machine-type rules.
+		// check for this and return t1 (the target type)
+		if (Traits::isNumberOrDouble(t1) && Traits::isNumberOrDouble(t2))
+			return t1;
+
 		if (!Traits::isMachineCompatible(t1,t2))
 		{
 			// these two types are incompatible machine types that require
@@ -3573,9 +3658,13 @@ namespace avmplus
 					scopeTraits->slotCount = 1;
 					scopeTraits->initTables(toplevel);
 					AbcGen gen(core->GetGC());
-					scopeTraits->setSlotInfo(0, 0, toplevel, t, scopeTraits->sizeofInstance, CPoolKind(0), gen);
+					scopeTraits->setSlotInfo(0, 0, toplevel, t, (int)scopeTraits->sizeofInstance, CPoolKind(0), gen);
 					scopeTraits->setTotalSize(scopeTraits->sizeofInstance + 16);
 					scopeTraits->linked = true;
+#ifdef DEBUGGER
+					scopeTraits->name = qn.getName();
+					scopeTraits->ns = qn.getNamespace();
+#endif
 				}
 				
 				// handler->scopeTraits = scopeTraits
@@ -3653,7 +3742,7 @@ namespace avmplus
 		else
 			core->console << "  ";
 		core->console << state->pc << ':';
-        core->formatOpcode(core->console, pc, (AbcOpcode)*pc, state->pc, pool);
+        core->formatOpcode(core->console, pc, (AbcOpcode)*pc, (int)(state->pc), pool);
 		core->console << '\n';
     }
 

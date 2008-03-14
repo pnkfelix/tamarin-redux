@@ -71,6 +71,10 @@ namespace avmplus
 		DRCWB(DoubleClass*)    doubleClass;
 		DRCWB(DecimalClass*)   decimalClass;
 		DRCWB(ObjectClass*)    objectClass;
+		DRCWB(IntVectorClass*) intVectorClass;
+		DRCWB(DoubleVectorClass*)    doubleVectorClass;
+		DRCWB(UIntVectorClass*)   uintVectorClass;
+		DRCWB(ObjectVectorClass*)    objectVectorClass;
 		RegExpClass*         regexpClass() { return (RegExpClass*)getBuiltinClass(avmplus::NativeID::abcclass_RegExp); }
 		DRCWB(StringClass*)    stringClass;
 		XMLClass*            xmlClass() { return (XMLClass*)getBuiltinClass(avmplus::NativeID::abcclass_XML); }
@@ -119,6 +123,7 @@ namespace avmplus
 
 		void throwRangeError(int id) const;
 		void throwRangeError(int id, Stringp arg1) const;
+		void throwRangeError(int id, Stringp arg1, Stringp arg2) const;
 		void throwRangeError(int id, Stringp arg1, Stringp arg2, Stringp arg3) const;
 
 		void throwReferenceError(int id, Multiname* multiname, const Traits* traits) const;

@@ -43,10 +43,15 @@
 
 #include "Profiler.h"
 
-#include "MSCom.h"
+#include "IUnknownConsumer.h"
+#include "IDispatchConsumer.h"
+#include "IDispatchProvider.h"
 #include "SystemClass.h"
-#include "AdaptActiveScriptSite.h"
+#include "IActiveScriptSiteConsumer.h"
 #include "COMErrorClass.h"
+#include "ActiveScriptError.h"
+#include "ExcepInfo.h"
+#include "Debugger.h"
 
 // files cloned from the shell
 namespace axtam {
@@ -56,8 +61,10 @@ class ByteArray;
 #include "DataIO.h"
 #include "ByteArrayGlue.h"
 #include "DomainClass.h"
+#include "FileClass.h"
 
 #include <fstream> // while we still load .abc files...
+#include <direct.h> // for _chdir() hack below
 
 
 using namespace avmplus::NativeID;
@@ -77,15 +84,19 @@ namespace axtam
 	HINSTANCE AXTam::hinstance = 0;
 
 	BEGIN_NATIVE_CLASSES(AXTam)
-		NATIVE_CLASS(abcclass_axtam_System,         SystemClass,       ScriptObject)
-		NATIVE_CLASS(abcclass_axtam_com_adaptors_consumer_IUnknown,   MSIUnknownConsumerClass,   ScriptObject)
-		NATIVE_CLASS(abcclass_axtam_com_adaptors_consumer_IDispatch,  MSIDispatchConsumerClass,  ScriptObject)
-		NATIVE_CLASS(abcclass_axtam_com_adaptors_consumer_IActiveScriptSite,
-		                                            AdaptActiveScriptSiteClass, ScriptObject)
-		NATIVE_CLASS(abcclass_axtam_com_Error,      COMErrorClass,     COMErrorObject)
+		NATIVE_CLASS(abcclass_axtam_System,                           SystemClass,             ScriptObject)
+		NATIVE_CLASS(abcclass_axtam_com_consumer_IUnknown,   IUnknownConsumerClass,   IUnknownConsumer)
+		NATIVE_CLASS(abcclass_axtam_com_consumer_IDispatch,  IDispatchConsumerClass,  IDispatchConsumer)
+		NATIVE_CLASS(abcclass_axtam_com_consumer_IActiveScriptSite,
+		                                                              IActiveScriptSiteConsumerClass, IActiveScriptSiteConsumer)
+		//NATIVE_CLASS(abcclass_axtam_com_Error,                        COMErrorClass,           COMErrorObject)
+		NATIVE_CLASS(abcclass_axtam_com_ProviderError,                COMProviderErrorClass,   COMProviderErrorObject)
+		NATIVE_CLASS(abcclass_axtam_com_ConsumerError,                COMConsumerErrorClass,   COMConsumerErrorObject)
+		NATIVE_CLASS(abcclass_axtam_com_EXCEPINFO,                    EXCEPINFOClass,          EXCEPINFOObject)
 		// clones from the shell
-		NATIVE_CLASS(abcclass_axtam_Domain,         DomainClass,       DomainObject)
-		NATIVE_CLASS(abcclass_flash_utils_ByteArray,    ByteArrayClass,     ByteArrayObject)
+		NATIVE_CLASS(abcclass_axtam_Domain,                           DomainClass,             DomainObject)
+		NATIVE_CLASS(abcclass_flash_utils_ByteArray,                  ByteArrayClass,          ByteArrayObject)
+		NATIVE_CLASS(abcclass_avmplus_File,                           avmshell::FileClass,     ScriptObject)
 
 	END_NATIVE_CLASSES()
 
@@ -94,6 +105,7 @@ namespace axtam
 	END_NATIVE_SCRIPTS()
 
 	BEGIN_NATIVE_MAP(AxtamScript)
+		NATIVE_METHOD_FLAGS(axtam_com_provider_createDispatchProvider, AXTam::createDispatchProviderMethod, 0)
 	END_NATIVE_MAP()
 
 	//ConsoleOutputStream *consoleOutputStream;
@@ -112,14 +124,15 @@ namespace axtam
 	}
 
 	// Get ready for hosting a new script environment.
-	HRESULT AXTam::InitNew(IActiveScript *as) {
+	void AXTam::Initialize(IActiveScript *as) {
+		AvmAssert(this->as == NULL); // already initialized??
 		this->as = as;
 		initBuiltinPool();
 		initAXPool();
 
 		#ifdef DEBUGGER
 		// Create the debugger
-		//debugger = new (gc) DebugCLI(this);
+		debugger = new (gc) axtam::Debugger(this);
 
 		// Create the profiler
 		profiler = new (gc) axtam::Profiler(this);
@@ -127,13 +140,17 @@ namespace axtam
 
 		// init toplevel internally
 		toplevel = initAXTamBuiltins();
-
-		return S_OK;
 	}
 
-	HRESULT AXTam::Close() {
+	void AXTam::Close() {
+		// This should be safe to call multiple times.
 		as = NULL;
-		return S_OK;
+		// Drop all COM references in our dispatchConsumers table.
+		stdext::hash_map<IUnknown *, DRC(IDispatchConsumer *)>::iterator it;
+		for (it=dispatchConsumers.begin(); it != dispatchConsumers.end(); it++) {
+			it->first->Release();
+		}
+		dispatchConsumers.clear();
 	}
 	
 	void AXTam::initAXPool()
@@ -174,6 +191,7 @@ namespace axtam
 			L"util-tamarin.es.abc",    L"bytes-tamarin.es.abc",L"util-tamarin.es.abc",
 			L"asm.es.abc",             L"abc.es.abc",          L"emit.es.abc",
 			L"cogen.es.abc",           L"cogen-stmt.es.abc",   L"cogen-expr.es.abc",
+			L"esc-core.es.abc",        L"eval-support.es.abc",
 			NULL
 		};
 		// first of these directories with abcs[0] wins...
@@ -210,14 +228,25 @@ namespace axtam
 					Stringp fname = new (GetGC()) String((wchar *)fqname, wcslen(fqname));
 					// XXX - this will be wrong for non-ascii names!
 					std::fstream file((char *)fname->toUTF8String()->c_str(), std::ios_base::in | std::ios_base::binary | std::ios_base::ate);
-					std::ifstream::pos_type size(file.tellg());
-					ScriptBuffer code = newScriptBuffer(size);
-					file.seekg(0);
-					file.read((char *)code.getBuffer(), size);
-					axtam::CodeContext* codeContext = new (GetGC()) axtam::CodeContext(toplevel->domainEnv());
-					// parse new bytecode
-					handleActionBlock(code, 0, toplevel->domainEnv(), toplevel, NULL, NULL, NULL, codeContext);
+					if (file.good()) {
+						std::ifstream::pos_type size(file.tellg());
+						ScriptBuffer code = newScriptBuffer(size);
+						file.seekg(0);
+						file.read((char *)code.getBuffer(), size);
+						axtam::CodeContext* codeContext = new (GetGC()) axtam::CodeContext(toplevel->domainEnv());
+						// parse new bytecode
+						handleActionBlock(code, 0, toplevel->domainEnv(), toplevel, NULL, NULL, NULL, codeContext);
+					} else {
+						AvmDebugMsg(true, "Can't find ABC file '%s'", fname->toUTF8String()->c_str());
+					}
 				}
+				// XXX - awful hack so esc can find esc-env.ast.  See bug 419768.
+				wcscpy_s(fqtail, tailsize, *candidate);
+				// For a binary build, the .ast should be next to the .abc files.
+				// For a source-directory, it will be in ..\build relative to the .abcs
+				if (*candidate)
+					wcscat_s(fqtail, tailsize, L"..\\build");
+				_wchdir(fqname);
 				break; // all done
 			}
 		}
@@ -248,7 +277,15 @@ namespace axtam
 		#endif
 	}
 
-	AXTam::AXTam(MMgc::GC *gc) : AvmCore(gc), pool(NULL), dispatchClass(NULL), unknownClass(NULL), toplevel(NULL)
+	AXTam::AXTam(MMgc::GC *gc) 
+		: AvmCore(gc), 
+		pool(NULL), 
+		dispatchClass(NULL), 
+		unknownClass(NULL), 
+		toplevel(NULL), 
+		excepinfoClass(NULL),
+		comConsumerErrorClass(NULL),
+		comProviderErrorClass(NULL)
 	{
 //		systemClass = NULL;
 		
@@ -352,20 +389,242 @@ namespace axtam
 		throwException(exception);
 	}
 
-	void AXTam::throwCOMError(HRESULT hr, EXCEPINFO *pei /* = NULL */){
-		// hrm - not sure this is working ok...
-		//AvmAssert(0);
-		comErrorClass()->throwError(hr);
+	void AXTam::fillEXCEPINFO(const Exception *exception, EXCEPINFO *pexcepinfo, bool includeStackTrace /* = true */)
+	{
+		// zero out members we don't fill (wsh doesn't appear to do this)
+		memset(pexcepinfo, 0, sizeof(*pexcepinfo));
+		Stringp s(string(exception->atom));
+		if (includeStackTrace) {
+			#ifdef DEBUGGER
+			if (exception->getStackTrace()) {
+				s = concatStrings(s, constantString("\n"));
+				s = concatStrings(s, exception->getStackTrace()->format(this));
+			}
+			#else
+				s = concatStrings(s, constantString("<stack trace not available>"));
+			#endif
+		}
+		pexcepinfo->bstrDescription = ::SysAllocString((const OLECHAR *)s->c_str());
+		pexcepinfo->scode = E_FAIL; // todo - get a better result value!
+	}
+
+	void AXTam::throwCOMConsumerError(HRESULT hr, EXCEPINFO *pei /* = NULL */){
+		comConsumerErrorClass->throwError(hr, pei);
 		AvmAssert(0); // not reached
 	}
 
+	bool AXTam::isCOMProviderError(Exception *exc) {
+		return exc->isValid() && istype(exc->atom, comProviderErrorClass->traits()->itraits);
+	}
+	bool AXTam::isCOMConsumerError(Exception *exc) {
+		return exc->isValid() && istype(exc->atom, comConsumerErrorClass->traits()->itraits);
+	}
+
+	HRESULT AXTam::handleException(Exception *exception, EXCEPINFO *pei /*=NULL*/, int depth /* = 0 */)
+	{
+		if (depth > 1) {
+			// give up in disgust
+			AvmDebugMsg(true, "The exception handlers keep throwing exceptions!\r\n");
+			return E_FAIL;
+		}
+		HRESULT hr;
+		TRY(this, kCatchAction_ReportAsError) { // An exception in our exception handler would otherwise be fatal!
+			if (isCOMProviderError(exception)) {
+				// This is an error explicitly thrown by script code.  It 
+				// means that the HRESULT just be returned - its not a 
+				// "script error".
+				COMErrorObject *eob = (COMErrorObject *)atomToScriptObject(exception->atom);
+				hr = eob->getHRESULT();
+			} else {
+				// dump the exception for diagnostic purposes
+				dumpException(exception);
+				// report the exception to the site.
+				// XXX - later, we will want to move this error handling into
+				// AS, leaving the C++ code to only deal with 'internal' errors
+				// in the engine itself.  For now though, report all errors to 
+				// the site
+				// We may not have a site if we are calling InitNew, or after we
+				// have closed...
+				if (activeScriptSite != 0) {
+					CGCRootComObject<CActiveScriptError> *err;
+					ATLTRY(err = new CGCRootComObject<CActiveScriptError>(this));
+					if (err) {
+						err->exception = exception;
+						// XXX - must get passed dwSourceContextCookie, if available
+						//err->dwSourceContextCookie = dwSourceContextCookie;
+						CComQIPtr<IActiveScriptError, &IID_IActiveScriptError> ase(err);
+						activeScriptSite->OnScriptError(ase);
+					}
+				}
+				if (pei) {
+					fillEXCEPINFO(exception, pei);
+					hr = DISP_E_EXCEPTION;
+				} else {
+					hr = E_FAIL;
+				}
+			}
+		}
+		CATCH(Exception * exception) {
+			AvmDebugMsg(false, "Error in exception handler\r\n");
+			hr = handleException(exception, pei, depth+1);
+		}
+
+		END_CATCH
+		END_TRY
+		return hr;
+	}
+
+	// Nice discussion on types that are important can be found at http://blogs.msdn.com/ericlippert/archive/2004/07/14/183241.aspx
+	// This shows that arrays really don't need much better support than this (indeed, even this goes further than JScript?)
 	Atom AXTam::toAtom(VARIANT &var)
 	{
+		if (V_ISARRAY(&var)) {
+			HRESULT hr;
+			// An array of some kind - decompose it.
+			SAFEARRAY FAR *psa;
+			if (V_ISBYREF(&var))
+				psa = *V_ARRAYREF(&var);
+			else
+				psa=V_ARRAY(&var);
+			VARTYPE eltType;
+
+			if (psa==NULL) // A NULL array
+				return nullObjectAtom;
+
+			if (FAILED(hr = SafeArrayGetVartype(psa, &eltType)))
+				throwCOMConsumerError(hr);
+
+			UINT nDim = SafeArrayGetDim(psa);
+			if (nDim != 1) {
+				AvmDebugMsg(false, "Only handle arrays with a single dimension");
+				return undefinedAtom;
+			}
+			long lb, ub;
+			if (FAILED(hr = SafeArrayGetLBound(psa, 1, &lb)))
+				throwCOMConsumerError(hr);
+			if (FAILED(hr = SafeArrayGetUBound(psa, 1, &ub)))
+				throwCOMConsumerError(hr);
+
+			// XXX - special cases?  VT_UI1 should probably be optimized as it
+			// is used to mean "binary data"
+			ArrayObject *ret = toplevel->arrayClass->newArray(ub-lb+1);
+			for (long i=lb;i<=ub;i++) {
+				Atom sub = undefinedAtom;
+				switch (eltType) {
+					// The following are all variant types valid in an array
+					// Of note, VT_I8 and VT_UI8 are not listed!
+					case VT_VARIANT:
+					{
+						CComVariant elt;
+						if (FAILED(hr = SafeArrayGetElement(psa, &i, &elt)))
+							throwCOMConsumerError(hr);
+						sub = toAtom(elt);
+						break;
+					}
+					case VT_I2: {
+						short elt;
+						if (FAILED(hr = SafeArrayGetElement(psa, &i, &elt)))
+							throwCOMConsumerError(hr);
+						sub = intToAtom(elt);
+						break;
+					}
+					case VT_I4:
+					case VT_ERROR:
+					case VT_INT:{
+						long elt;
+						if (FAILED(hr = SafeArrayGetElement(psa, &i, &elt)))
+							throwCOMConsumerError(hr);
+						sub = intToAtom(elt);
+						break;
+					}
+
+					case VT_I1: {
+						char elt;
+						if (FAILED(hr = SafeArrayGetElement(psa, &i, &elt)))
+							throwCOMConsumerError(hr);
+						sub = intToAtom(elt);
+						break;
+					}
+//					case VT_UI1: - not done yet pending special support?
+					case VT_UI2: {
+						unsigned short elt;
+						if (FAILED(hr = SafeArrayGetElement(psa, &i, &elt)))
+							throwCOMConsumerError(hr);
+						sub = uintToAtom(elt);
+						break;
+					}
+					case VT_UI4:
+					case VT_UINT: {
+						unsigned long elt;
+						if (FAILED(hr = SafeArrayGetElement(psa, &i, &elt)))
+							throwCOMConsumerError(hr);
+						sub = uintToAtom(elt);
+						break;
+					}
+					case VT_R4: {
+						float elt;
+						if (FAILED(hr = SafeArrayGetElement(psa, &i, &elt)))
+							throwCOMConsumerError(hr);
+						sub = doubleToAtom(elt);
+						break;
+					}
+					case VT_R8: {
+						double elt;
+						if (FAILED(hr = SafeArrayGetElement(psa, &i, &elt)))
+							throwCOMConsumerError(hr);
+						sub = doubleToAtom(elt);
+						break;
+					}
+					case VT_BSTR: {
+						BSTR elt;
+						if (FAILED(hr = SafeArrayGetElement(psa, &i, &elt)))
+							throwCOMConsumerError(hr);
+						sub = toAtom(elt);
+						break;
+					}
+					case VT_DISPATCH: {
+						CComPtr<IDispatch> elt;
+						if (FAILED(hr = SafeArrayGetElement(psa, &i, &elt)))
+							throwCOMConsumerError(hr);
+						sub = toAtom(elt);
+						break;
+					}
+					case VT_UNKNOWN: {
+						CComPtr<IUnknown> elt;
+						if (FAILED(hr = SafeArrayGetElement(psa, &i, &elt)))
+							throwCOMConsumerError(hr);
+						sub = toAtom(elt);
+						break;
+					}
+					case VT_BOOL: {
+						VARIANT_BOOL elt;
+						if (FAILED(hr = SafeArrayGetElement(psa, &i, &elt)))
+							throwCOMConsumerError(hr);
+						sub = elt ? trueAtom : falseAtom;
+					}
+					// unsupported types.
+					case VT_CY:
+					case VT_DATE:
+					case VT_DECIMAL:
+					case VT_RECORD:
+					default:
+						AvmDebugMsg(false, "Unsupported array type %x\n", eltType);
+						sub = undefinedAtom;
+				}
+				ret->push(&sub, 1);
+			}
+			return ret->atom();
+		}
 		switch (var.vt) {
+			// GetDispID() documents that new attributes should be added
+			// with a type of VT_EMPTY.  Therefore, we treat VT_EMPTY as
+			// 'undefined', and NULL as null!
 			case VT_EMPTY:
-			case VT_NULL:
 			case VT_VOID: // theoretically not valid in a variant
 				return undefinedAtom;
+
+			case VT_NULL:
+				return nullObjectAtom;
 
 			//case VT_I1:
 			//case VT_UI1:
@@ -380,6 +639,8 @@ namespace axtam
 				return uintToAtom(var.uiVal);
 			case VT_UI4:
 				return uintToAtom(var.ulVal);
+			case VT_UINT:
+				return uintToAtom(var.uintVal);
 			case VT_R4:
 				return doubleToAtom(var.fltVal);
 			case VT_R8:
@@ -406,43 +667,177 @@ namespace axtam
 			case VT_DISPATCH:
 				return toAtom(var.pdispVal);
 		}
-		AvmAssert(0); // a type we are yet to handle!
+		AvmDebugMsg(true, "unhandled VARIANT type %d", var.vt);
 		return undefinedAtom;
+	}
+
+	IDispatchConsumer *AXTam::getExistingConsumer(IUnknown *pUnk)
+	{
+		// See if the IUnknown as passed is in the map.
+		stdext::hash_map<IUnknown *, DRC(IDispatchConsumer *)>::iterator it = dispatchConsumers.find(pUnk);
+		if(it == dispatchConsumers.end()) {
+			// The IUnknown we are passed may not be exactly IUnknown, but
+			// instead a derived interface.  COM identity rules state that
+			// pointers returned from an explicit QI for IUnknown must
+			// be compared, so do that now.
+			CComQIPtr<IUnknown, &IID_IUnknown> realUnk(pUnk);
+			if (realUnk.p == pUnk) {
+				// Same pointer - no point re-checking the map - its not there!
+				return NULL;
+			}
+			it = dispatchConsumers.find(realUnk.p);
+		}
+		if(it == dispatchConsumers.end())
+			return NULL;
+
+		return it->second;
 	}
 
 	Atom AXTam::toAtom(IDispatch *pDisp)
 	{
-		return dispatchClass->create(pDisp)->atom();
+		if (!pDisp)
+			return nullObjectAtom;
+
+		// If this core has already seen this IDispatch, return the original object
+		// so expandos etc are what we expect.
+		IDispatchConsumer *dc = getExistingConsumer(pDisp);
+		if (dc == NULL) {
+			// haven't seen it before - create a new one and stash away.
+			// We can't get smarter, like only caching IDispatch objects
+			// with expandos, as we still need object identity to work - eg,
+			// 'window.document === window.document' must return True even when
+			// no expandos exist on either object.
+			CComQIPtr<IDispatch, &IID_IDispatch> disp(pDisp);
+			dc = dispatchClass->create(pDisp);
+			// must store a real IUnknown pointer so identity rules are respected
+			CComQIPtr<IUnknown, &IID_IUnknown> realUnk(pDisp);
+			// we store raw pointers, and COM reference is kept via 'Detach'.
+			dispatchConsumers[realUnk.Detach()] = dc;
+		}
+		return dc->atom();
 	}
 
 	Atom AXTam::toAtom(IUnknown *pUnk, const IID &iid /*= __uuidof(0)*/)
 	{
-		return unknownClass->create(pUnk, iid)->atom();
+		return pUnk ? unknownClass->create(pUnk, iid)->atom() : nullObjectAtom;
 	}
 
-	void AXTam::atomToVARIANT(Atom val, CComVariant *pResult)
+	CComVariant AXTam::atomToVARIANT(Atom val)
 	{
 		switch (val&7) {
 			case kDoubleType:
-				*pResult = doubleNumber(val);
-				break;
+				return doubleNumber(val);
 			case kIntegerType:
-				*pResult = toUInt32(val);
-				break;
+				// kIntegerType is signed - which is handy, as we should prefer
+				// signed values to unsigned - VBScript, for example, can't handle
+				// unsigned.
+				return integer(val);
 			case kStringType:
-				*pResult = (OLECHAR *)string(val)->c_str();
-				break;
+				return (OLECHAR *)string(val)->c_str();
+			case kObjectType:
+				// an arbitrary object.
+				// If its already a COM object, just extract the initial object.
+				if (istype(val, dispatchClass->traits()->itraits)) {
+					IDispatchConsumer *dc = (IDispatchConsumer *)atomToScriptObject(val);
+					return CComVariant(dc->getDispatch());
+				}
+				if (istype(val, unknownClass->traits()->itraits)) {
+					IUnknownConsumer *uc = (IUnknownConsumer*)atomToScriptObject(val);
+					return CComVariant(uc->ob);
+				}
+				// some other JS object - create an IDispatch wrapper for it.
+				return CComVariant(createDispatchProvider(val));
 			default:
+				if (AvmCore::isNull(val)) {
+					// Better way to get a VT_NULL variant?
+					CComVariant ret;
+					ret.ChangeType(VT_NULL);
+					return ret;
+				}
+				if (AvmCore::isUndefined(val))
+					return CComVariant(); // VT_EMPTY is default.
 				// the more complex type checking.
 				if (isBoolean(val)) {
-					*pResult = boolean(val) ? true : false;
+					return boolean(val) ? true : false;
 				} else {
 					// coerce to a string.
-					*pResult = (OLECHAR *)coerce_s(val)->c_str();
+					return (OLECHAR *)coerce_s(val)->c_str();
 				}
 				break;
 		}
 	}
+
+	HRESULT AXTam::atomToVARIANT(avmplus::Atom val, ATL::CComVariant *pResult)
+	{
+		if (!pResult)
+			return E_POINTER;
+		HRESULT hr;
+		TRY(this, kCatchAction_ReportAsError) {
+			*pResult = atomToVARIANT(val);
+			hr = S_OK;
+		} CATCH(Exception *exception) {
+			hr = handleConversionFailure(exception);
+		}
+		END_CATCH
+		END_TRY
+		return hr;
+	}
+
+	void *AXTam::atomToIUnknown(Atom val, const IID &iid)
+	{
+		void *ret;
+		HRESULT hr = atomToIUnknown(val, iid, &ret);
+		if (FAILED(hr))
+			throwCOMConsumerError(hr);
+		return ret;
+	}
+
+	HRESULT AXTam::atomToIUnknown(Atom val, const IID &iid, void **ret)
+	{
+		if (!ret)
+			return E_POINTER;
+		if (!istype(val, unknownClass->traits()->itraits)) {
+			AvmDebugMsg(true, "atomToIUnknown doesn't have an unknown consumer");
+			return E_FAIL;
+		}
+		IUnknownConsumer *u = (IUnknownConsumer *)atomToScriptObject(val);
+		return u->get(iid, ret);
+	}
+
+	HRESULT AXTam::handleConversionFailure(const Exception *exc)
+	{
+		// This is an "unexpected" error caused by our implementation
+		// rather than by script code.
+		AvmDebugMsg(true, "Conversion failed");
+		// It makes no sense to try and translate the likely TypeError
+		// into a HRESULT - it doesn't really help the *caller* of this.
+		// We need to provide good diagnosis for the implementor...
+		return E_FAIL;
+	}
+
+	CComPtr<IDispatch> AXTam::createDispatchProvider(Atom ob)
+	{
+		CGCRootComObject<IDispatchProvider> *d = NULL;
+		if (!isObject(ob))
+			toplevel->throwTypeError(kCantUseInstanceofOnNonObjectError);
+		ScriptObject *so = atomToScriptObject(ob);
+		ATLTRY(d = new CGCRootComObject<IDispatchProvider>(this));
+		if (!d)
+			so->toplevel()->throwError(kOutOfMemoryError);
+		d->ob = so;
+		return CComPtr<IDispatch>(d);
+	}
+
+	ScriptObject *AXTam::createDispatchProviderMethod(Atom ob)
+	{
+		if (!isObject(ob))
+			toplevel->throwTypeError(kCantUseInstanceofOnNonObjectError);
+		// XXX - todo - ack - this is some ScriptObject * - obviously something is wrong ;)
+		ScriptObject *so = atomToScriptObject(ob);
+		AXTam *core = (AXTam *)so->core();
+		return core->atomToScriptObject(core->toAtom(core->createDispatchProvider(ob)));
+	}
+
 
 } /* end of namespace AXTam */
 

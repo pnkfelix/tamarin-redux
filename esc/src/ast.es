@@ -1,4 +1,4 @@
-/* -*- mode: java; mode: font-lock; tab-width: 4; insert-tabs-mode: nil; indent-tabs-mode: nil -*- */
+/* -*- mode: java; tab-width: 4; insert-tabs-mode: nil; indent-tabs-mode: nil -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -45,12 +45,14 @@ public namespace Ast
     //    use namespace intrinsic;
 
     // POS
+    //
+    // Source location information.
+    //
+    // This representation is heavyweight for ES4 but may be required
+    // to support "include" as in AS3, since that may introduce new
+    // filenames everywhere.
 
-    type POS =
-       { file: String
-       , span: int //StreamPos.span
-       , sm: int // StreamPos.sourcemap
-       , post_newline: Boolean }
+    type POS = { line : int /* , filename: String */ };
 
     // BASIC TYPES
 
@@ -343,6 +345,19 @@ public namespace Ast
     class AssignLogicalOr {}
 
     const assignOp = new Assign;
+    const assignPlusOp = new AssignPlus;
+    const assignMinusOp = new AssignMinus;
+    const assignTimesOp = new AssignTimes;
+    const assignDivideOp = new AssignDivide;
+    const assignRemainderOp = new AssignRemainder;
+    const assignLeftShiftOp = new AssignLeftShift;
+    const assignRightShiftOp = new AssignRightShift;
+    const assignRightShiftUnsignedOp = new AssignRightShiftUnsigned;
+    const assignBitwiseAndOp = new AssignBitwiseAnd;
+    const assignBitwiseOrOp = new AssignBitwiseOr;
+    const assignBitwiseXorOp = new AssignBitwiseXor;
+    const assignLogicalAndOp = new AssignLogicalAnd;
+    const assignLogicalOrOp = new AssignLogicalOr;
 
     // UNOP
 
@@ -410,14 +425,15 @@ public namespace Ast
        , ListExpr
        , InitExpr
        , SliceExpr
+       , EvalScopeInitExpr
        , GetTemp
        , GetParam )
 
-	class TernaryExpr {
+    class TernaryExpr {
         const e1 : EXPR
         const e2 : EXPR
         const e3 : EXPR
-    	function TernaryExpr (e1,e2,e3)
+        function TernaryExpr (e1,e2,e3)
             : e1=e1, e2=e2, e3=e3 {}
     }
 
@@ -425,8 +441,8 @@ public namespace Ast
         const op : BINOP
         const e1 : EXPR
         const e2 : EXPR
-    	function BinaryExpr (op,e1,e2)
-	        : op=op, e1=e1, e2=e2 {}
+        function BinaryExpr (op,e1,e2)
+            : op=op, e1=e1, e2=e2 {}
     }
 
     /*
@@ -441,14 +457,14 @@ public namespace Ast
         const op : BINTYOP
         const e1 : EXPR
         const e2 : TYPE_EXPR
-	    function BinaryTypeExpr (op,e1,e2)
-	        : op=op, e1=e1, e2=e2 {}
-	}
+        function BinaryTypeExpr (op,e1,e2)
+            : op=op, e1=e1, e2=e2 {}
+    }
 
     class UnaryExpr {
         const op : UNOP;
         const e1 : EXPR;
-	    function UnaryExpr (op,e1)
+        function UnaryExpr (op,e1)
             : op=op, e1=e1 {}
     }
 
@@ -483,16 +499,20 @@ public namespace Ast
 
     class LiteralExpr {
         const literal : LITERAL;
-        function LiteralExpr (literal)
-            : literal = literal {}
+        const pos : POS?
+        function LiteralExpr (literal, pos=null)
+            : literal = literal
+            , pos = pos {}
     }
 
     class CallExpr {
         const expr : EXPR;
         const args : EXPRS;
-        function CallExpr (expr,args)
+        const pos : POS?
+        function CallExpr (expr,args,pos=null)
             : expr = expr
-            , args = args {}
+            , args = args
+            , pos = pos {}
     }
 
     class ApplyTypeExpr {
@@ -531,14 +551,19 @@ public namespace Ast
 
     class LexicalRef {
         const ident : IDENT_EXPR;
-        function LexicalRef (ident)
-            : ident = ident { }
+        const pos : POS?
+        function LexicalRef (ident, pos=null)
+            : ident = ident
+            , pos = pos { }
     }
 
     class SetExpr {
         const op : ASSIGNOP;
         const le : EXPR;
         const re : EXPR;
+        function get pos() : POS? {
+            return le ? le.pos : null;
+        }
         function SetExpr (op,le,re)
             : op=op, le=le, re=re {}
     }
@@ -557,6 +582,15 @@ public namespace Ast
             : exprs=exprs {}
     }
 
+    class EvalScopeInitExpr {
+        const index: int;
+        const how: String;
+        function EvalScopeInitExpr(index, how)
+            : index=index
+            , how=how
+        {}
+    }
+
     type INIT_TARGET =
        ( VarInit
        , LetInit
@@ -573,7 +607,7 @@ public namespace Ast
     const prototypeInit = new PrototypeInit;
     const instanceInit = new InstanceInit;
 
-	class InitExpr {
+    class InitExpr {
         const target : INIT_TARGET;
         const head : HEAD;               // for desugaring temporaries
         const inits  //: INITS;
@@ -727,9 +761,9 @@ public namespace Ast
     }
 
     class LiteralDecimal {
-        const decimalValue : String;
-        function LiteralDecimal (str : String)
-            : decimalValue = str { }  // FIXME: convert from string to decimal
+        const decimalValue : decimal;
+        function LiteralDecimal (decimalValue)
+            : decimalValue = decimalValue { }
     }
 
     class LiteralInt {
@@ -740,6 +774,8 @@ public namespace Ast
 
     class LiteralUInt {
         const uintValue : uint;
+        function LiteralUInt(uintValue) 
+            : uintValue=uintValue {}
     }
 
     class LiteralBoolean {
@@ -797,10 +833,14 @@ public namespace Ast
 
     class LiteralFunction {
         const func : FUNC;
+        function LiteralFunction (func)
+            : func = func {}
     }
 
-	class LiteralRegExp {
+    class LiteralRegExp {
         const src : String;
+        function LiteralRegExp(src)
+            : src= src {}
     }
 
     type VAR_DEFN_TAG =
@@ -878,23 +918,68 @@ public namespace Ast
     class Get {}
     class Set {}
 
+    class FuncAttr {
+        /* Outer function, or null if the function is at the global
+           level (including for class methods). */
+        const parent: FuncAttr;
+
+        /* Nested functions and function expressions, empty for leaf functions */
+        const children;
+
+        function FuncAttr(parent) 
+            : parent = parent
+            , children = []
+        {}
+
+        /* True iff identifier "arguments" lexically referenced in function body.
+           Note that the parameter list is excluded. */
+        var uses_arguments = false;
+        
+        /* True iff identifier expression "eval" is lexically referenced 
+           in the function body as the operator in a call expression. */
+        var uses_eval = false;
+
+        /* True iff ...<id> appears in the parameter list. */
+        var uses_rest = false;
+        
+        /* True iff the body has a "with" statement */
+        var uses_with = false;
+
+        /* True iff the body has a "try" statement with a "catch" clause */
+        var uses_catch = false;
+
+        /* True iff the body has a "try" statement with a "finally" clause */
+        var uses_finally = false;
+
+        /* True iff this function is native */
+        var is_native = false;
+
+        /* True iff the function must capture its statement result value and return it if 
+           control falls off the end */
+        var capture_result = false;
+
+        /* Synthesized: true iff activation object must be reified for any reason */
+        var reify_activation = false;
+    }
+
     class Func {
         const name //: FUNC_NAME;
-        const isNative: Boolean;
         const block: BLOCK;
         const params: HEAD;
         const vars: HEAD;
         const defaults: [EXPR];
         const type /*: FUNC_TYPE*/;    // FIXME: should be able to use 'type' here
-        function Func (name,isNative,block,
-                       params,vars,defaults,ty)
+        const attr: FuncAttr;
+        const numparams: int;
+        function Func (name,block,params,numparams,vars,defaults,ty,attr)
             : name = name
-            , isNative = isNative
             , block = block
             , params = params
+            , numparams = numparams
             , vars = vars
             , defaults = defaults
-            , type = ty {}
+            , type = ty
+            , attr = attr {}
     }
 
     // CTOR
@@ -1051,8 +1136,8 @@ public namespace Ast
 
     class SpecialType {
         const kind : SPECIAL_TYPE_KIND;
-        function SpecialType(kind) : kind=kind {}}
-    
+        function SpecialType(kind) : kind=kind {}
+    }
 
     type SPECIAL_TYPE_KIND =
         ( AnyType
@@ -1201,6 +1286,18 @@ public namespace Ast
     }
 
     class ForInStmt {
+        const vars : HEAD;
+        const init : EXPR?;
+        const obj  : EXPR;
+        const stmt : STMT;
+        const labels : [IDENT] = [];
+        const is_each : boolean;
+        function ForInStmt (vars,init,obj,stmt,is_each=false)
+            : vars = vars
+            , init = init
+            , obj = obj
+            , stmt = stmt
+            , is_each = is_each {}
     }
 
     class ThrowStmt {
@@ -1234,10 +1331,10 @@ public namespace Ast
     }
 
     class LabeledStmt {
-        const ident : IDENT;
+        const label : IDENT;
         const stmt : STMT;
         function LabeledStmt (label,stmt)
-            : ident = ident
+            : label = label
             , stmt = stmt { }
     }
 
@@ -1250,21 +1347,19 @@ public namespace Ast
     class WhileStmt {
         const expr : EXPR;
         const stmt : STMT;
-        const labels : [IDENT];
-        function WhileStmt (expr,stmt,labels)
+        const labels : [IDENT] = [];
+        function WhileStmt (expr,stmt)
             : expr = expr
-            , stmt = stmt
-            , labels = labels {}
+            , stmt = stmt {}
     }
 
     class DoWhileStmt {
         const expr : EXPR;
         const stmt : STMT;
-        const labels : [IDENT];
-        function DoWhileStmt (expr,stmt,labels)
+        const labels : [IDENT] = [];
+        function DoWhileStmt (expr,stmt)
             : expr = expr
-            , stmt = stmt
-            , labels = labels {}
+            , stmt = stmt {}
     }
 
     class ForStmt {
@@ -1273,14 +1368,13 @@ public namespace Ast
         const cond : EXPR?;
         const incr : EXPR?;
         const stmt : STMT;
-        const labels : [IDENT];
-        function ForStmt (vars,init,cond,incr,stmt,labels)
+        const labels : [IDENT] = [];
+        function ForStmt (vars,init,cond,incr,stmt)
             : vars = vars
             , init = init
             , cond = cond
             , incr = incr
-            , stmt = stmt
-            , labels = labels {}
+            , stmt = stmt {}
     }
 
     class IfStmt {
@@ -1296,11 +1390,9 @@ public namespace Ast
     class SwitchStmt {
         const expr : EXPR;
         const cases : CASES;
-        const labels : [IDENT];
-        function SwitchStmt (expr, cases, labels)
+        function SwitchStmt (expr, cases)
             : expr = expr
-            , cases = cases
-            , labels = labels { }
+            , cases = cases { }
     }
 
     type CASE = Case;
@@ -1421,10 +1513,14 @@ public namespace Ast
         var packages: PACKAGES;
         var block: BLOCK;
         var head: HEAD;
-        function Program (packages, block, head)
+        var file: String?;
+        var attr: FuncAttr;
+        function Program (packages, block, head, attr, file=null)
             : packages = packages
             , block = block
-            , head = head {}
+            , head = head
+            , attr = attr
+            , file = file {}
     }
 
     function test () {

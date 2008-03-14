@@ -44,8 +44,10 @@ namespace avmplus
 {
 	using namespace MMgc;
 
-	Debugger::TraceLevel Debugger::astrace = Debugger::TRACE_OFF;
-	uint64 Debugger::astraceStartTime = OSDep::currentTimeMillis();
+	Debugger::TraceLevel	Debugger::astrace_console = Debugger::TRACE_OFF;
+	Debugger::TraceLevel	Debugger::astrace_callback = Debugger::TRACE_OFF;
+	bool					Debugger::in_trace = false;
+	uint64					Debugger::astraceStartTime = OSDep::currentTimeMillis();
 
 	Debugger::Debugger(AvmCore *core)
 		: core(core)
@@ -54,6 +56,11 @@ namespace avmplus
 	{
 	}
 
+	Debugger::~Debugger()
+	{
+		disableAllTracing();
+	}
+	
 	void Debugger::stepInto()
 	{
 		stepState.flag = true;
@@ -228,16 +235,28 @@ namespace avmplus
 			debugMethod(env);
 	}
 
+	void Debugger::disableAllTracing()
+	{
+		in_trace = true;
+		astrace_callback = TRACE_OFF;
+		astrace_console = TRACE_OFF;
+		trace_callback = 0;
+		in_trace = false;
+	}
+	
 	void Debugger::traceMethod(AbstractFunction* fnc, bool ignoreArgs)
 	{
-		if (astrace > TRACE_OFF)
+		if (in_trace) return;
+		in_trace = true;
+		
+		// callback trace
+		if (trace_callback && fnc && astrace_callback > TRACE_OFF)
+			traceCallback(0);
+		
+		if (astrace_console > TRACE_OFF)
 		{
 			if (fnc)
 			{
-				// disable trace temporarily so associated allocs don't appear
-				TraceLevel lvl = astrace;
-				astrace = TRACE_OFF;
-
 				// WARNING: don't change the format of output since outside utils depend on it
 				uint64 delta = OSDep::currentTimeMillis() - astraceStartTime;
 				core->console << (uint32)(delta) << " AVMINF: MTHD ";
@@ -247,21 +266,10 @@ namespace avmplus
 					core->console << "<unknown>";
 				
 				core->console << " (";
-				if (!ignoreArgs && core->callStack && (lvl == TRACE_METHODS_WITH_ARGS || lvl == TRACE_METHODS_AND_LINES_WITH_ARGS))
-				{
-					DebugStackFrame* frame = (DebugStackFrame*)frameAt(0);
-					int count;
-					Atom* arr;
-					if (frame && frame->arguments(arr, count))
-					{
-						for(int i=0; i<count; i++)
-						{
-							core->console << core->format (arr[i]);
-							if (i+1 < count)
-								core->console << ", ";
-						}
-					}
-				}
+
+				if (!ignoreArgs && core->callStack && (astrace_console == TRACE_METHODS_WITH_ARGS || astrace_console == TRACE_METHODS_AND_LINES_WITH_ARGS))
+					core->console << traceArgumentsString();
+
 				core->console << ")";
 				if (!fnc->isFlagSet(AbstractFunction::SUGGEST_INTERP))
 				{
@@ -269,19 +277,25 @@ namespace avmplus
 					core->console.writeHexAddr( (uintptr)fnc->impl32);
 				}
 				core->console << "\n";		
-				astrace = lvl;
 			}
-		}
+		}		
+		in_trace = false;
 	}
 
 	void Debugger::traceLine(int line)
 	{
-		if (astrace >= TRACE_METHODS_AND_LINES)
+		if (in_trace) return;
+		in_trace = true;
+		
+		// callback trace
+		AvmAssert(line != 0);
+		if (trace_callback && astrace_callback >= TRACE_METHODS_AND_LINES)
+			traceCallback(line);
+		
+		// console level trace
+		if (astrace_console >= TRACE_METHODS_AND_LINES)
 		{
 			Stringp file = core->callStack->filename;
-
-			TraceLevel lvl = astrace;
-			astrace = TRACE_OFF;
 
 			// WARNING: don't change the format of output since outside utils depend on it
 			uint64 delta = OSDep::currentTimeMillis() - astraceStartTime;
@@ -290,10 +304,66 @@ namespace avmplus
 				core->console << "   " << line << "\t\t " << file << "\n";
 			else
 				core->console << "   " << line << "\t\t ??? \n"; 			
-			astrace = lvl;
 		}
+		in_trace = false;
 	}
 
+	void Debugger::traceCallback(int line)
+	{
+		if (!core->callStack && core->callStack->env)
+			return;
+			
+		Stringp file = ( core->callStack->filename ) ? Stringp(core->callStack->filename) : Stringp(core->kEmptyString);
+		Stringp name = core->kEmptyString;
+		Stringp args = core->kEmptyString;
+
+		MethodEnv* env = core->callStack->env;
+		if (env->method)
+		{
+			name = ( env->method->name != 0 ) ? Stringp(env->method->name) : Stringp(core->kEmptyString);
+			if ((line == 0) && (astrace_callback == TRACE_METHODS_WITH_ARGS || astrace_callback == TRACE_METHODS_AND_LINES_WITH_ARGS))
+				args = traceArgumentsString();
+		}
+		
+		Atom argv[5] = { trace_callback->atom(), file->atom(), core->intToAtom(line), name->atom(), args->atom() };
+		int argc = 4;
+
+		TRY(core, kCatchAction_ReportAsError)
+		{
+			trace_callback->call(argc, argv);
+			if (core->dprof.dprofile)
+				core->dprof.endmark();
+		}
+		CATCH(Exception *exception)
+		{
+			if (core->dprof.dprofile)
+				core->dprof.endmark();
+			(void) exception;
+			//core->uncaughtException(exception);
+		}
+		END_CATCH
+		END_TRY		
+	}
+
+	Stringp Debugger::traceArgumentsString()
+	{
+		Stringp args = core->kEmptyString;
+		DebugStackFrame* frame = (DebugStackFrame*)frameAt(0);
+		int count;
+		Atom* arr;
+		if (frame && frame->arguments(arr, count))
+		{
+			Stringp comma = core->newString(",");
+			for(int i=0; i<count; i++)
+			{
+				args = core->concatStrings(args, core->format(arr[i]));
+				if (i+1 < count)
+					args = core->concatStrings(args, comma);
+			}
+		}
+		return args;
+	}
+		
 	/**
 	 * Called when an abc file is first decoded.
 	 * This method builds a list of source files
@@ -302,7 +372,7 @@ namespace avmplus
 	void Debugger::processAbc(PoolObject* pool, ScriptBuffer code)
 	{
 		// first off we build an AbcInfo object 
-		AbcFile* abc = new (core->GetGC()) AbcFile(core, code.getSize());
+		AbcFile* abc = new (core->GetGC()) AbcFile(core, (int)code.getSize());
 		
 		// now let's scan the abc resources pulling out what we need
 		scanResources(abc, pool);
@@ -423,7 +493,7 @@ namespace avmplus
 					if (active == NULL)
 						AvmAssert(0 == 1); // means OP_debugline appeared before OP_debugfile which is WRONG!  Fix compiler
 					else
-						active->addLine(core, line, m, pc - abc_start);
+						active->addLine(core, line, m, (int)(pc - abc_start));
  					break;
 				}
 
@@ -652,7 +722,7 @@ namespace avmplus
 		{
 			uintptr index = (uintptr)debugger->pool2abcIndex.get(Atom((PoolObject*)m->pool));
 
-			AbcFile* abc = (AbcFile*)debugger->abcAt(index);
+			AbcFile* abc = (AbcFile*)debugger->abcAt((int)index);
 			source = abc->sourceNamed(trace->filename);
 		}
 		linenum = trace->linenum;

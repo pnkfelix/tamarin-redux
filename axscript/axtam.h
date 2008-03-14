@@ -50,7 +50,7 @@
 #define WINVER 0x0501		// Change this to the appropriate value to target other versions of Windows.
 #endif
 
-#ifndef _WIN32_WINNT		// Allow use of features specific to Windows XP or later.                   
+#ifndef _WIN32_WINNT		// Allow use of features specific to Windows XP or later.
 #define _WIN32_WINNT 0x0501	// Change this to the appropriate value to target other versions of Windows.
 #endif						
 
@@ -62,13 +62,14 @@
 #define _WIN32_IE 0x0600	// Change this to the appropriate value to target other versions of IE.
 #endif
 
-// TODO: Yet to consider threading considerations
-#define _ATL_APARTMENT_THREADED
-#define _ATL_NO_AUTOMATIC_NAMESPACE
-
-#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS	// some CString constructors will be explicit
+// Not defining either of _ATL_SINGLE_THREADED or _ATL_APARTMENT_THREADED 
+// appears to default to a multi-thread model, which is what we want.
 
 #include "resource.h"
+
+// Useful #defines before including atl:
+// Send info about QI calls to the debugger.
+// #define _ATL_DEBUG_QI
 
 // ATL, COM, ActiveScripting etc related headers.
 #include <atlbase.h>
@@ -78,6 +79,8 @@
 #include <DispEx.h>
 using namespace ATL;
 
+#include <hash_map>
+
 
 // Tamarin headers
 #include "avmplus.h"
@@ -86,6 +89,9 @@ using namespace ATL;
 #include "Exception.h"
 #include "avmplusDebugger.h"
 using namespace avmplus;
+
+// We use a DRC on IDispatchConsumer, so a fwd decl doesn't work.
+#include "IDispatchConsumer.h"
 
 // The NATIVE_CLASS macros etc expect an avmplus::NativeID namespace.
 namespace avmplus
@@ -113,9 +119,10 @@ DEFINE_GUID(AXT_CATID_ActiveScriptParse, 0xf0b7a1a2, 0x9847, 0x11cf, 0x8f, 0x20,
 // TODO: move some of these to a better header.
 namespace axtam
 {
-	class MSIUnknownConsumerClass;
-	class MSIDispatchConsumerClass;
-	class COMErrorClass;
+	class IUnknownConsumerClass;
+	class COMConsumerErrorClass;
+	class COMProviderErrorClass;
+	class EXCEPINFOClass;
 
 	// CodeContext is used to track which security context we are in.
 	// When an AS3 method is called, the AS3 method will set core->codeContext to its code context.
@@ -137,6 +144,7 @@ namespace axtam
 	{
 	public:
 		AXTam(MMgc::GC *gc);
+		~AXTam() {Close();}
 
 		// XXX - is it appropriate for toplevel to be stored here 
 		// (ie, is it really per 'core'?)
@@ -162,28 +170,82 @@ namespace axtam
 		Atom toAtom(IUnknown *pUnk, const IID &iid = __uuidof(0));
 
 		// Convert an atom to the specifically requested variant type.
-		void atomToTypedVARIANT(Atom val, VARTYPE vt, CComVariant *pResult);
+		CComVariant atomToTypedVARIANT(Atom val, VARTYPE vt);
 		// Convert an atom to any variant type.
-		void atomToVARIANT(Atom val, CComVariant *pResult);
+		CComVariant atomToVARIANT(Atom val);
+		void *atomToIUnknown(Atom val, const IID &iid);
+		// Convert an atom - but catch exceptions and translate to a COM
+		// HRESULT.  Suitable for use when no tamarin exception handler is
+		// setup (eg, when returning results to COM objects).  Note that if
+		// these fail, they will generally cause debug output to be written
+		HRESULT atomToTypedVARIANT(Atom val, VARTYPE vt, CComVariant *pResult);
+		// Convert an atom to any variant type.
+		HRESULT atomToVARIANT(Atom val, CComVariant *pResult);
+		HRESULT atomToIUnknown(Atom val, const IID &iid, void **ret);
+
 //		DispatchConsumerClass *dispatchClass;
 
-		// Functions directly related to being embedded in a COM world
-		HRESULT InitNew(IActiveScript *as);
-		HRESULT Close();
-
+		void Initialize(IActiveScript *as);
+		void Close();
 		// Dump an exception for the benefit of the person developing/debugging the
 		// engine rather than the author of the actual script code
 		void dumpException(Exception *exc);
-		MSIDispatchConsumerClass *dispatchClass;
-		MSIUnknownConsumerClass *unknownClass;
+		// Some "class" pointers - getBuiltinClass() doesn't work for our "extension" classes...
+		IDispatchConsumerClass *dispatchClass;
+		IUnknownConsumerClass *unknownClass;
+		COMConsumerErrorClass *comConsumerErrorClass;
+		COMProviderErrorClass *comProviderErrorClass;
+		// Get an Atom for a previously seen IUnknown object, or undefinedAtom.
+		IDispatchConsumer *getExistingConsumer(IUnknown *pUnk);
+		EXCEPINFOClass *excepinfoClass;
 
-		COMErrorClass *comErrorClass() const { return (COMErrorClass*)toplevel->getBuiltinClass(avmplus::NativeID::abcclass_axtam_com_Error); }
-		void throwCOMError(HRESULT hr, EXCEPINFO *pei = NULL);
+		// Ownership of EXCEPINFO is taken by this function.
+		void throwCOMConsumerError(HRESULT hr, EXCEPINFO *pei = NULL);
+
+		// Used by objects which delegate COM interfaces to script code, but
+		// after delegation fail to convert the result to the native COM type.
+		HRESULT handleConversionFailure(const Exception *);
+		// Use this to check if script code has thrown an exception with a HRESULT
+		// that should be returned to the COM method being called.
+		bool isCOMProviderError(Exception *exc);
+		// You almost never need to know if it is a consumer error - treat that as a "normal" exception.
+		bool isCOMConsumerError(Exception *exc);
+		// fill an EXCEPINFO with a tamarin exception
+		void fillEXCEPINFO(const Exception *exception, EXCEPINFO *pexcepinfo, bool includeStackTrace = true);
+
+		// handle an exception by a "top-level" COM entry-point.
+		HRESULT handleException(Exception *exc, EXCEPINFO *pei = NULL, int depth=0);
+
 		Toplevel* initAXTamBuiltins();
+		// Create IDispatch wrappers around script objects (dispatch providers)
+		// The native method version for script code.
+		CComPtr<IDispatch> createDispatchProvider(Atom ob);
+		// ack - something is wrong with this - |this| is always a ScriptObject * :(
+		ScriptObject *createDispatchProviderMethod(Atom ob);
+		//
+
+		Atom constant(const avmplus::wchar *s)
+		{
+			return constantString(s)->atom();
+		}
+
+		Stringp constantString(const avmplus::wchar *s)
+		{
+			return internString(newString(s));
+		}
+		// ack - we shadow these... - XXX - todo - get the above in the core!
+		Atom constant(const char *s) {return AvmCore::constant(s);}
+		Stringp constantString(const char *s) {return AvmCore::constantString(s);}
+
+		CComPtr<IActiveScriptSite> activeScriptSite;
 
 	private:
 		DECLARE_NATIVE_CLASSES()
 		DECLARE_NATIVE_SCRIPTS()
+
+		// A hashtable of IDispatchConsumerObjects, keyed by the address of the IUnknown
+		// it wraps.  MarkH failed to beat any of the avm hashtables into compliance.
+		stdext::hash_map<IUnknown *, DRC(IDispatchConsumer *)> dispatchConsumers;
 
 		bool gracePeriod;
 		bool inStackOverflow;
@@ -220,7 +282,7 @@ namespace axtam
 	{
 	public:
 		typedef Base _BaseClass;
-		CGCRootComObject(AvmCore *core) throw() : _BaseClass(core)
+		CGCRootComObject(AXTam *core) throw() : _BaseClass(core)
 		{
 			_pAtlModule->Lock();
 		}

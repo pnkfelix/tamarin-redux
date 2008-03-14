@@ -71,6 +71,10 @@ namespace avmplus
 #define VOID_TYPE		(core->traits.void_itraits)
 #define NULL_TYPE		(core->traits.null_itraits)
 #define NAMESPACE_TYPE	(core->traits.namespace_itraits)
+#define VECTORINT_TYPE	(core->traits.vectorint_itraits)
+#define VECTORUINT_TYPE	(core->traits.vectoruint_itraits)
+#define VECTORDOUBLE_TYPE		(core->traits.vectordouble_itraits)
+#define VECTOROBJ_TYPE	(core->traits.vectorobj_itraits)
 
 const int kBufferPadding = 16;
 
@@ -93,6 +97,16 @@ const int kBufferPadding = 16;
 		 * setConsoleStream.
 		 */
 		PrintWriter console;
+
+#ifdef VTUNE
+		iJIT_IsProfilingActiveFlags VTuneStatus;
+
+		iJIT_IsProfilingActiveFlags CheckVTuneStatus() 
+		{
+			iJIT_IsProfilingActiveFlags profiler = iJIT_IsProfilingActive();	
+			return profiler;
+		}
+#endif // VTUNE
 
 		/**
 		 * The GC used by this AVM instance
@@ -216,7 +230,7 @@ const int kBufferPadding = 16;
 		 * will check the stack pointer to make sure it
 		 * doesn't go below this value.
 		 */
-		uint32 minstack;
+		uintptr_t minstack;
 
 		/**
 		 * This method will be invoked when the first exception
@@ -725,7 +739,7 @@ const int kBufferPadding = 16;
 			}
 			if ((atom & 7) == kIntegerType) {
 				decNumber ival;
-				MathUtils::decNumberFromInt(&ival, (atom>>3));
+				MathUtils::decNumberFromInt(&ival, (int)(atom>>3));
 				decNumberPlus(&ret->dn, &ival, ctx);
 				return ret;
 			} 
@@ -762,6 +776,12 @@ const int kBufferPadding = 16;
 		 * decoded.  Otherwise, it is coerced to the int type
 		 * and returned.  This is ToInt32() from E3 section 9.5
 		 */
+#ifdef AVMPLUS_64BIT
+		int64	integer64(Atom atom)			{ return (int64)integer(atom); }
+		static	int64 integer64_i(Atom atom)	{ return (int64)integer_i(atom); }
+		static	int64 integer64_d(double d)		{ return (int64)integer_d(d); }
+		static	int64 integer64_d_sse2(double d){ return (int64)integer_d_sse2(d); }
+#endif
 		int integer(Atom atom);
 
 		// convert atom to integer when we know it is already a legal signed-32 bit int value
@@ -805,7 +825,7 @@ const int kBufferPadding = 16;
 			AvmAssert(isNumeric(a));
 
 			if ((a&7) == kIntegerType)
-				return a>>3;
+				return (int)(a>>3);
 			else if ((a & 7) == kDecimalType) {
 				DecimalRep *drep = atomToDecimal(a);
                 return MathUtils::decNumberToDouble(&drep->dn);
@@ -843,7 +863,10 @@ const int kBufferPadding = 16;
 
 		Atom doubleAtom(Atom atom)
 		{
-			return doubleToAtom(doubleNumber(atom));
+			// optimize (and prevent some asserts in Flash): if it's already a double,
+			// don't bother converting to double and then allocating a new atom.
+			// just return the one we have.
+			return isDouble(atom) ? atom : doubleToAtom(doubleNumber(atom));
 		}
 
 		/**
@@ -1382,61 +1405,6 @@ const int kBufferPadding = 16;
 		int findNamespace(const Namespace *ns);
 
 	public:
-#ifdef DEBUGGER
-#if defined(MMGC_IA32) || defined(MMGC_IA64)
-		static inline uint32 FindOneBit(uint32 value)
-		{
-#ifndef __GNUC__
-			_asm
-			{
-				bsr eax,[value];
-			}
-#else
-			// DBC - This gets rid of a compiler warning and matchs PPC results where value = 0
-			register int	result = ~0;
-			
-			if (value)
-			{
-				asm (
-					"bsr %1, %0"
-					: "=r" (result)
-					: "m"(value)
-					);
-			}
-			return result;
-#endif
-		}
-
-		#elif defined(MMGC_PPC)
-
-		static inline int FindOneBit(uint32 value)
-		{
-			register int index;
-			#ifdef DARWIN
-			asm ("cntlzw %0,%1" : "=r" (index) : "r" (value));
-			#else
-			register uint32 in = value;
-			asm { cntlzw index, in; }
-			#endif
-			return 31-index;
-		}
-
-		#else // generic platform
-
-		static int FindOneBit(uint32 value)
-		{
-			for (int i=0; i < 32; i++)
-				if (value & (1<<i))
-					return i;
-			// asm versions of this function are undefined if no bits are set
-			AvmAssert(false);
-			return 0;
-		}
-
-		#endif  // MMGC_platform
-#endif
-
-	public:
 		/**
 		 * intern the given string atom which has already been allocated
 		 * @param atom
@@ -1563,11 +1531,11 @@ const int kBufferPadding = 16;
 		class GCInterface : MMgc::GCCallback
 		{
 		public:
-			GCInterface(MMgc::GC * _gc) : MMgc::GCCallback(_gc) {}
+			GCInterface(MMgc::GC * _gc) : MMgc::GCCallback(_gc), core(NULL) {}
 			void SetCore(AvmCore* _core) { this->core = _core; }
-			void presweep() { core->presweep(); }
-			void postsweep() { core->postsweep(); }
-			void log(const char *str) { core->console << str; }
+			void presweep() { if(core) core->presweep(); }
+			void postsweep() { if(core) core->postsweep(); }
+			void log(const char *str) { if(core) core->console << str; }
 		private:
 			AvmCore *core;
 		};

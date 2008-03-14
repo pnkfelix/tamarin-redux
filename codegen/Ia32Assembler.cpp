@@ -162,7 +162,7 @@ namespace avmplus
 		IMM32(imm32);
 	}
 
-	void CodegenMIR::MOV(int disp, Register base, sintptr imm) 
+	void CodegenMIR::MOV(int disp, Register base, sintptr imm, bool /*unused*/) 
 	{
 		incInstructionCount();
 		#ifdef AVMPLUS_VERBOSE
@@ -182,7 +182,7 @@ namespace avmplus
 		#ifdef AVMPLUS_VERBOSE
 		if (verbose())
 		{
-			char *opstr="?";
+			const char *opstr="?";
 			switch(op) {
 			case 0x2d: opstr = "sub  "; break;
 			case 0x05: opstr = "add  "; break;
@@ -388,7 +388,7 @@ namespace avmplus
 		#ifdef AVMPLUS_VERBOSE
 		if (verbose())
 		{
-			char *opstr = "?";
+			const char *opstr = "?";
 			switch (op) {
 			case 7: opstr = "sar  "; break;
 			case 5: opstr = "shr  "; break;
@@ -403,7 +403,7 @@ namespace avmplus
 		*mip++ = (MDInstruction)(imm8);
 	}
 
-	void CodegenMIR::ALU(int op, Register r, sintptr disp, Register base)
+	void CodegenMIR::ALU(int op, Register r, sintptr disp, Register base, bool /*unused*/)
 	{
 		incInstructionCount();
 		#ifdef AVMPLUS_VERBOSE
@@ -435,7 +435,7 @@ namespace avmplus
 		#ifdef AVMPLUS_VERBOSE
 		if (verbose())
 		{
-			char *opstr="?";
+			const char *opstr="?";
 			switch(op) {
 			case 0x02: opstr = "jb   "; break;
 			case 0x03: opstr = "jnb  "; break;
@@ -503,7 +503,7 @@ namespace avmplus
 		#ifdef AVMPLUS_VERBOSE
 		if (verbose())
 		{
-			char *opstr="?";
+			const char *opstr="?";
 			switch(op) {
 			case 0xddd8: opstr = "fstp "; x87Top++; break;
 			case 0xddc0: opstr = "ffree"; x87Top++; break;
@@ -526,7 +526,7 @@ namespace avmplus
 		#ifdef AVMPLUS_VERBOSE
 		if (verbose())
 		{
-			char *opstr="?";
+			const char *opstr="?";
 			switch(op) {
 			case 0xdc02: opstr = "fcom "; break;
 			case 0xdd03: opstr = "fstpq"; x87Top++; break;
@@ -554,7 +554,7 @@ namespace avmplus
 		#ifdef AVMPLUS_VERBOSE
 		if (verbose())
 		{
-			char *opstr="?";
+			const char *opstr="?";
 			switch(op) {
 			case 0xdde9: opstr = "fucomp"; x87Top++; break;
 			case 0xd9e0: opstr = "fchs "; break;
@@ -1060,6 +1060,11 @@ namespace avmplus
 	void* CodegenMIR::emitImtThunk(ImtBuilder::ImtEntry *e)
 	{
 		mip = mipStart = getMDBuffer(pool);
+		if (!mip)
+		{
+			overflow = true;
+			return NULL;
+		}
 
 #ifdef FEATURE_BUFFER_GUARD
 		GrowthGuard guard(pool->codeBuffer);

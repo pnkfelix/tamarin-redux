@@ -36,28 +36,32 @@
 
 namespace axtam {
 	/**
-	 * class COMError
+	 * class COMError.  Our base class - only subclasses should be thrown
 	 */
 	class COMErrorClass : public ClassClosure
 	{
-	public:
-		DECLARE_NATIVE_MAP(COMErrorClass)
+	protected:
 		COMErrorClass(VTable* cvtable);
+	public:
+//		DECLARE_NATIVE_MAP(COMErrorClass)
 
 		Atom call(int argc, Atom* argv)
 		{
 			return construct(argc, argv);
 		}
 
-		ScriptObject *createInstance(VTable *ivtable, ScriptObject *delegate);
+		// override ctor just so we can get 'hresult' :(
+		Atom construct(int argc, Atom* argv);
+	
+		//ScriptObject *createInstance(VTable *ivtable, ScriptObject *delegate);
 
 
 		/**
 		 * throwError is a convenience function for throwing
-		 * an exception with a formatted error message,
-		 * printf-style
+		 * an exception with a hresult and optionally an EXCEPINFO.
+		   NOTE: The EXCEPINFO ownership is taken by this function!
 		 */
-		void throwError(HRESULT hr);
+		void throwError(HRESULT hr, EXCEPINFO *pei = NULL);
 
 		/** @name static methods */
 		/*@{*/
@@ -66,14 +70,19 @@ namespace axtam {
 
 	class COMErrorObject : public ScriptObject
 	{
-	public:
+		friend class COMErrorClass;
+	protected:
 		COMErrorObject(VTable *vtable, ScriptObject *delegate);
 		~COMErrorObject() {
 #ifdef DEBUGGER
 			stackTrace = 0; 
 #endif
 		}
+	public:
+		HRESULT getHRESULT() const;
 		Stringp stackTraceToString() const;
+	private:
+		Atom atomhresult; // would prefer to fetch this from script object...
 #ifdef DEBUGGER
 		StackTrace *getStackTrace() const { return stackTrace; }
 
@@ -82,4 +91,49 @@ namespace axtam {
 #endif /* DEBUGGER */
 	};
 
+	// An error specific to "com providers" - ie, classes which implement
+	// COM interfaces.  An exception of this type is thrown whenever the object
+	// wishes to return a failure HRESULT.  The HRESULT is returned directly
+	// to whoever is using the COM interface - the user never sees these
+	// kinds of exceptions.
+	// In other words, these are thrown by script code and caught by native code.
+	class COMProviderErrorClass : public COMErrorClass
+	{
+	public:
+		COMProviderErrorClass(VTable* cvtable);
+		ScriptObject *createInstance(VTable *ivtable, ScriptObject *delegate);
+		DECLARE_NATIVE_MAP(COMProviderErrorClass)
+	};
+
+	class COMProviderErrorObject : public COMErrorObject
+	{
+	public:
+		COMProviderErrorObject(VTable *vtable, ScriptObject *delegate)
+			: COMErrorObject(vtable, delegate)
+				{;}
+	};
+
+	// Exceptions specific to "com consumers" - ie, classes which use COM
+	// objects.  For example, interaction with the Window object would cause
+	// one of these exceptions if the underlying COM calls behind the window
+	// return an unexpected error code.  These exceptions are treated like all 
+	// other exceptions - a traceback will be written, the script host will be
+	// notified of the error, etc.
+	// In other words, these are thrown by native code and caught (or not!) by 
+	// script code.
+	class COMConsumerErrorClass : public COMErrorClass
+	{
+	public:
+		COMConsumerErrorClass(VTable* cvtable);
+		ScriptObject *createInstance(VTable *ivtable, ScriptObject *delegate);
+		DECLARE_NATIVE_MAP(COMConsumerErrorClass)
+	};
+
+	class COMConsumerErrorObject : public COMErrorObject
+	{
+	public:
+		COMConsumerErrorObject(VTable *vtable, ScriptObject *delegate)
+			: COMErrorObject(vtable, delegate)
+				{;}
+	};
 };

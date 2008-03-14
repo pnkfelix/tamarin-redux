@@ -49,6 +49,12 @@
 
 using namespace avmplus;
 
+// avmplus and NSPR both typedef some basic types: we must disambiguate
+using avmplus::uint64;
+using avmplus::uint32;
+using avmplus::uint16;
+using avmplus::uint8;
+
 namespace avmshell
 {
 	class ByteArrayObject;
@@ -70,7 +76,6 @@ namespace avmplus
 #include "Profiler.h"
 #include "DataIO.h"
 #include "ByteArrayGlue.h"
-#include "TypedArrayClass.h"
 #include "DictionaryGlue.h"
 #include "SamplerScript.h"
 #include "JavaGlue.h"
@@ -91,11 +96,10 @@ namespace avmshell
 {
 	class ShellCodeContext : public CodeContext
 	{
-		DomainEnv* const _domainEnv;
 	  public:
-		  ShellCodeContext(DomainEnv *de) : _domainEnv(de) {}
-		  virtual ~ShellCodeContext() {}
-		  virtual DomainEnv *domainEnv() const { return _domainEnv; }
+		DWB(DomainEnv*) m_domainEnv;
+		virtual ~ShellCodeContext() {}
+		virtual DomainEnv *domainEnv() const { return m_domainEnv; }
 	};
 	
 	/**

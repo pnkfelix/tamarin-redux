@@ -1,4 +1,4 @@
-/* -*- mode: java; mode: font-lock; tab-width: 4; insert-tabs-mode: nil; indent-tabs-mode: nil -*- */
+/* -*- mode: java; tab-width: 4; insert-tabs-mode: nil; indent-tabs-mode: nil -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -1005,6 +1005,30 @@ public namespace Encode;
               + nd.decimalValue
               + "' }";
         }
+        case (nd: LiteralDouble) {
+            var str =
+                "{ 'ast_class': 'LiteralDouble'"
+              + indent(nesting)
+              + ", 'doubleValue': '"
+              + double.intValue
+              + "' }";
+        }
+        case (nd: LiteralInt) {
+            var str =
+                "{ 'ast_class': 'LiteralInt'"
+              + indent(nesting)
+              + ", 'intValue': '"
+              + nd.intValue
+              + "' }";
+        }
+        case (nd: LiteralUInt) {
+            var str =
+                "{ 'ast_class': 'LiteralUInt'"
+              + indent(nesting)
+              + ", 'uintValue': '"
+              + nd.uintValue
+              + "' }";
+        }
         case (nd: LiteralNamespace) {
             var str =
                 "{ 'ast_class': 'LiteralNamespace'"
@@ -1111,7 +1135,7 @@ public namespace Encode;
         case (nd: LetVar) {
             var str = "{ 'ast_class': 'LetVar' }";
         }
-	}
+    }
 
         exit ("Encode:literalField ",str);
         return str;

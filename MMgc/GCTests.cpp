@@ -49,21 +49,47 @@
 
 #ifdef _DEBUG
 
+#include <stdio.h>
+
 namespace MMgc
 {
 	GC *gc;
 
+	void collect()
+	{
+#ifdef MMGC_THREADSAFE
+		gc->CollectFromRequest();
+#else
+		gc->Collect();
+#endif
+	}
+
 	GCWeakRef* createWeakRef(int extra=0)
 	{
+		// Bogusly use up some extra stack.
+		//
+		// Certain compilers/platforms require this (at least gcc/MacIntel).
+		// A pointer to the temporary GCObject can be left on the stack, so
+		// far down that CleanStack doesn't dare touch it.  Leaving the
+		// pointer there causes the temporary to be marked, and not collected,
+		// which causes tests to fail with assertions.
+		///
+		// The extra 64 bytes here causes the temporary to end up higher on
+		// the stack (numerically lesser address, on Intel at least) where
+		// CleanStack will clobber it.
+		//
+		char buf[64];
+		sprintf(buf, "%d", extra);  // don't optimize away buf
+
 		return (new (gc, extra) GCObject())->GetWeakRef();
 	}
 
 	void weakRefSweepSmall()
 	{
 		GCWeakRef *ref = createWeakRef();
-		gc->Collect();
+		collect();
 		gc->CleanStack(true);
-		gc->Collect();
+		collect();
 		(void)ref;
 		GCAssert(ref->get() == NULL);
 	}
@@ -71,9 +97,9 @@ namespace MMgc
 	void weakRefSweepLarge()
 	{
 		GCWeakRef *ref = createWeakRef(5000);
-		gc->Collect();
+		collect();
 		gc->CleanStack(true);
-		gc->Collect();
+		collect();
 		(void)ref;
 		GCAssert(ref->get() == NULL);
 	}
@@ -149,11 +175,17 @@ namespace MMgc
 	void RunGCTests(GC *g)
 	{
 		gc = g;
+#ifdef MMGC_THREADSAFE
+		g->OnEnterRequest();
+#endif
 		weakRefSweepSmall();
 		weakRefSweepLarge();
 		weakRefFreeSmall();
 		weakRefFreeLarge();
 		drcApolloTest();
+#ifdef MMGC_THREADSAFE
+		g->OnLeaveRequest();
+#endif
 	}
 }
 

@@ -38,11 +38,11 @@
 
 #include <string.h>
 
-#if defined(DARWIN) || defined(MMGC_ARM)
+#include "MMgc.h"
+
+#if defined(DARWIN) || defined(MMGC_ARM) || defined (MMGC_SPARC)
 #include <stdlib.h>
 #endif
-
-#include "MMgc.h"
 
 namespace MMgc
 {
@@ -83,9 +83,9 @@ namespace MMgc
 		enableMemoryProfiling = false;
 #endif
 
-#if defined(_MAC) || defined(MMGC_ARM)
-		m_malloc = m ? m : malloc;
-		m_free = f ? f : free;		
+#if defined(_MAC) || defined(MMGC_ARM) || defined (MMGC_SPARC)
+		m_malloc = m ? m : (GCMallocFuncPtr)malloc;
+		m_free = f ? f : (GCFreeFuncPtr)free;		
 #else
 		(void)m;
 		(void)f;
@@ -133,10 +133,18 @@ namespace MMgc
 
 		decommitTicks = 0;
 		decommitThresholdTicks = kDecommitThresholdMillis * GC::GetPerformanceFrequency() / 1000;
+
+#ifdef MMGC_AVMPLUS
+		InitMirMemory();
+#endif /*MMGC_AVMPLUS*/
 	}
 
 	GCHeap::~GCHeap()
 	{
+#ifdef MMGC_AVMPLUS
+		FlushMirMemory();
+#endif /*MMGC_AVMPLUS*/
+
 #ifdef MEMORY_INFO
 		if(numAlloc != 0)
 		{
@@ -340,7 +348,11 @@ namespace MMgc
 				if(DecommitMemoryThatMaySpanRegions(block->baseAddr, block->size * kBlockSize))
 				{
 					block->committed = false;
+#ifdef _MAC
+					block->dirty = true;
+#else					
 					block->dirty = false;
+#endif					
 					decommitSize -= block->size;
 #ifdef MEMORY_INFO
 					if(heapVerbose)
@@ -366,6 +378,9 @@ namespace MMgc
 					block->baseAddr = 0;
 
 					block = prev;
+#ifdef _MAC
+					block->dirty = true;
+#endif
 				}
 
 				HeapBlock *next = block + block->size;
@@ -483,7 +498,7 @@ namespace MMgc
 	{
 		Region *region = AddrToRegion(item);
 		if(region) {
-			int index = ((char*)item - region->baseAddr) / kBlockSize;
+			size_t index = ((char*)item - region->baseAddr) / kBlockSize;
 			HeapBlock *b = blocks + region->blockId + index;
 			GCAssert(item >= b->baseAddr && item < b->baseAddr + b->size * GCHeap::kBlockSize);
 			return b;
@@ -524,7 +539,9 @@ namespace MMgc
 					CheckFreelist();
 
 					zero = block->dirty && zero;
-
+					
+					GCAssert(!block->dirty ? *(uint32*)block->baseAddr == 0 : true);
+					
 					return block;
 				}
 
@@ -697,7 +714,12 @@ namespace MMgc
 #endif
 			numDecommitted -= block->size;
 			block->committed = true;
+#ifdef _MAC
+			// can't set to false, but don't need to set to true
+			GCAssert(block->dirty == true);
+#else
 			block->dirty = false;
+#endif
 		}
 	}
 #endif
@@ -866,7 +888,7 @@ namespace MMgc
 		if (lastRegion != NULL)
 #endif
 		{
-			commitAvail = (lastRegion->reserveTop - lastRegion->commitTop) / kBlockSize;
+			commitAvail = (int)((lastRegion->reserveTop - lastRegion->commitTop) / kBlockSize);
 			
 			// Can this request be satisfied purely by committing more memory that
 			// is already reserved?
@@ -1072,7 +1094,11 @@ namespace MMgc
 		block->next = NULL;
 		block->committed = true;
 #ifdef USE_MMAP
+#ifdef _MAC
+		block->dirty = true;
+#else
 		block->dirty = false; // correct?
+#endif		
 #else
 		block->dirty = true;
 #endif
@@ -1093,7 +1119,11 @@ namespace MMgc
 			block->prev = NULL;
 			block->next = NULL;
 			block->committed = false;
+#ifdef _MAC
+			block->dirty = true;
+#else
 			block->dirty = false;
+#endif			
 #ifdef MEMORY_INFO
 			block->allocTrace = 0;
 			block->freeTrace = 0;
@@ -1184,4 +1214,89 @@ namespace MMgc
 
 	}
 
+	void GCHeap::FlushMirMemory()
+	{
+		for(int i=0;i<MirBufferCount;i++)
+		{
+			MirMemInfo* b = &m_mirBuffers[i];
+			GCAssertMsg(b->free, "Oh, should be freed");
+			if (b->size)
+				ReleaseCodeMemory(b->addr, b->size);
+		}
+	}
+
+	void GCHeap::InitMirMemory()
+	{
+		for(int i=0;i<MirBufferCount;i++)
+		{
+			MirMemInfo* b = &m_mirBuffers[i];
+			b->addr = 0;
+			b->size = 0;
+			b->free = true;
+		}
+	}
+		
+	void* GCHeap::ReserveMirMemory(size_t size)
+	{
+		MirMemInfo* buf = 0;
+		{
+			GCAcquireSpinlock lock(m_mirBufferLock);
+			for(int i=0;i<MirBufferCount;i++)
+			{
+				MirMemInfo* b = &m_mirBuffers[i];
+				if (b->free)
+				{
+					if (b->size >= size)
+					{
+						b->free = false;
+						buf = b;
+						break;
+					}
+
+					// pick best between empty or least largest
+					if (!buf || b->size < buf->size)
+						buf = b;
+				}
+			}
+
+			// lock in our selection
+			if (buf) buf->free = false; 
+		}
+		// WATCH OUT; lock on buffers relased
+
+		// no match, no room 
+		if (!buf) return 0;
+		
+		// match 
+		if (buf->size >= size) return buf->addr;
+		 
+		// eviction 
+		if (buf->size)
+			ReleaseCodeMemory(buf->addr, buf->size);
+			
+		buf->size = size;
+		buf->addr = ReserveCodeMemory(0,size);
+		if (buf->addr)
+			return buf->addr;
+			
+		// failure
+		buf->size = 0;
+		GCAcquireSpinlock lock(m_mirBufferLock);  // technically needed
+		buf->free = true;
+		return 0;	
+	}	
+	
+	void GCHeap::ReleaseMirMemory(void* addr, size_t /*size*/)
+	{
+		MirMemInfo* b = 0;
+		for(int i=0;i<MirBufferCount;i++)
+		{
+			b = &m_mirBuffers[i];
+			if (b->addr == addr)
+				break;
+		}
+		GCAssertMsg(b && !b->free, "Ohh very bad we have a memory leak");
+		GCAcquireSpinlock lock(m_mirBufferLock);  // technically needed 
+		if (b) b->free = true;
+	}
 }

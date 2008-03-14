@@ -1387,7 +1387,7 @@ namespace avmplus
 			*dst++ = extractCharacter(src);
 		}
 		*dst = 0;
-		out->unlockBuffer(dst-outbuf);
+		out->unlockBuffer((int)(dst-outbuf));
 		
 		return out;
     }
@@ -1671,6 +1671,11 @@ namespace avmplus
 	void Toplevel::throwRangeError(int id, Stringp arg1) const
 	{
 		rangeErrorClass()->throwError(id, arg1);
+	}
+
+	void Toplevel::throwRangeError(int id, Stringp arg1, Stringp arg2) const
+	{
+		rangeErrorClass()->throwError(id, arg1, arg2);
 	}
 
 	void Toplevel::throwRangeError(int id, Stringp arg1, Stringp arg2, Stringp arg3) const

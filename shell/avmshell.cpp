@@ -128,16 +128,11 @@ namespace avmshell
 		NATIVE_CLASS(abcclass_avmplus_StringBuilder,   StringBuilderClass, StringBuilderObject)		
 		NATIVE_CLASS(abcclass_avmplus_JObject,          JObjectClass,		JObject)
 		NATIVE_CLASS(abcclass_flash_utils_ByteArray,    ByteArrayClass,     ByteArrayObject)		
-		NATIVE_CLASS(abcclass_flash_utils_ShortArray,   ShortArrayClass,    ShortArrayObject)		
-		NATIVE_CLASS(abcclass_flash_utils_UShortArray,  UShortArrayClass,   UShortArrayObject)		
-		NATIVE_CLASS(abcclass_flash_utils_IntArray,     IntArrayClass,      IntArrayObject)		
-		NATIVE_CLASS(abcclass_flash_utils_UIntArray,    UIntArrayClass,     UIntArrayObject)		
-		NATIVE_CLASS(abcclass_flash_utils_FloatArray,   FloatArrayClass,    FloatArrayObject)		
-		NATIVE_CLASS(abcclass_flash_utils_DoubleArray,  DoubleArrayClass,   DoubleArrayObject)	
 		NATIVE_CLASS(abcclass_flash_utils_Dictionary,   DictionaryClass,    DictionaryObject)
 		NATIVE_CLASS(abcclass_flash_sampler_Sample,     SampleClass,        SampleObject)
 		NATIVE_CLASS(abcclass_flash_sampler_NewObjectSample, NewObjectSampleClass, NewObjectSampleObject)
 		NATIVE_CLASS(abcclass_flash_sampler_DeleteObjectSample, SampleClass, SampleObject)
+		NATIVE_CLASS(abcclass_flash_trace_Trace,		TraceClass,			ScriptObject)
 	END_NATIVE_CLASSES()
 
 	BEGIN_NATIVE_SCRIPTS(Shell)
@@ -154,7 +149,11 @@ namespace avmshell
 	#ifdef WIN32
 	void Shell::computeStackBase()
 	{
+#ifdef AVMPLUS_AMD64
+		const int kStackMargin = 262144;
+#else
 		const int kStackMargin = 131072;
+#endif
 		
 		SYSTEM_INFO sysinfo;
 		GetSystemInfo(&sysinfo);
@@ -218,6 +217,8 @@ namespace avmshell
 			printf("          [-Dgcstats]   generate statistics on gc\n");
 			printf("          [-Dnoincgc]   don't use incremental collection\n");
 			printf("          [-Dastrace N] display AS execution information, where N is [1..4]\n");
+			printf("          [-Dlanguage l] localize runtime errors, languages are:\n");
+			printf("                        en,de,es,fr,it,ja,ko,zh-CN,zh-TW\n");
 		#endif
 
 		#ifdef AVMPLUS_INTERP
@@ -451,7 +452,8 @@ namespace avmshell
 													  domain,
 													  toplevel->domainEnv());
 
-			ShellCodeContext* codeContext = new (GetGC()) ShellCodeContext(domainEnv);
+			ShellCodeContext* codeContext = new (GetGC()) ShellCodeContext();
+			codeContext->m_domainEnv = domainEnv;
 				
 			// parse new bytecode
 			handleActionBlock(code, 0, domainEnv, toplevel, NULL, NULL, NULL, codeContext);
@@ -560,7 +562,19 @@ namespace avmshell
 						} else if (!strcmp(arg+2, "noincgc")) {
 							GetGC()->incremental = false;
 						} else if (!strcmp(arg+2, "astrace")) {
-							avmplus::Debugger::astrace = (avmplus::Debugger::TraceLevel) strtol(argv[++i], 0, 10);
+							avmplus::Debugger::astrace_console = (avmplus::Debugger::TraceLevel) strtol(argv[++i], 0, 10);
+						} else if (!strcmp(arg+2, "language")) {
+							langID=-1;
+							for (int j=0;j<kLanguages;j++) {
+								if (!strcmp(argv[i+1],languageNames[j].str)) {
+									langID=j;
+									break;
+								}
+							}
+							if (langID==-1) {
+								langID = atoi(argv[i+1]);
+							}
+							i++;
                     	#endif /* DEBUGGER */
 						#ifdef AVMPLUS_INTERP
 						} else if (!strcmp(arg+2, "interp")) {
@@ -747,7 +761,8 @@ namespace avmshell
 						return(1);
 				}
 
-				ShellCodeContext* codeContext = new (GetGC()) ShellCodeContext(domainEnv);
+				ShellCodeContext* codeContext = new (GetGC()) ShellCodeContext();
+				codeContext->m_domainEnv = domainEnv;
 				
 				// parse new bytecode
 				if (isValid)

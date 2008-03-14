@@ -40,7 +40,9 @@ them both to 0; an emulation function will be used. */
 #define HAVE_LIMITS_H 1
 
 /* Define to 1 if the system has the type `long long'. */
+#ifndef HAVE_LONG_LONG
 #define HAVE_LONG_LONG 1
+#endif
 
 /* Define to 1 if you have the `memmove' function. */
 #define HAVE_MEMMOVE 1
@@ -169,6 +171,7 @@ inline bool isUnicodeWhiteSpace(unsigned short x)
 #define NO_RECURSE 
 
 /* Name of package */
+#ifndef PACKAGE
 #define PACKAGE "pcre"
 
 /* Define to the address where bug reports for this package should be sent. */
@@ -185,7 +188,7 @@ inline bool isUnicodeWhiteSpace(unsigned short x)
 
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "7.3"
-
+#endif // PACKAGE
 
 /* If you are compiling for a system other than a Unix-like system or
    Win32, and it needs some magic to be inserted before the definition
@@ -221,7 +224,9 @@ inline bool isUnicodeWhiteSpace(unsigned short x)
 #define SUPPORT_UTF8 
 
 /* Version number of package */
+#ifndef VERSION
 #define VERSION "7.3"
+#endif // VERSION
 
 // AVMPLUS_PCRE is #defined for any code changes avmplus requires
 #define AVMPLUS_PCRE
@@ -233,3 +238,4 @@ inline bool isUnicodeWhiteSpace(unsigned short x)
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 /* #undef size_t */
+

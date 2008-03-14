@@ -116,7 +116,7 @@ namespace avmplus
 	};
 
 	template <class T, ListElementType kElementType>
-	class List : private ListBase<T, kElementType>
+	class List : public ListBase<T, kElementType>
 	{
 		using ListBase<T, kElementType>::data;
 		using ListBase<T, kElementType>::len;
@@ -191,9 +191,17 @@ namespace avmplus
 		}
 		void insert(int index, T value)
 		{
+			if ((uint32)index >= len)
+			{
+				// Someone is trying to insert at the end
+				add(value);
+				return;
+			}
+
 			if (len >= max) {
 				grow();
 			}
+
 			//move items up
 			arraycopy(data, index, data, index + 1, len - index);
 
@@ -246,19 +254,16 @@ namespace avmplus
 		T removeAt(uint32 i)
 		{
 			T old = (T)0;
-			if (i >= 0)
-			{
-				old = data[i];
-				if(kElementType == LIST_RCObjects)
-					set(i, NULL);
-				arraycopy(data, i+1, data, i, len-i-1);
-				len--;
-				// clear copy at the end so it can be collected if removed
-				// and isn't decremented on next add
-				if(kElementType != LIST_NonGCObjects)
-					data[len] = NULL;
-				AvmAssert(len >= 0);
-			}
+			old = data[i];
+			if(kElementType == LIST_RCObjects)
+				set(i, NULL);
+			arraycopy(data, i+1, data, i, len-i-1);
+			len--;
+			// clear copy at the end so it can be collected if removed
+			// and isn't decremented on next add
+			if(kElementType != LIST_NonGCObjects)
+				data[len] = NULL;
+			AvmAssert(len >= 0);
 			return old;
 		}
 

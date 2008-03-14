@@ -1,4 +1,4 @@
-/* -*- mode: java; mode: font-lock; tab-width: 4; insert-tabs-mode: nil; indent-tabs-mode: nil -*- */
+/* -*- mode: java; tab-width: 4; insert-tabs-mode: nil; indent-tabs-mode: nil -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -141,40 +141,36 @@ public namespace Char
     const Newline = "\n".charCodeAt(0);
     const CarriageReturn = "\r".charCodeAt(0);
 
-    function fromOctal (str)
-	: int
-    {
-	return parseInt (str);
-    }
-
-    function fromHex (str)
-	: int
-    {
-	return parseInt (str);
-    }
-
-    function isIdentifierStart(c) {
-        if (c >= Char::A && c <= Char::Z) return true;
-        else if (c >= Char::a && c <= Char::z) return true;
-        else if (c == Char::UnderScore) return true;
-        else if (c == Char::Dollar) return true;
+    function isUnicodeIdentifierStart(c) {
+        if (c >= Char::A && c <= Char::Z) 
+            return true;
+        if (c >= Char::a && c <= Char::z) 
+            return true;
+        if (c == Char::UnderScore) 
+            return true;
+        if (c == Char::Dollar) 
+            return true;
+        // FIXME: More Unicode here!
         return false;
     }
 
-    function isDigit (c) {
-        if (c >= Char::Zero && c <= Char::Nine) return true;
+    function isUnicodeIdentifierPart(c) {
+        if (c >= Char::A && c <= Char::Z) 
+            return true;
+        if (c >= Char::a && c <= Char::z) 
+            return true;
+        if (c >= Char::Zero && c <= Char::Nine) 
+            return true;
+        if (c == Char::UnderScore) 
+            return true;
+        if (c == Char::Dollar) 
+            return true;
+        // FIXME: More Unicode here!
         return false;
     }
-
-    function isIdentifierPart(c) {
-        if (isIdentifierStart (c)) return true;
-        else if (isDigit (c)) return true;
-        return false;
-    }
-
 
     function test () {
-	print ("testing lex-char.es");
+        print ("testing lex-char.es");
         print ("Space=",Space);
         print ("Tab=",Tab);
         print ("Newline=",Newline);
