@@ -172,7 +172,6 @@ namespace avmplus
 	class ExceptionFrame;
 	class ExceptionHandler;
 	class ExceptionHandlerTable;
-	class FrameState;
 	class GrowableBuffer;
 	class Hashtable;
 	class HeapMultiname;
@@ -283,18 +282,8 @@ namespace avmplus
 #include "ScriptObject.h"
 #include "avmplusProfiler.h"
 #include "StringBuffer.h"
-
-#ifdef AVMPLUS_ARM
-#include "ArmAssembler.h"
-#endif
-
-#ifdef AVMPLUS_MIR
-#include "CodegenMIR.h"
-#endif
-
 #include "AtomArray.h"
 #include "Verifier.h"
-#include "FrameState.h"
 #include "NativeFunction.h"
 #include "ClassClosure.h"
 #include "ClassClass.h"

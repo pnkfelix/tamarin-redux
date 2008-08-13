@@ -37,6 +37,9 @@
 
 
 #include "avmplus.h"
+#ifdef AVMPLUS_MIR
+#include "../codegen/CodegenLIR.h"
+#endif
 
 namespace avmplus
 {
@@ -63,7 +66,7 @@ namespace avmplus
 
 		#ifdef AVMPLUS_VERIFYALL
 		f->flags |= VERIFIED;
-		if (f->pool->core->verifyall && f->pool)
+		if (f->pool->core->config.verifyall && f->pool)
 			f->pool->processVerifyQueue(env->toplevel());
 		#endif
 
@@ -91,9 +94,9 @@ namespace avmplus
 		Verifier verifier(this, toplevel);
 
 		AvmCore* core = this->core();
-		if (core->turbo && !isFlagSet(AbstractFunction::SUGGEST_INTERP))
+		if (core->config.turbo && !isFlagSet(AbstractFunction::SUGGEST_INTERP))
 		{
-			CodegenMIR mir(this);
+			CodegenLIR mir(this);
 			verifier.verify(&mir);	// pass 2 - data flow
 			if (!mir.overflow)
 				mir.emitMD(); // pass 3 - generate code

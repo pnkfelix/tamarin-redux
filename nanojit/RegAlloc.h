@@ -1,3 +1,4 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -11,11 +12,11 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is [Open Source Virtual Machine.].
+ * The Original Code is [Open Source Virtual Machine].
  *
  * The Initial Developer of the Original Code is
  * Adobe System Incorporated.
- * Portions created by the Initial Developer are Copyright (C) 2004-2006
+ * Portions created by the Initial Developer are Copyright (C) 2004-2007
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,43 +36,45 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __avmplus_NamespaceSet__
-#define __avmplus_NamespaceSet__
+
+#ifndef __nanojit_RegAlloc__
+#define __nanojit_RegAlloc__
 
 
-namespace avmplus
+namespace nanojit
 {
-	/**
-	 * NamespaceSet is a reference to 0 or more namespaces.  It consists
-	 * of a list of namespaces.
-	 */
-	class NamespaceSet : public MMgc::GCObject
+	inline RegisterMask rmask(Register r)
 	{
-	public:
-		int size;
-		Namespace* namespaces[1/*namespaceCount*/];
+		return 1 << r;
+	}
 
-		NamespaceSet(int namespaceCount);
+	class RegAlloc MMGC_SUBCLASS_DECL
+	{
+		public:
+			RegAlloc() {}
+			void	clear();
+			bool	isFree(Register r); 
+			void	addFree(Register r);
+			void	removeFree(Register r);
+			void	addActive(Register r, LIns* ins);
+			void	removeActive(Register r);
+			LIns*	getActive(Register r); 
+			void	retire(Register r);
 
-		NamespaceSet(Namespace* ns)
-		{
-			this->size = 1;
-			this->namespaces[0] = ns;
-		}
+			debug_only( uint32_t	countFree(); )
+			debug_only( uint32_t	countActive(); )
+			debug_only( void		checkCount(); )
+			debug_only( bool		isConsistent(Register r, LIns* v); )
+			debug_only( uint32_t	count; )
+			debug_only( RegisterMask managed; )    // bitfield of 0..NJ_MAX_REGISTERS denoting which are under our management                     
 
-		bool contains(Namespace* ns) const
-		{
-			for (int i=0,n=size; i < n; i++)
-				if (namespaces[i] == ns)
-					return true;
-			return false;
-		}
+			LIns*	active[NJ_MAX_REGISTERS];  // active[r] = OP that defines r
+			RegisterMask	free;
+			RegisterMask	used;
 
-//#ifdef AVMPLUS_VERBOSE
-	public:
-		Stringp format(AvmCore* core) const;
-//#endif
+			verbose_only( static void formatRegisters(RegAlloc& regs, char* s, Fragment*); )
+
+			DECLARE_PLATFORM_REGALLOC()
 	};
 }
-
-#endif /* __avmplus_NamespaceSet__ */
+#endif // __nanojit_RegAlloc__

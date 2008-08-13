@@ -1,3 +1,4 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -15,7 +16,7 @@
  *
  * The Initial Developer of the Original Code is
  * Adobe System Incorporated.
- * Portions created by the Initial Developer are Copyright (C) 2004-2006
+ * Portions created by the Initial Developer are Copyright (C) 2004-2007
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,43 +36,26 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __avmplus_NamespaceSet__
-#define __avmplus_NamespaceSet__
 
+//
+// This is the source file for the nanojit project's precompiled header.
+//
 
-namespace avmplus
-{
-	/**
-	 * NamespaceSet is a reference to 0 or more namespaces.  It consists
-	 * of a list of namespaces.
-	 */
-	class NamespaceSet : public MMgc::GCObject
-	{
-	public:
-		int size;
-		Namespace* namespaces[1/*namespaceCount*/];
+#include "nanojit.h"
 
-		NamespaceSet(int namespaceCount);
+// The default precompiled header setting on project nanojit is
+// to replace up to #include "nanojit.h" with nanojit.pch, the
+// precompiled header.
 
-		NamespaceSet(Namespace* ns)
-		{
-			this->size = 1;
-			this->namespaces[0] = ns;
-		}
+// nanojit.cpp has custom precompiled header settings to create
+// nanojit.pch by precompiling this file up until the 
+// #include "nanojit.h".
 
-		bool contains(Namespace* ns) const
-		{
-			for (int i=0,n=size; i < n; i++)
-				if (namespaces[i] == ns)
-					return true;
-			return false;
-		}
+// #include "nanojit.h" should be the first non-comment line in
+// any CPP in this project, as the default will be to substitute
+// the contents of the pch for everything up to the include.
 
-//#ifdef AVMPLUS_VERBOSE
-	public:
-		Stringp format(AvmCore* core) const;
-//#endif
-	};
-}
+// If a file cannot #include "nanojit.h", or cannot include it
+// first, then it should disable the precompiled header for that file only
+// (for instance, pcre.cpp).
 
-#endif /* __avmplus_NamespaceSet__ */

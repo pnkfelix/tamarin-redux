@@ -1,3 +1,4 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -15,7 +16,7 @@
  *
  * The Initial Developer of the Original Code is
  * Adobe System Incorporated.
- * Portions created by the Initial Developer are Copyright (C) 2004-2006
+ * Portions created by the Initial Developer are Copyright (C) 2004-2007
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,43 +36,33 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __avmplus_NamespaceSet__
-#define __avmplus_NamespaceSet__
+#ifndef __avmplus_msc_inttypes__
+#define __avmplus_msc_inttypes__
 
+typedef unsigned char    uint8_t;
+typedef unsigned short   uint16_t;
+typedef signed char      int8_t;
+typedef short            int16_t;
+typedef unsigned int     uint32_t; 
+typedef signed int       int32_t;
+typedef __int64          int64_t;
+typedef unsigned __int64 uint64_t;
+typedef long long          int64_t;
+typedef unsigned long long         uint64_t;
 
-namespace avmplus
-{
-	/**
-	 * NamespaceSet is a reference to 0 or more namespaces.  It consists
-	 * of a list of namespaces.
-	 */
-	class NamespaceSet : public MMgc::GCObject
-	{
-	public:
-		int size;
-		Namespace* namespaces[1/*namespaceCount*/];
+// math friendly pointer (64 bits in LP 64 systems)
+#if defined (_MSC_VER) && (_MSC_VER >= 1300)
+#define AVMPLUS_TYPE_IS_POINTER_SIZED __w64
+#else
+#define AVMPLUS_TYPE_IS_POINTER_SIZED
+#endif	
 
-		NamespaceSet(int namespaceCount);
+#ifdef AVMPLUS_64BIT
+typedef AVMPLUS_TYPE_IS_POINTER_SIZED uint64_t uintptr_t;
+typedef AVMPLUS_TYPE_IS_POINTER_SIZED int64_t intptr_t;
+#else
+typedef AVMPLUS_TYPE_IS_POINTER_SIZED uint32_t uintptr_t;
+typedef AVMPLUS_TYPE_IS_POINTER_SIZED int32_t intptr_t;
+#endif
 
-		NamespaceSet(Namespace* ns)
-		{
-			this->size = 1;
-			this->namespaces[0] = ns;
-		}
-
-		bool contains(Namespace* ns) const
-		{
-			for (int i=0,n=size; i < n; i++)
-				if (namespaces[i] == ns)
-					return true;
-			return false;
-		}
-
-//#ifdef AVMPLUS_VERBOSE
-	public:
-		Stringp format(AvmCore* core) const;
-//#endif
-	};
-}
-
-#endif /* __avmplus_NamespaceSet__ */
+#endif	

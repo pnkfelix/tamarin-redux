@@ -37,6 +37,8 @@
 
 
 #include "avmplus.h"
+#include "../codegen/CodegenLIR.h"
+#include "FrameState.h"
 
 namespace avmplus
 {
@@ -139,7 +141,7 @@ namespace avmplus
 	 * @param pool
 	 * @param info
 	 */
-    void Verifier::verify(CodegenMIR *mir)
+    void Verifier::verify(CodegenLIR *mir)
 	{		
 		SAMPLE_FRAME("[verify]", core);
 
@@ -229,8 +231,8 @@ namespace avmplus
 #ifdef FEATURE_BUFFER_GUARD
 		#ifdef AVMPLUS_MIR
 		// allow the mir buffer to grow dynamically
-		GrowthGuard guard(mir ? mir->mirBuffer : NULL);
-		this->growthGuard = &guard;
+		//GrowthGuard guard(mir ? mir->mirBuffer : NULL);
+		//this->growthGuard = &guard;
 		#endif //AVMPLUS_MIR
 #endif /* FEATURE_BUFFER_GUARD */
 
@@ -304,8 +306,10 @@ namespace avmplus
 
 				if (!blockState->targetOfBackwardsBranch)
 				{
-					blockStates->remove((uintptr)pc);
-					core->GetGC()->Free(blockState);
+                    // fixme: CodegenLIR wants to do all patching in epilog() so we cannot
+                    // free the block early.
+					//blockStates->remove((uintptr)pc);
+					//core->GetGC()->Free(blockState);
 				}
 			}
 			else
@@ -843,7 +847,7 @@ namespace avmplus
 				}
 
 				#ifdef AVMPLUS_VERIFYALL
-				if (core->verifyall)
+				if (core->config.verifyall)
 					pool->enq(f);
 				#endif
 
@@ -937,7 +941,7 @@ namespace avmplus
 				itraits->resolveSignatures(toplevel);
 
 				#ifdef AVMPLUS_VERIFYALL
-				if (core->verifyall)
+				if (core->config.verifyall)
 				{
 					pool->enq(ctraits);
 					pool->enq(itraits);
@@ -1284,7 +1288,7 @@ namespace avmplus
 				}
 
 				#ifdef AVMPLUS_VERIFYALL
-				if (core->verifyall)
+				if (core->config.verifyall)
 					pool->enq(m);
 				#endif
 
@@ -3406,7 +3410,7 @@ namespace avmplus
 		}
 #ifdef AVMPLUS_MIR
 		if (mir && v.ins)
-			mir->formatOperand(core->console, v.ins, mir->ipStart);
+			mir->formatOperand(core->console, v.ins);
 #endif
 	}
 

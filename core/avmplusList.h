@@ -183,6 +183,10 @@ namespace avmplus
 		{
 			return data[index];
 		}
+		T last() const
+		{
+			return data[len-1];
+		}
 		void set(uint32 index, T value)
 		{
 			wb(index, value);
@@ -302,6 +306,13 @@ namespace avmplus
 		}
 
 		const T *getData() const { return data; }
+
+        void become(List<T, kElementType> &list) {
+            clear();
+            for (int i=0, n=list.len; i < n; i++)
+                add(list[i]);
+            list.clear();
+        }
 
 	private:
 
