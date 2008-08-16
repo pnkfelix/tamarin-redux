@@ -39,13 +39,14 @@ INCLUDES += \
   -I$(topsrcdir)/MMgc \
   -I$(topsrcdir)/core \
   -I$(topsrcdir)/codegen \
+  -I$(topsrcdir)/nanojit \
   -I$(topsrcdir)/pcre \
   $(NULL)
 
 $(call RECURSE_DIRS,MMgc)
 
 ifdef ENABLE_TAMARIN
-$(call RECURSE_DIRS,core pcre codegen)
+$(call RECURSE_DIRS,core pcre codegen nanojit)
 
 ifeq (darwin,$(TARGET_OS))
 $(call RECURSE_DIRS,platform/mac)

@@ -119,6 +119,7 @@
 #endif
 
 #define AVMPLUS_MIR
+#define FEATURE_NANOJIT
 
 // if a function meets the E4 criteria for being unchecked, then make
 // all its parameters optional and add a rest arg.  asc should do this
@@ -197,6 +198,17 @@
 
 #ifdef AVMPLUS_SPARC
 #define AVM10_BIG_ENDIAN
+#endif
+
+// FASTCALL 
+#ifdef AVMPLUS_IA32
+	#if _MSC_VER
+		#define FASTCALL __fastcall
+	#elif __GNUC__
+		#define FASTCALL __attribute__((fastcall))
+	#else
+		#define FASTCALL
+	#endif
 #endif
 
 // Enable translation from ABC byte code to a wider word code that can
