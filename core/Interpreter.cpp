@@ -52,7 +52,7 @@
 // not an array of bytes.
 
 namespace avmplus
-{
+{	
 
 #define IS_INTEGER(v)        (((v) & 7) == kIntegerType)
 #define IS_DOUBLE(v)         (((v) & 7) == kDoubleType)
@@ -152,7 +152,9 @@ namespace avmplus
 		return AvmCore::number_d(a);
 	}
 
+#ifdef _MSC_VER
 #pragma warning(disable:4102)    // unreferenced label
+#endif
 #ifdef MSVC_X86_ASM_THREADING
 #  pragma warning(disable:4740)  // "inline assembler suppresses global optimization"
 #endif
@@ -498,15 +500,14 @@ namespace avmplus
 		const byte * volatile code_start = pos;
 #endif // AVMPLUS_WORD_CODE
 		int volatile max_scope = MethodInfo::maxScopeDepth(info, max_scope_depth - init_scope_depth);
-
+		
 		// these should have been checked in AbcParser
 		AvmAssert(local_count+max_scope+max_stack > 0);
 		Atom* framep = (Atom*)alloca(sizeof(Atom)*(local_count + max_scope + max_stack));
 		Atom* scopeBase = framep + local_count;
 		Atom* withBase = NULL;
 
-#ifdef DEBUGGER
-		env->invocationCount++;
+		#ifdef DEBUGGER
 		CallStackNode callStackNode(env, info, framep, 0, argc, ap, 0 /* later changed to 'pc' */);
 		// don't allow entry into the debugger until we have setup the frame
 #endif
@@ -587,13 +588,13 @@ namespace avmplus
 		volatile int initialScopeDepth = scopeDepth;
 
 		PoolObject *pool = info->pool;
-		const List<Stringp, LIST_RCObjects>& cpool_string = pool->cpool_string;
+		const List<Stringp>& cpool_string = pool->cpool_string;
 #ifndef AVMPLUS_WORD_CODE
-        const List<int,LIST_NonGCObjects>& cpool_int = pool->cpool_int;
-        const List<uint32,LIST_NonGCObjects>& cpool_uint = pool->cpool_uint;
+        const List<int>& cpool_int = pool->cpool_int;
+        const List<uint32>& cpool_uint = pool->cpool_uint;
 #endif // !AVMPLUS_WORD_CODE
         const List<double*, LIST_GCObjects>& cpool_double = pool->cpool_double;
-		const List<Namespace*, LIST_RCObjects>& cpool_ns = pool->cpool_ns;
+		const List<Namespace*>& cpool_ns = pool->cpool_ns;
 
 		Atom *sp = scopeBase + max_scope - 1;
 
@@ -702,9 +703,9 @@ namespace avmplus
 #else
 		TRY_UNLESS(core, !info->exceptions, kCatchAction_SearchForActionScriptExceptionHandler) {
 #endif
-			
+		
 		restore_dxns();
-
+		
 		// the verifier ensures we don't fall off the end of a method.  so
 		// we dont have to check the end pointer here.
 #if defined DIRECT_DISPATCH
@@ -777,7 +778,7 @@ namespace avmplus
                 NEXT;
 			}
 #endif
-					
+
 #ifndef AVMPLUS_WORD_CODE
 			INSTR(timestamp) {
 				// FIXME: In the direct threaded translation these should probably
@@ -785,7 +786,7 @@ namespace avmplus
                 NEXT;
 			}
 #endif
-					
+
 			INSTR(coerce_a) { // no-op since interpreter only uses atoms
 #ifdef MSVC_X86_REWRITE_THREADING
 				SAVE_EXPC;    // need to do _something_ or the label disappears completely
@@ -1630,12 +1631,12 @@ namespace avmplus
 				IFCMP(<=, core->compare(rhs, lhs) != trueAtom);
                 NEXT;
 			}
-			
+
 			INSTR(ifge) {
 				IFCMP(>=, core->compare(lhs, rhs) == falseAtom);
                 NEXT;
 			}
-
+			
 			INSTR(ifnge) {
 				IFCMP(<, core->compare(lhs, rhs) != falseAtom);
                 NEXT;
@@ -1653,7 +1654,7 @@ namespace avmplus
 		sp[0] = generic_cmp ? trueAtom : falseAtom; \
 		restore_dxns(); \
 	}
-					
+
             INSTR(lessthan) {
 				CMP(<, core->compare(lhs, rhs) == trueAtom);
                 NEXT;
@@ -1668,12 +1669,12 @@ namespace avmplus
 				CMP(>, core->compare(rhs, lhs) == trueAtom);
                 NEXT;
 			}
-					
+
             INSTR(greaterequals) {
 				CMP(>=, core->compare(lhs, rhs) == falseAtom);
                 NEXT;
 			}
-					
+
             INSTR(newobject) {
 				SAVE_EXPC;
                 int32 argc = U30ARG;
@@ -2059,7 +2060,7 @@ namespace avmplus
 				*sp = toplevel->callproperty(base, &multiname, argc, atomv, toplevel->toVTable(base));\
 			}\
 			restore_dxns();
-
+				
 			INSTR(callproperty) {
 				callprop_impl(base);
 				NEXT;
@@ -2203,7 +2204,7 @@ namespace avmplus
 				restore_dxns();
 				NEXT;
 			}
-
+				
 #ifndef AVMPLUS_WORD_CODE
             INSTR(pushshort) {
                 // this just pushes an integer since we dont have short atoms
@@ -2288,7 +2289,7 @@ namespace avmplus
                 NEXT;
 			}
 #endif
-					
+
             INSTR(getscopeobject) {
 				int scope_index = U8ARG;
 				sp++;
@@ -2503,7 +2504,7 @@ namespace avmplus
 				*++sp = *pc++;
 				NEXT;
 			}
-					
+
 			INSTR(ext_push_doublebits) {
 				union {
 					double d;
