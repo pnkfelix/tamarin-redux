@@ -37,6 +37,13 @@
 
 
 #include "avmplus.h"
+#ifdef AVMPLUS_MIR
+#include "../codegen/CodegenLIR.h"
+#endif
+
+#ifdef PERFM
+#include "../vprof/vprof.h"
+#endif /* PERFM */
 
 namespace avmplus
 {
@@ -63,7 +70,7 @@ namespace avmplus
 
 		#ifdef AVMPLUS_VERIFYALL
 		f->flags |= VERIFIED;
-		if (f->pool->core->verifyall && f->pool)
+		if (f->pool->core->config.verifyall && f->pool)
 			f->pool->processVerifyQueue(env->toplevel());
 		#endif
 
@@ -91,10 +98,21 @@ namespace avmplus
 		Verifier verifier(this, toplevel);
 
 		AvmCore* core = this->core();
-		if (core->turbo && !isFlagSet(AbstractFunction::SUGGEST_INTERP))
+        
+		if (core->config.turbo && !isFlagSet(AbstractFunction::SUGGEST_INTERP))
 		{
-			CodegenMIR mir(this);
+#ifdef PERFM
+			uint64_t start = rtstamp();
+#endif /* PERFM */
+		
+			CodegenLIR mir(this);
 			verifier.verify(&mir);	// pass 2 - data flow
+#ifdef PERFM
+			uint64_t stop = rtstamp();
+			const int mhz = 100;
+			_nvprof("verify & IR gen", (stop-start)/(100*mhz));
+#endif /* PERFM */
+
 			if (!mir.overflow)
 				mir.emitMD(); // pass 3 - generate code
 

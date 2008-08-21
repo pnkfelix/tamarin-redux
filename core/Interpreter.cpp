@@ -599,7 +599,7 @@ namespace avmplus
 
 #else // !AVMPLUS_WORD_CODE
 
-#  if defined AVMPLUS_VERBOSE
+#  if 0 && defined AVMPLUS_VERBOSE
 #    define INSTR(op) case OP_##op: \
                         if (pool->verbose) {\
 							showState(info, code_start, pc-1,  framep, sp, scopeDepth, scopeBase, max_scope); \
@@ -1385,7 +1385,7 @@ namespace avmplus
             INSTR(equals) {
 				// OPTIMIZEME?
 				SAVE_EXPC;
-				sp[-1] = core->eq(sp[-1], sp[0]);
+				sp[-1] = core->equals(sp[-1], sp[0]);
                 sp--;
 				restore_dxns();
                 NEXT;
@@ -1482,12 +1482,12 @@ namespace avmplus
 	} while(0)
 	
 		   INSTR(ifeq) {
-				IFEQ(==, eq, trueAtom);
+				IFEQ(==, equals, trueAtom);
                 NEXT;
 			}
 					
 			INSTR(ifne) {
-				IFEQ(!=, eq, falseAtom);
+				IFEQ(!=, equals, falseAtom);
                 NEXT;
 			}
 
@@ -1801,7 +1801,7 @@ namespace avmplus
 				int indexReg  = U30ARG;
 				Atom objAtom = framep[objectReg];
 				int index = core->integer(framep[indexReg]);
-				*(++sp) = env->hasnext2(objAtom, index) ? trueAtom : falseAtom;
+				*(++sp) = env->hasnextproto(objAtom, index) ? trueAtom : falseAtom;
 				framep[objectReg] = objAtom;
 				framep[indexReg] = core->intToAtom(index);
 				restore_dxns();

@@ -241,6 +241,7 @@ namespace avmshell
 
 		#ifdef AVMPLUS_VERBOSE
 			printf("          [-Dverbose]   trace every instruction (verbose!)\n");
+			printf("          [-Dverbose_init] trace the builtins too\n");
 			printf("          [-Dbbgraph]   output MIR basic block graphs for use with Graphviz\n");
 		#endif
 
@@ -517,10 +518,10 @@ namespace avmshell
 		{
 			#if defined (AVMPLUS_IA32) || defined(AVMPLUS_AMD64)
 			#ifdef AVMPLUS_MAC
-			sse2 = true;
+			config.sse2 = true;
 			#else
 			if (!P4Available()) {
-				sse2 = false;
+				config.sse2 = false;
 			}
 			#endif
 			#endif
@@ -554,16 +555,16 @@ namespace avmshell
 				{
 					if (arg[1] == 'D') {
 						if (!strcmp(arg+2, "timeout")) {
-							interrupts = true;
+							config.interrupts = true;
 
 						#ifdef AVMPLUS_IA32
 						} else if (!strcmp(arg+2, "nosse")) {
-							sse2 = false;
+							config.sse2 = false;
 						#endif
 
 	                    #ifdef AVMPLUS_VERIFYALL
 						} else if (!strcmp(arg+2, "verifyall")) {
-							verifyall = true;
+							config.verifyall = true;
 		                #endif /* AVMPLUS_VERIFYALL */
 
 	                    #ifdef _DEBUG
@@ -594,28 +595,31 @@ namespace avmshell
 							i++;
                     	#endif /* DEBUGGER */
 						} else if (!strcmp(arg+2, "interp")) {
-							turbo = false;
+							config.turbo = false;
 						#ifdef AVMPLUS_VERBOSE
 						} else if (!strcmp(arg+2, "verbose")) {
 							do_verbose = true;
+						} else if (!strcmp(arg+2, "verbose_init")) {
+                            do_verbose = this->config.verbose = true;
+                        
 						#endif
 
 	                #ifdef AVMPLUS_MIR
 						} else if (!strcmp(arg+2, "forcemir")) {
-							forcemir = true;
+							config.forcemir = true;
 
 						} else if (!strcmp(arg+2, "nodce")) {
-							dceopt = false;
+							config.dceopt = false;
 							
 						} else if (!strcmp(arg+2, "nocse")) {
-							cseopt = false;
+							config.cseopt = false;
 
 						} else if (!strcmp(arg+2, "mem")) {
 							show_mem = true;
 
                         #ifdef AVMPLUS_VERBOSE
 						} else if (!strcmp(arg+2, "bbgraph")) {
-							bbgraph = true;  // generate basic block graph (only valid with mir switch)
+							config.bbgraph = true;  // generate basic block graph (only valid with mir switch)
                         #endif
                     #endif /* AVMPLUS_MIR */
 
@@ -701,7 +705,7 @@ namespace avmshell
 
 #ifdef AVMPLUS_VERBOSE
 			if (do_verbose)
-				verbose = true;
+				config.verbose = true;
 #endif
 
 			#ifdef DEBUGGER
@@ -722,7 +726,7 @@ namespace avmshell
 			#endif
 
 			// start the 15 second timeout if applicable
-			if (interrupts) {
+			if (config.interrupts) {
 				#ifdef WIN32
 				timeSetEvent(kScriptTimeout*1000,
 							 kScriptTimeout*1000,
@@ -762,7 +766,7 @@ namespace avmshell
 				filename = argv[i];
 
 				#ifdef AVMPLUS_VERBOSE
-				if (verbose) {
+				if (config.verbose) {
 					console << "run " << filename << "\n";
 				}
 				#endif

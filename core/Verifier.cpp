@@ -37,6 +37,8 @@
 
 
 #include "avmplus.h"
+#include "../codegen/CodegenLIR.h"
+#include "FrameState.h"
 
 namespace avmplus
 {
@@ -139,8 +141,11 @@ namespace avmplus
 	 * @param pool
 	 * @param info
 	 */
-    void Verifier::verify(CodegenMIR *mir)
-	{		
+    void Verifier::verify(CodegenLIR *mir)
+	{
+		//debugging hack
+        //verbose = (mir != 0);
+
 		SAMPLE_FRAME("[verify]", core);
 
 		#ifdef AVMPLUS_VERBOSE
@@ -229,8 +234,8 @@ namespace avmplus
 #ifdef FEATURE_BUFFER_GUARD
 		#ifdef AVMPLUS_MIR
 		// allow the mir buffer to grow dynamically
-		GrowthGuard guard(mir ? mir->mirBuffer : NULL);
-		this->growthGuard = &guard;
+		//GrowthGuard guard(mir ? mir->mirBuffer : NULL);
+		//this->growthGuard = &guard;
 		#endif //AVMPLUS_MIR
 #endif /* FEATURE_BUFFER_GUARD */
 
@@ -304,8 +309,10 @@ namespace avmplus
 
 				if (!blockState->targetOfBackwardsBranch)
 				{
-					blockStates->remove((uintptr)pc);
-					core->GetGC()->Free(blockState);
+                    // fixme: CodegenLIR wants to do all patching in epilog() so we cannot
+                    // free the block early.
+					//blockStates->remove((uintptr)pc);
+					//core->GetGC()->Free(blockState);
 				}
 			}
 			else
@@ -359,8 +366,8 @@ namespace avmplus
 							state->push(NULL);
 
 							#ifdef AVMPLUS_MIR
-							if (mir)
-								mir->localSet(stackBase, mir->exAtom);
+							//if (mir)
+							//	mir->localSet(stackBase, mir->exAtom);
 							#endif
 
 							checkTarget(target);
@@ -843,7 +850,7 @@ namespace avmplus
 				}
 
 				#ifdef AVMPLUS_VERIFYALL
-				if (core->verifyall)
+				if (core->config.verifyall)
 					pool->enq(f);
 				#endif
 
@@ -937,7 +944,7 @@ namespace avmplus
 				itraits->resolveSignatures(toplevel);
 
 				#ifdef AVMPLUS_VERIFYALL
-				if (core->verifyall)
+				if (core->config.verifyall)
 				{
 					pool->enq(ctraits);
 					pool->enq(itraits);
@@ -1284,7 +1291,7 @@ namespace avmplus
 				}
 
 				#ifdef AVMPLUS_VERIFYALL
-				if (core->verifyall)
+				if (core->config.verifyall)
 					pool->enq(m);
 				#endif
 
@@ -1437,9 +1444,7 @@ namespace avmplus
 					if (slotType == core->traits.int_ctraits)
 					{
 						emitCoerce(INT_TYPE, sp);
-						Value v = state->stackTop();
-						state->pop();
-						state->stackTop() = v;
+                        emitNip();
 						if (opcode == OP_callpropvoid)
 							state->pop();
 						break;
@@ -1447,9 +1452,7 @@ namespace avmplus
 					else if (slotType == core->traits.uint_ctraits)
 					{
 						emitCoerce(UINT_TYPE, sp);
-						Value v = state->stackTop();
-						state->pop();
-						state->stackTop() = v;
+                        emitNip();
 						if (opcode == OP_callpropvoid)
 							state->pop();
 						break;
@@ -1457,9 +1460,7 @@ namespace avmplus
 					else if (slotType == core->traits.number_ctraits)
 					{
 						emitCoerce(NUMBER_TYPE, sp);
-						Value v = state->stackTop();
-						state->pop();
-						state->stackTop() = v;
+                        emitNip();
 						if (opcode == OP_callpropvoid)
 							state->pop();
 						break;
@@ -1467,9 +1468,7 @@ namespace avmplus
 					else if (slotType == core->traits.boolean_ctraits)
 					{
 						emitCoerce(BOOLEAN_TYPE, sp);
-						Value v = state->stackTop();
-						state->pop();
-						state->stackTop() = v;
+                        emitNip();
 						if (opcode == OP_callpropvoid)
 							state->pop();
 						break;
@@ -1477,9 +1476,7 @@ namespace avmplus
 					else if (slotType == core->traits.string_ctraits)
 					{
 						emitToString(OP_convert_s, sp);
-						Value v = state->stackTop();
-						state->pop();
-						state->stackTop() = v;
+                        emitNip();
 						if (opcode == OP_callpropvoid)
 							state->pop();
 						break;
@@ -1490,9 +1487,7 @@ namespace avmplus
 					{
 						AvmAssert(slotType->itraits != NULL);
 						emitCoerce(slotType->itraits, state->sp());
-						Value v = state->stackTop();
-						state->pop();
-						state->stackTop() = v;
+                        emitNip();
 						if (opcode == OP_callpropvoid)
 							state->pop();
 						break;
@@ -2644,15 +2639,27 @@ namespace avmplus
 		state->pop(2);
 	}
 
+    // ( x1 x2 -- x2 x1 )
 	void Verifier::emitSwap()
 	{
-		if (mir) mir->emitSwap(state, state->sp(), state->sp()-1);
+		if (mir) 
+            mir->emitSwap(state, state->sp(), state->sp()-1);
 		Value v1 = state->peek(1);
 		Value v2 = state->peek(2);
 		state->pop(2);
 		state->push(v1);
 		state->push(v2);
 	}
+
+    // ( x1 x2 -- x2 )
+    void Verifier::emitNip()
+    {
+        if (mir) 
+            mir->emitCopy(state, state->sp(), state->sp()-1);
+        Value v = state->stackTop();
+        state->pop(2);
+        state->push(v);
+    }
 
 	FrameState *Verifier::getFrameState(sintptr targetpc)
 	{
@@ -3338,9 +3345,9 @@ namespace avmplus
     {
 		// stack
 		core->console << "                        stack:";
-		for (int i=0, n=state->stackDepth; i < n; i++) {
+		for (int i=stackBase, n=state->sp(); i <= n; i++) {
 			core->console << " ";
-			printValue(state->stackValue(i));
+			printValue(state->value(i));
 		}
 		core->console << '\n';
 
@@ -3366,9 +3373,12 @@ namespace avmplus
 			}
 			core->console << "] ";
 		}
-		for (int i=0, n=state->scopeDepth; i < n; i++) 
+		for (int i=scopeBase, n=stackBase; i < n; i++) 
 		{
-            printValue(state->scopeValue(i));
+            if (i-scopeBase < state->scopeDepth)
+                printValue(state->value(i));
+            else
+                core->console << "~";
 			core->console << " ";
         }
 		core->console << '\n';
@@ -3406,7 +3416,7 @@ namespace avmplus
 		}
 #ifdef AVMPLUS_MIR
 		if (mir && v.ins)
-			mir->formatOperand(core->console, v.ins, mir->ipStart);
+			mir->formatOperand(core->console, v.ins);
 #endif
 	}
 

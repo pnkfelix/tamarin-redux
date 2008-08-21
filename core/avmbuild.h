@@ -53,7 +53,7 @@
 
 #ifdef AVMPLUS_MAC
   // Are we PowerPC or i386 (Macintel) or x86_64 (64-bit)?
-  #if __i386__
+  #ifdef __i386__
     #ifndef AVMPLUS_IA32
       #define AVMPLUS_IA32
     #endif
@@ -119,6 +119,7 @@
 #endif
 
 #define AVMPLUS_MIR
+#define FEATURE_NANOJIT
 
 // if a function meets the E4 criteria for being unchecked, then make
 // all its parameters optional and add a rest arg.  asc should do this
@@ -191,12 +192,26 @@
 // Enable interfacing Java
 #define FEATURE_JNI
 
+// performance metrics for NJ 
+//#define PERFM
+
 #ifdef SOLARIS
 #define HAVE_ALLOCA_H
 #endif
 
 #ifdef AVMPLUS_SPARC
 #define AVM10_BIG_ENDIAN
+#endif
+
+// FASTCALL 
+#ifdef AVMPLUS_IA32
+	#if _MSC_VER
+		#define FASTCALL __fastcall
+	#elif __GNUC__
+		#define FASTCALL __attribute__((fastcall))
+	#else
+		#define FASTCALL
+	#endif
 #endif
 
 // Enable translation from ABC byte code to a wider word code that can

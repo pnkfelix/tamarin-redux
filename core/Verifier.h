@@ -57,12 +57,15 @@ namespace avmplus
 	 * incompatible frame states cause verify errors.
 	 */
 
+	class FrameState;
+	class CodegenLIR;
+
 	class Verifier
 	{
 	public:
 
 		#ifdef AVMPLUS_MIR
-		CodegenMIR *mir;
+		CodegenLIR *mir;
 		#endif // AVMPLUS_MIR
 
 		AvmCore *core;
@@ -99,7 +102,7 @@ namespace avmplus
 		 * an exception will be thrown, of type VerifyError.
 		 * @param info the method to verify
 		 */
-		void verify(CodegenMIR *mir);
+		void verify(CodegenLIR *mir);
 		FrameState* getFrameState(sintptr targetpc);
 
 	private:
@@ -147,6 +150,7 @@ namespace avmplus
 		void emitGetSlot(int slot);
 		void emitSetSlot(int slot);
 		void emitSwap();
+        void emitNip();
 
 		Binding findMathFunction(Traits* math, Multiname* name, Binding b, int argc);
 
@@ -160,6 +164,23 @@ namespace avmplus
 		void verifyWarn(int errorId, ...);
 		#endif
     };
+}
+
+namespace nanojit {
+    class Fragment;
+    struct GuardRecord {
+        int calldepth;
+        Fragment *from, *target;
+        void *jmp, *origTarget;
+        GuardRecord *next, *outgoing;
+    };
+    #define GuardRecordSize(r) sizeof(GuardRecord)
+
+    struct SideExit {
+        int sid;
+        Fragment *target;
+    };
+    #define SideExitSize(x) sizeof(SideExit)
 }
 
 #endif /* __avmplus_Verifier__ */
