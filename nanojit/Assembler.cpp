@@ -213,7 +213,7 @@ namespace nanojit
 
 		// nothing free, steal one 
 		// LSRA says pick the one with the furthest use
-		LIns* vic = findVictim(regs,allow,prefer);
+		LIns* vic = findVictim(regs,allow);
 	    Reservation* resv = getresv(vic);
 
 		// restore vic
@@ -236,6 +236,14 @@ namespace nanojit
 		_resvFree= i-1;
 	}
 
+    /**
+     * these instructions don't have to be saved & reloaded to spill,
+     * they can just be recalculated w/out any inputs.
+     */
+    bool Assembler::canRemat(LIns *i) {
+        return i->isconst() || i->isconstq() || i->isop(LIR_alloc);
+    }
+
 	Reservation* Assembler::reserveAlloc(LInsp i)
 	{
 		uint32_t item = _resvFree;
@@ -246,14 +254,6 @@ namespace nanojit
         r->used = 1;
 		if (!item) 
 			setError(ResvFull); 
-
-        if (i->isconst() || i->isconstq() || i->isop(LIR_alloc))
-            r->cost = 0;
-        else if (i == _thisfrag->lirbuf->sp || i == _thisfrag->lirbuf->rp)
-            r->cost = 2;
-        else
-            r->cost = 1;
-
         i->setresv(item);
 		return r;
 	}
@@ -326,7 +326,7 @@ namespace nanojit
 	{
 		// start and end on same page?
 		size_t exit = 0;
-		int_t pages = _stats.pages;
+		int32_t pages = _stats.pages;
 		if (_nExitIns-1 == _stats.codeExitStart)
 			;
 		else if (samepage(_nExitIns,_stats.codeExitStart))
@@ -534,6 +534,7 @@ namespace nanojit
 		Register r;
 
         if (resv && (r=resv->reg) != UnknownReg && (rmask(r) & allow)) {
+            _allocator.useActive(r);
 			return r;
         }
 
@@ -541,21 +542,27 @@ namespace nanojit
         if (!resv)
 			resv = reserveAlloc(i);
 
-        if ((r=resv->reg) == UnknownReg)
+        r = resv->reg;
+        if (r != UnknownReg && 
+            ((rmask(r)&XmmRegs) && !(allow&XmmRegs) ||
+                 (rmask(r)&x87Regs) && !(allow&x87Regs)))
+        {
+            // x87 <-> xmm copy required
+            evict(r);
+            r = UnknownReg;
+        }
+
+        if (r == UnknownReg)
 		{
-            if (resv->cost == 2 && (allow&SavedRegs))
-                prefer = allow&SavedRegs;
 			r = resv->reg = registerAlloc(prefer);
 			_allocator.addActive(r, i);
 			return r;
 		}
-		else 
+		else
 		{
 			// r not allowed
 			resv->reg = UnknownReg;
 			_allocator.retire(r);
-            if (resv->cost == 2 && (allow&SavedRegs))
-                prefer = allow&SavedRegs;
 			Register s = resv->reg = registerAlloc(prefer);
 			_allocator.addActive(s, i);
             if (rmask(r) & GpRegs) {
@@ -985,8 +992,8 @@ namespace nanojit
                         JMP(_epilogue);
                     }
                     MR(SP,FP);
-                    if (sse2)
-                        evict(FST0);
+                    //if (sse2)
+                    //    evict(FST0);
                     break;
                 }
 
@@ -1578,7 +1585,8 @@ namespace nanojit
 
 					// do this after we've handled the call result, so we dont
 					// force the call result to be spilled unnecessarily.
-					evictRegs(~SavedRegs);
+
+					evictScratchRegs();
 
 					asm_call(ins);
 				}
@@ -1829,14 +1837,50 @@ namespace nanojit
         return i;
 	}
 
+    /**
+     * move regs around so the SavedRegs contains the highest priority regs.
+     */
+    void Assembler::evictScratchRegs()
+    {
+        avmplus::SortedMap<int32_t, int32_t, avmplus::LIST_NonGCObjects> primap(_gc);
+        RegisterMask scratch = ~SavedRegs;
+        for (Register r = FirstReg; r <= LastReg; r = nextreg(r)) {
+            if (_allocator.getActive(r)) {
+                int32_t pri = _allocator.getPriority(r);
+                NanoAssert(!primap.containsKey(pri));
+                primap.put(pri, r);
+            }
+        }
+        // now primap has the live regs in priority order.  
+
+        RegisterMask allow = SavedRegs;
+        while (!primap.isEmpty()) {
+            // get the highest priority var
+            Register r = (Register) primap.removeLast();
+            if (rmask(r) & allow) {
+                // high priority item already in saved reg
+                allow &= ~rmask(r);
+            } 
+            else if (allow && (rmask(r)&GpRegs)) {
+                // move hi-pri item to saved reg.  
+                // if spilling is required, will spill a lower pri saved reg.
+                LIns *i = _allocator.getActive(r);
+                Register s = findRegFor(i, allow);
+                allow &= ~rmask(s);
+            }
+            else {
+                // no more saved regs available. evict.
+                evict(r);
+            }
+        }
+    }
+
 	void Assembler::evictRegs(RegisterMask regs)
 	{
 		// generate code to restore callee saved registers 
 		// @todo speed this up
-		for (Register r = FirstReg; r <= LastReg; r = nextreg(r))
-		{
-			if ((rmask(r) & regs) && _allocator.getActive(r))
-            {
+        for (Register r = FirstReg; r <= LastReg; r = nextreg(r)) {
+            if ((rmask(r) & regs) && _allocator.getActive(r)) {
 				evict(r);
             }
 		}
