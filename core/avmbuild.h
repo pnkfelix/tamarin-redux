@@ -133,11 +133,13 @@
 // don't want MIR enabled for a particular build? define AVMPLUS_DISABLE_MIR
 #ifndef AVMPLUS_DISABLE_MIR
 	#define AVMPLUS_MIR
+	#define FEATURE_NANOJIT
 #endif
 
 #if defined(AVMPLUS_MAC) && defined(AVMPLUS_64BIT)
 	// MIR not yet supported on 64-bit Mac
 	#undef AVMPLUS_MIR
+	#undef FEATURE_NANOJIT
 #endif
 
 // if a function meets the E4 criteria for being unchecked, then make
@@ -257,6 +259,17 @@
 #ifdef AVMPLUS_BIG_ENDIAN
 	// define in case any old code relies on this
 	#define AVM10_BIG_ENDIAN
+#endif
+
+// FASTCALL 
+#ifdef AVMPLUS_IA32
+	#if _MSC_VER
+		#define FASTCALL __fastcall
+	#elif __GNUC__
+		#define FASTCALL __attribute__((fastcall))
+	#else
+		#define FASTCALL
+	#endif
 #endif
 
 // Enable translation from ABC byte code to a wider word code that can

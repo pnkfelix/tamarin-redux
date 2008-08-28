@@ -38,6 +38,7 @@
 
 
 #include "avmplus.h"
+#include "CodegenMIR.h"
 
 #ifdef AVMPLUS_MIR
 namespace avmplus

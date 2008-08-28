@@ -391,6 +391,8 @@ uint64_t rtstamp()
 			: "%eax", "%ecx", "%edx"
 		);
 		return temp;
+	#else 
+		return 0;
 	#endif
 }
 
