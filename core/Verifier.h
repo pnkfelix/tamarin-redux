@@ -57,12 +57,15 @@ namespace avmplus
 	 * incompatible frame states cause verify errors.
 	 */
 
+	class FrameState;
+	class CodegenLIR;
+
 	class Verifier
 	{
 	public:
 
 		#ifdef AVMPLUS_MIR
-		CodegenMIR *mir;
+		CodegenLIR *mir;
 		#endif // AVMPLUS_MIR
 		#ifdef AVMPLUS_WORD_CODE
 		Translator *translator;
@@ -103,7 +106,7 @@ namespace avmplus
 		 * @param info the method to verify
 		 */
 #ifdef AVMPLUS_MIR
-		void verify(CodegenMIR *mir);
+		void verify(CodegenLIR *mir);
 #else
 		void verify();
 #endif
@@ -156,6 +159,8 @@ namespace avmplus
 		void emitGetSlot(int slot);
 		void emitSetSlot(int slot);
 		void emitSwap();
+        void emitNip();
+
 		void emitCallproperty(AbcOpcode opcode, int& sp, Multiname& multiname, uint32 imm30, uint32 imm30b);
 #ifdef AVMPLUS_MIR
 		bool emitCallpropertyMethodMIR(AbcOpcode opcode, Traits* t, Binding b, Multiname& multiname, uint32 argc);
@@ -165,7 +170,6 @@ namespace avmplus
 		bool emitCallpropertyMethodXLAT(AbcOpcode opcode, Traits* t, Binding b, Multiname& multiname, uint32 argc);
 		bool emitCallpropertySlotXLAT(AbcOpcode opcode, Traits* t, Binding b, uint32 argc);
 #endif
-		
 		Binding findMathFunction(Traits* math, Multiname* name, Binding b, int argc);
 
 		Binding findStringFunction(Traits* string, Multiname* name, Binding b, int argc);
@@ -178,6 +182,23 @@ namespace avmplus
 		void verifyWarn(int errorId, ...);
 		#endif
     };
+}
+
+namespace nanojit {
+    class Fragment;
+    struct GuardRecord {
+        int calldepth;
+        Fragment *from, *target;
+        void *jmp, *origTarget;
+        GuardRecord *next, *outgoing;
+    };
+    #define GuardRecordSize(r) sizeof(GuardRecord)
+
+    struct SideExit {
+        int sid;
+        Fragment *target;
+    };
+    #define SideExitSize(x) sizeof(SideExit)
 }
 
 #endif /* __avmplus_Verifier__ */
