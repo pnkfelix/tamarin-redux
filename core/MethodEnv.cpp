@@ -303,6 +303,11 @@ namespace avmplus
 		vtable->traits->core->interrupt(this);
 	}
 
+    void MethodEnv::stkover()
+    {
+        this->core()->stackOverflow(this);
+    }
+
 	Traits* MethodEnv::toClassITraits(Atom atom)
 	{
 		switch (atom&7)
@@ -777,7 +782,7 @@ namespace avmplus
 		}
 	}
 
-	int MethodEnv::hasnext2(Atom& objAtom, int& index) const
+	int MethodEnv::hasnextproto(Atom& objAtom, int& index) const
 	{
 		if (index < 0)
 			return 0;
