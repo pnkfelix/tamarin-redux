@@ -59,7 +59,6 @@ avmplus_CXXSRCS := $(avmplus_CXXSRCS) \
   $(curdir)/DateObject.cpp \
   $(curdir)/Domain.cpp \
   $(curdir)/DomainEnv.cpp \
-  $(curdir)/DynamicProfiler.cpp \
   $(curdir)/E4XNode.cpp \
   $(curdir)/ErrorClass.cpp \
   $(curdir)/ErrorConstants.cpp \
@@ -92,12 +91,12 @@ avmplus_CXXSRCS := $(avmplus_CXXSRCS) \
   $(curdir)/ScriptBuffer.cpp \
   $(curdir)/ScriptObject.cpp \
   $(curdir)/StackTrace.cpp \
-  $(curdir)/StaticProfiler.cpp \
   $(curdir)/StringBuffer.cpp \
   $(curdir)/StringClass.cpp \
   $(curdir)/StringObject.cpp \
   $(curdir)/Toplevel.cpp \
   $(curdir)/Traits.cpp \
+  $(curdir)/Translator.cpp \
   $(curdir)/UnicodeUtils.cpp \
   $(curdir)/VectorClass.cpp \
   $(curdir)/Verifier.cpp \

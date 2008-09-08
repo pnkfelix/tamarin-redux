@@ -91,30 +91,39 @@ namespace avmplus
 		Verifier verifier(this, toplevel);
 
 		AvmCore* core = this->core();
-		if (core->turbo && !isFlagSet(AbstractFunction::SUGGEST_INTERP))
+		if ((core->IsMIREnabled()) && !isFlagSet(AbstractFunction::SUGGEST_INTERP))
 		{
 			CodegenMIR mir(this);
-			verifier.verify(&mir);	// pass 2 - data flow
-			if (!mir.overflow)
-				mir.emitMD(); // pass 3 - generate code
-
-			// the MD buffer can overflow so we need to re-iterate
-			// over the whole thing, since we aren't yet robust enough
-			// to just rebuild the MD code.
-
-			// mark it as interpreted and try to limp along
-			if (mir.overflow)
+			TRY(core, kCatchAction_Rethrow)
 			{
-				#ifdef AVMPLUS_INTERP
-				AvmCore* core = this->core();
-				if (returnTraits() == NUMBER_TYPE)
-					implN = Interpreter::interpN;
-				else
-					impl32 = Interpreter::interp32;
-				#else
-				toplevel()->throwError(kOutOfMemoryError);
-				#endif //AVMPLUS_INTERP
+				verifier.verify(&mir);	// pass 2 - data flow
+        
+				if (!mir.overflow)
+					mir.emitMD(); // pass 3 - generate code
+
+				// the MD buffer can overflow so we need to re-iterate
+				// over the whole thing, since we aren't yet robust enough
+				// to just rebuild the MD code.
+
+				// mark it as interpreted and try to limp along
+				if (mir.overflow)
+				{
+					AvmCore* core = this->core();
+					if (returnTraits() == NUMBER_TYPE)
+						implN = avmplus::interpN;
+					else
+						impl32 = avmplus::interp32;
+				}
 			}
+			CATCH (Exception *exception) 
+			{
+				mir.clearMIRBuffers();
+
+				// re-throw exception
+				core->throwException(exception);
+			}
+			END_CATCH
+			END_TRY
 		}
 		else
 		{
@@ -122,7 +131,7 @@ namespace avmplus
 		}
 		#else
 		Verifier verifier(this, toplevel);
-		verifier.verify(NULL);
+		verifier.verify();
 		#endif
 
         #ifdef DEBUGGER
@@ -174,7 +183,7 @@ namespace avmplus
 		for(int i=0; i<local_count; i++)
 		{
 			//localNames[i] = core->kundefined;
-			WBRC(core->GetGC(), localNames, &localNames[i], core->kundefined);
+			WBRC(core->GetGC(), localNames, &localNames[i], uintptr(Stringp(core->kundefined)));
 		}
 	}
 
@@ -194,9 +203,7 @@ namespace avmplus
 
 		// if we are running mir then the types are native and we
 		// need to box em.
-		#ifdef AVMPLUS_INTERP
 		if (isFlagSet(TURBO))
-		#endif //AVMPLUS_INTERP
 		{
 			// each entry is a pointer into the function's stack frame
 			void **in = (void**)src;			// WARNING this must match with MIR generator
@@ -247,7 +254,6 @@ namespace avmplus
 				at++;
 			}
 		}
-		#ifdef AVMPLUS_INTERP
 		else
 		{
 			// no MIR then we know they are Atoms and we just copy them
@@ -255,7 +261,6 @@ namespace avmplus
 			for(int i=srcPos; i<size; i++)
 				dest[at++] = in[i];
 		}
-		#endif //AVMPLUS_INTERP
 	}
 
 	/**
@@ -277,9 +282,7 @@ namespace avmplus
 
 		// If the method has been jit'd then we need to box em, otherwise just
 		// copy them 
-		#ifdef AVMPLUS_INTERP
 		if (isFlagSet(TURBO))
-		#endif //AVMPLUS_srcTERP
 		{
 			// we allocated double sized entry for each local src CodegenMIR
 			void** out = (void**)dest;		// WARNING this must match with MIR generator
@@ -317,7 +320,6 @@ namespace avmplus
 				}
 			}
 		}
-		#ifdef AVMPLUS_INTERP
 		else
 		{
 			// no MIR then we know they are Atoms and we just copy them
@@ -325,7 +327,6 @@ namespace avmplus
 			for(int i=destPos; i<size; i++)
 				out[i] = src[at++];
 		}
-		#endif //AVMPLUS_srcTERP
 	}
 
 	uint32 MethodInfo::size() const

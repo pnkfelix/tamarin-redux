@@ -38,22 +38,27 @@
 #ifndef __avmbuild__
 #define __avmbuild__
 
+#ifdef UNIX
+  #ifndef AVMPLUS_UNIX
+    #define AVMPLUS_UNIX
+  #endif
+#endif // UNIX
 
 #ifdef _MAC
   #ifndef AVMPLUS_MAC
     #define AVMPLUS_MAC
   #endif
-#endif
+#endif // _MAC
 
 #ifdef WIN32
   #ifndef AVMPLUS_WIN32
     #define AVMPLUS_WIN32
   #endif
-#endif
+#endif // WIN32
 
-#ifdef AVMPLUS_MAC
+#if defined(AVMPLUS_MAC) || defined(AVMPLUS_UNIX)
   // Are we PowerPC or i386 (Macintel) or x86_64 (64-bit)?
-  #if __i386__
+  #ifdef __i386__
     #ifndef AVMPLUS_IA32
       #define AVMPLUS_IA32
     #endif
@@ -67,9 +72,16 @@
     #ifndef AVMPLUS_64BIT
 	  #define AVMPLUS_64BIT
     #endif
-  #elif (__ppc__)
+  #elif (__ppc__) || (__powerpc__)
     #ifndef AVMPLUS_PPC
       #define AVMPLUS_PPC
+    #endif	
+    #ifdef __powerpc64__
+      #define AVMPLUS_64BIT
+    #endif
+  #elif (__arm__)
+    #ifndef AVMPLUS_ARM
+      #define AVMPLUS_ARM
     #endif	
   #endif
 #endif
@@ -118,8 +130,15 @@
   #endif
 #endif
 
-#define AVMPLUS_MIR
-#define AVMPLUS_INTERP
+// don't want MIR enabled for a particular build? define AVMPLUS_DISABLE_MIR
+#ifndef AVMPLUS_DISABLE_MIR
+	#define AVMPLUS_MIR
+#endif
+
+#if defined(AVMPLUS_MAC) && defined(AVMPLUS_64BIT)
+	// MIR not yet supported on 64-bit Mac
+	#undef AVMPLUS_MIR
+#endif
 
 // if a function meets the E4 criteria for being unchecked, then make
 // all its parameters optional and add a rest arg.  asc should do this
@@ -132,16 +151,19 @@
 
 #if defined(VTUNE) || defined(DEBUG) || defined(_DEBUG) || defined(DEBUGGER)
 #define AVMPLUS_VERBOSE
-#define AVMPLUS_PROFILE
 #endif
 
 // #undef verify, a Mac thing
 #undef verify
 
 #ifdef AVMPLUS_MAC
-#if !TARGET_RT_MAC_MACHO
-#define AVMPLUS_MAC_CARBON
-#endif
+	#ifdef AVMPLUS_64BIT
+		// 64-bit Mac builds can't use Carbon
+		#define AVMPLUS_MAC_NO_CARBON
+	#endif
+    #if !defined(TARGET_RT_MAC_MACHO) && !defined(AVMPLUS_MAC_NO_CARBON)
+		#define AVMPLUS_MAC_CARBON
+	#endif
 #endif
 
 #ifdef AVMPLUS_MAC
@@ -157,11 +179,20 @@
   #endif
 #endif
 
+#ifndef AVMPLUS_UNALIGNED_ACCESS
+    #if defined(AVMPLUS_IA32) || defined(AVMPLUS_AMD64)
+        #define AVMPLUS_UNALIGNED_ACCESS
+    #else
+        // leave undefined, assume unaligned access is a bad thing
+    #endif
+#endif
+
 /**
  * We have avmplus.vcproj compiled with the /W4 warning level
  * which is quite picky.  Disable warnings we don't care about.
  */
 #ifdef _MSC_VER
+    #pragma warning(disable:4102) // unreferenced label
 	#pragma warning(disable:4201) // nonstandard extension used : nameless struct/union
 	#pragma warning(disable:4512) //assignment operator could not be generated
 	#pragma warning(disable:4511) //can't generate copy ctor
@@ -182,6 +213,17 @@
 	// some that might be useful to turn on someday, but would require too much twiddly code tweaking right now
 //	#pragma warning(error:4296)	// expression is always true (false) (Generally, an unsigned variable was used in a comparison operation with zero.)
 
+	#ifndef DEBUG
+	#include <memory.h>
+	#include <string.h>
+	#pragma intrinsic(memcmp)
+	#pragma intrinsic(memcpy)
+	#pragma intrinsic(memset)
+	#pragma intrinsic(strlen)
+	#pragma intrinsic(strcpy)
+	#pragma intrinsic(strcat)
+	#endif // DEBUG
+
 #endif
 
 // extra safety checks during parsing
@@ -193,12 +235,63 @@
 // Enable interfacing Java
 #define FEATURE_JNI
 
+#define PCRE_STATIC
+
 #ifdef SOLARIS
 #define HAVE_ALLOCA_H
 #endif
 
-#ifdef AVMPLUS_SPARC
-#define AVM10_BIG_ENDIAN
+#if !defined(AVMPLUS_LITTLE_ENDIAN) && !defined(AVMPLUS_BIG_ENDIAN)
+	#if defined(AVMPLUS_IA32) || defined(AVMPLUS_AMD64) || defined(AVMPLUS_ARM)
+		// assume ARM is always little-endian for now
+		#define AVMPLUS_LITTLE_ENDIAN
+ 	#elif defined(AVMPLUS_PPC) || defined(AVMPLUS_SPARC)
+ 		#define AVMPLUS_BIG_ENDIAN
+ 	#else
+ 		#error "must define AVMPLUS_LITTLE_ENDIAN or AVMPLUS_BIG_ENDIAN"
+ 	#endif
+#endif
+
+#ifdef AVMPLUS_BIG_ENDIAN
+	// define in case any old code relies on this
+	#define AVM10_BIG_ENDIAN
+#endif
+
+// Enable translation from ABC byte code to a wider word code that can
+// also be used by a direct threaded interpreter
+#ifdef AVMPLUS_MAC
+#  define AVMPLUS_WORD_CODE         // probably broken on 64-bit
+#  define AVMPLUS_PEEPHOLE_OPTIMIZER
+#  define AVMPLUS_DIRECT_THREADED   // gcc on this platform
+#endif
+
+#ifdef AVMPLUS_WIN32
+#  define AVMPLUS_WORD_CODE         // probably broken on 64-bit
+#  define AVMPLUS_PEEPHOLE_OPTIMIZER
+//#  define AVMPLUS_DIRECT_THREADED // see comments in Interpreter.cpp before enabling this
+#endif
+
+#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#  ifndef AVMPLUS_WORD_CODE
+#    error "You must have word code enabled to perform peephole optimization"
+#  endif
+#endif
+
+// The use of this switch is described in comments at the head of utils/superwordprof.c
+//
+// The limit is optional and describes a cutoff for sampling; the program continues to
+// run after sampling ends but data are no longer gathered or stored.  A limit of 250e6
+// produces 1GB of sample data.  There is one sample per VM instruction executed.
+//#define SUPERWORD_PROFILING
+//#define SUPERWORD_LIMIT 250000000
+
+#ifdef SUPERWORD_PROFILING
+#  ifndef AVMPLUS_WORD_CODE
+#    error "You must have word code enabled to perform superword profiling"
+#  endif
+#  ifdef AVMPLUS_DIRECT_THREADED
+#    error "You must disable direct threading to perform superword profiling"
+#  endif
 #endif
 
 #endif /* __avmbuild__ */
