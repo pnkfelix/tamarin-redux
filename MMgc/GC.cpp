@@ -57,7 +57,6 @@
 #endif
 #endif
 #endif
-
 #ifdef _DEBUG
 #include "GCTests.h"
 #endif
@@ -82,7 +81,6 @@
 		#include <stdlib.h>
 	#endif // HAVE_ALLOCA_H
 #endif
-
 #if defined(UNIX) || defined(MMGC_MAC_NO_CARBON)
 #include <sys/time.h>
 #endif // UNIX
@@ -123,14 +121,12 @@ extern "C" greg_t _getsp(void);
 
 // Werner mode is a back pointer chain facility for Relase mode
 //#define WERNER_MODE
-
 #ifdef WERNER_MODE
 	#include <typeinfo>
 	#include <stdio.h>
 	void *shouldGo;
 	char statusBuffer[1024];
 #endif
-
 namespace MMgc
 {
 
@@ -315,7 +311,6 @@ namespace MMgc
 			MMGC_GET_STACK_EXTENTS(this, item.ptr, item._size);
 			rememberedStackBottom =  (const void *)((const char *)item.ptr + item._size);
 		}
-
 #ifdef MMGC_DRC
 		zct.gc = this;
 #endif
@@ -869,7 +864,6 @@ bail:
 			return GCAlloc::GetMark(item);
 		}
 	}
-
 	void GC::ClearMarks()
 	{
 		MMGC_ASSERT_EXCLUSIVE_GC(this);
@@ -1167,7 +1161,6 @@ bail:
 	int GC::GetPageMapValueAlreadyLocked(uintptr addr) const
 	{
 		uintptr index = (addr-memStart) >> 12;
-
 #ifdef MMGC_AMD64
 		GCAssert((index >> 2) < uintptr(64*65536) * uintptr(GCHeap::kBlockSize));
 #else
@@ -1180,7 +1173,6 @@ bail:
 		//return (pageMap[addr >> 2] & (3<<shiftAmount)) >> shiftAmount;
 		return (pageMap[index >> 2] >> shiftAmount) & 3;
 	}
-
 	void GC::SetPageMapValue(uintptr addr, int val)
 	{
 		uintptr index = (addr-memStart) >> 12;
@@ -1321,7 +1313,6 @@ bail:
 			asm("mr %0,%%r1" : "=r" (stackP));
 	#endif // _MAC
 #endif // MMGC_PPC
-
 		if( ((char*) stackP > (char*)rememberedStackTop) && ((char *)rememberedStackBottom > (char*)stackP)) {
 			size_t amount = (char*) stackP - (char*)rememberedStackTop;
 			void *stack = alloca(amount);
@@ -1372,7 +1363,6 @@ bail:
 	{
 		init(_gc, this, FixedMalloc::GetInstance()->Size(this));
 	}
-
 	GCRoot::GCRoot(GC * _gc, const void * _object, size_t _size)
 	{
 		init(_gc, _object, _size);
@@ -1611,7 +1601,6 @@ bail:
 		}
 	}
 #endif
-
 #ifdef _DEBUG
 
 	void GC::RCObjectZeroCheck(RCObject *item)
@@ -1991,7 +1980,6 @@ bail:
 			}
 		}
 #endif
-
 		// strip "class "
 		if (!strncmp(typeName, "class ", 6))
 			typeName += 6;
@@ -2523,7 +2511,6 @@ bail:
 
 #ifdef WERNER_MODE
 #define RECURSIVE_MARK
-
 	class MarkList
 	{
 	public:
@@ -2541,7 +2528,6 @@ bail:
 	MarkList *MarkList::current = NULL;
 	int MarkList::offset = -1;
 #endif
-
 	void GC::MarkItem(GCWorkItem &wi, GCStack<GCWorkItem> &work)
 	{
 		size_t size = wi.GetSize();
@@ -2568,7 +2554,6 @@ bail:
 					}
 				}
 #endif
-
 				if(wl->prev)
 					sprintf(statusBuffer, "0x%x+%d -> 0x%x size=%d (%s)\n",  (unsigned int)wl->prev->wi.ptr, wl->off, (unsigned int)wl->wi.ptr, wl->wi.GetSize(), name);
 				else
@@ -2619,7 +2604,6 @@ bail:
 #ifdef WERNER_MODE
 			MarkList::offset = (int)p - (int)wi.ptr;
 #endif
-
 			uintptr val = *p++;  
 
 			if(val < _memStart || val >= _memEnd)

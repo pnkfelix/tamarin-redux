@@ -39,7 +39,6 @@
 #include "avmplus.h"
 
 #ifdef AVMPLUS_MIR
-
 //hack
 #ifdef AVMPLUS_ARM
 	#if !defined(AVMPLUS_SYMBIAN) && !defined(UNDER_CE)
@@ -724,7 +723,6 @@ namespace avmplus
 					double d;
                     uint32 i[2];
 				};
-
 				d = core->number_d(arg);
 				IMM32(i[0]);
 				IMM32(i[1]);

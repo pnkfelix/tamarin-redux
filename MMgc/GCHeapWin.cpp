@@ -471,7 +471,6 @@ namespace MMgc
 			}
 			inited = true;
 		}
-
 		HANDLE ht = GetCurrentThread();
 		HANDLE hp = GetCurrentProcess();
 
@@ -533,7 +532,6 @@ namespace MMgc
 
 			// Sometimes fires off in 64-bit 
 			// GCAssert(!frame.AddrPC.Offset || frame.AddrPC.Offset > 0x1000);
-
 			trace[i++] = (sintptr) frame.AddrPC.Offset;
 		}
 		trace[i] = 0;

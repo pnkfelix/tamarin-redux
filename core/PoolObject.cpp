@@ -72,6 +72,9 @@ namespace avmplus
 		#ifdef AVMPLUS_MIR
 		delete codeBuffer;
 		#endif
+		#ifdef AVMPLUS_WORD_CODE
+		delete word_code.cpool_mn;
+		#endif
 	}
 	
     AbstractFunction* PoolObject::getMethodInfo(uint32 index)
@@ -512,7 +515,6 @@ namespace avmplus
 			int info = 0;
 			int value_index = 0;
 			CPoolKind value_kind = (CPoolKind)0;
-
 			// Check for version metadata
 			switch (kind)
 			{
@@ -961,4 +963,25 @@ namespace avmplus
 		}
 		return f;
 	}
+	
+#ifdef AVMPLUS_WORD_CODE
+	PrecomputedMultinames::PrecomputedMultinames(MMgc::GC* gc, PoolObject* pool)
+		: MMgc::GCRoot(gc)
+		, nNames (0)
+	{
+		nNames = pool->constantMnCount;
+		for ( uint32 i=1 ; i < nNames ; i++ ) {
+			Multiname mn;
+			pool->parseMultiname(mn, i);
+			mn.IncrementRef();
+			multinames[i] = mn;
+		}
+	}
+	
+	PrecomputedMultinames::~PrecomputedMultinames() {
+		for ( uint32 i=1 ; i < nNames ; i++ ) 
+			multinames[i].DecrementRef();
+	}
+#endif
+	
 }

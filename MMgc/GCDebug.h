@@ -49,7 +49,6 @@
 #ifdef _MAC
     #if defined(AVMPLUS_MAC_CARBON)
         typedef const unsigned char* ConstStr255Param;
-
         extern "C"
 		{	
         #if defined(TARGET_RT_MAC_MACHO)	// DBC

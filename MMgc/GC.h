@@ -135,9 +135,7 @@ extern "C" void saveRegs64(void* saves, const void* stack, int* size);
 // TPR - increasing to 20 causes this code to not get optimized out
 
 #ifdef __GNUC__
-
 #ifdef _MAC
-
 #define MMGC_GET_STACK_EXTENTS(_gc, _stack, _size) \
 		int __ppcregs[20]; \
 		asm("stmw r13,0(%0)" : : "b" (__ppcregs));\
@@ -150,9 +148,7 @@ extern "C" void saveRegs64(void* saves, const void* stack, int* size);
 			"cmpi cr0,r3,0\n"\
 			"bne 1b" : "=b" (__stackBase) : : "r3");\
 		_size = (uintptr) __stackBase - (uintptr) _stack;
-
 #else // _MAC
-
 #define MMGC_GET_STACK_EXTENTS(_gc, _stack, _size) \
 		int __ppcregs[20]; \
 		asm("stmw %%r13,0(%0)" : : "b" (__ppcregs));\
@@ -165,11 +161,8 @@ extern "C" void saveRegs64(void* saves, const void* stack, int* size);
 			"cmpi cr0,%%r3,0\n"\
 		     "bne StackBaseLoop%1%2" : "=b" (__stackBase) : "i" (__FILE__), "i" (__LINE__) : "r3"); \
 		_size = (uintptr) __stackBase - (uintptr) _stack;
-
 #endif // _MAC
-
 #else // __GNUC__
-
 #define MMGC_GET_STACK_EXTENTS(_gc, _stack, _size) \
 		int __ppcregs[20]; \
 		asm("stmw r13,0(%0)" : : "b" (__ppcregs));\
@@ -182,7 +175,6 @@ extern "C" void saveRegs64(void* saves, const void* stack, int* size);
 			"cmpi cr0,r3,0\n"\
 		     "bne StackBaseLoop" : "=b" (__stackBase) : : "r3"); \
 		_size = (uintptr) __stackBase - (uintptr) _stack;
-
 #endif // __GNUC__
 
 #elif defined MMGC_ARM
@@ -208,9 +200,7 @@ extern "C" void saveRegs64(void* saves, const void* stack, int* size);
 		asm("mov %0,sp" : "=r" (_stack));\
 		_size = (uintptr)_gc->GetStackTop() - (uintptr)_stack;
 #endif //__ARMCC__
-
 #endif
-
 
 #elif defined MMGC_SPARC
 #define MMGC_GET_STACK_EXTENTS(_gc, _stack, _size) \
