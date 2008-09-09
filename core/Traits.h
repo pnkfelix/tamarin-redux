@@ -112,7 +112,6 @@ namespace avmplus
 			this must be set to true.  If it is false, the JIT will early bind to 
 			the AS defined constructor. */
 		bool hasCustomConstruct:1;
-
 #ifdef DEBUGGER
 		/** how we implement dictionary or strict style lookups */
 		bool isActivationTraits:1;

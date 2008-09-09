@@ -27,6 +27,7 @@ platform/mac/MMgc/build64/**
 platform/mac/avmplus/build64/**
 platform/mac/shell/build64/**
 MMgc/obj_8/**
+MMgc/obj/**
 MMgc/x64/**
 objdir-*/**
 *_DBG.OBJ/**
@@ -54,9 +55,3 @@ obj-dir/**
 axscript/vc2008/obj/**
 axscript/vc2008/*.ncb
 axscript/vc2008/axtam.vcproj.*.user
-core/*.out
-shell/*.out
-*.pp
-*.ii
-*.deps
-

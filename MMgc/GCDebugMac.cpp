@@ -54,7 +54,6 @@
 #if defined(MMGC_CUSTOM_DEBUG_MESSAGE_HANDLER)
 	void MMGCCustomDebugMessageHandler(const char *message);
 #endif
-
 namespace MMgc
 {
 	void GCDebugMsg(bool debuggerBreak, const char* format, ...)
@@ -74,7 +73,6 @@ namespace MMgc
 			MMGCCustomDebugMessageHandler(p);
         #else
 		    CFStringRef cfStr = ::CFStringCreateWithCString(NULL, p, kCFStringEncodingUTF8);
-
 			if(debugBreak)
 			{
 				Str255 buf;
@@ -85,7 +83,6 @@ namespace MMgc
 			{
 				::CFShow(cfStr);
 			}
-
 			::CFRelease (cfStr);
 		#endif
 	}

@@ -143,7 +143,6 @@ namespace avmplus
 		// redundantly fill in fields.
 		inline explicit CallStackNode(int) { }
 #endif
-
 		// WARNING!!!! this method is called by CodegenMIR if you change the signature then change the call there.
 		void initialize(MethodEnv *			env,
 						AbstractFunction *	info,
@@ -169,9 +168,7 @@ namespace avmplus
 		sintptr volatile * eip; 	// ptr to where the current pc is stored
 
 		void**		scopeBase(); // with MIR, array members are (ScriptObject*); with interpreter, they are (Atom).
-		#ifdef AVMPLUS_INTERP
 		int*		scopeDepth; // Only used by the interpreter! With MIR, look for NULL entires in the scopeBase array.
-		#endif
 	protected:
 		// allow more flexibility to subclasses
 		CallStackNode(){}

@@ -208,7 +208,6 @@ namespace avmplus
 		static void *lptr[MAX_LONG_JMP_COUNT];
 		static int   lptrcounter;
 #endif //#if defined(AVMPLUS_AMD64) && !defined(_WIN64)
-
 	};
 
 	/**

@@ -40,7 +40,6 @@
 #include "avmplus.h"
 
 #ifdef AVMPLUS_MIR
-
 namespace avmplus
 {
 	using namespace MMgc;

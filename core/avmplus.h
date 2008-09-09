@@ -166,7 +166,6 @@ namespace avmplus
 	class Debugger;
 	class Domain;
 	class DomainEnv;
-	class DynamicProfiler;
 	class E4XNode;
 	class ErrorClass;
 	class ErrorObject;
@@ -178,7 +177,6 @@ namespace avmplus
 	class GrowableBuffer;
 	class Hashtable;
 	class HeapMultiname;
-	class Interpreter;
 	class IntVectorObject;
 	class DoubleVectorObject;
 	class UIntVectorObject;
@@ -214,12 +212,12 @@ namespace avmplus
 	class ScriptEnv;
 	class ScriptObject;
 	class StackTrace;
-	class StaticProfiler;
 	class StringBuffer;
 	class StringClass;
 	class String;
 	class Toplevel;
 	class Traits;
+	class Translator;
 	class UnicodeUtils;
 	class Value;
 	class Verifier; 
@@ -247,7 +245,6 @@ namespace avmplus
 {
 //#ifdef AVMTHUNK_VERSION
 // Native-Method helpers (only used when AVMTHUNK_VERSION defined, but must be declared before we know...)
-
 	typedef avmplus::AbcEnv* AvmInstance;
 	typedef avmplus::ScriptObject* AvmObject;
 	typedef avmplus::String* AvmString;
@@ -255,7 +252,6 @@ namespace avmplus
 	typedef avmplus::Atom AvmBox;
 	typedef avmplus::MethodEnv* AvmMethodEnv;
 	typedef uint32_t AvmBoolArg;
-
 	#define AvmThunkRetType_AvmObject		(error ??? illegal) /* all Objects are return as AvmBox */
 	typedef AvmBox AvmThunkRetType_AvmBoolArg;
 	typedef AvmBox AvmThunkRetType_int32_t;
@@ -265,13 +261,9 @@ namespace avmplus
 	typedef AvmBox AvmThunkRetType_AvmString;
 	typedef AvmBox AvmThunkRetType_void;
 	typedef double AvmThunkRetType_double;
-
 	#define AVMTHUNK_CALLTYPE	 /* could be used to declare custom call type (eg __fastcall) */
-
 	typedef AvmThunkRetType_AvmBox (*AvmThunkNativeThunker)(AvmMethodEnv env, uint32_t argc, const AvmBox* argv);
-
 //#endif
-
 	namespace NativeID
 	{
         #include "builtin.h"
@@ -298,8 +290,6 @@ namespace avmplus
 #include "BuiltinTraits.h"
 #include "NamespaceSet.h"
 #include "Multiname.h"
-#include "DynamicProfiler.h"
-#include "StaticProfiler.h"
 #include "Sampler.h"
 #include "AvmCore.h"
 #include "AtomWriteBarrier.h"
@@ -326,6 +316,7 @@ namespace avmplus
 #endif
 
 #include "AtomArray.h"
+#include "Translator.h"
 #include "Verifier.h"
 #include "FrameState.h"
 #include "NativeFunction.h"

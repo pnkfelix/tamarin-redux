@@ -2054,14 +2054,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\core\DynamicProfiler.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\core\DynamicProfiler.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\core\E4XNode.cpp"
 				>
 			</File>
@@ -2346,14 +2338,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\core\StaticProfiler.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\core\StaticProfiler.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\core\StringBuffer.cpp"
 				>
 			</File>
@@ -2391,6 +2375,14 @@
 			</File>
 			<File
 				RelativePath="..\..\core\Traits.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\core\Translator.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\core\Translator.h"
 				>
 			</File>
 			<File

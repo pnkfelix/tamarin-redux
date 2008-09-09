@@ -39,7 +39,6 @@
 #ifndef __avmplus_CodegenMIR__
 #define __avmplus_CodegenMIR__
 
-
 namespace avmplus
 {
 	// bit insert and extraction macros.  
@@ -823,7 +822,6 @@ namespace avmplus
 		#define DEBUGGERADDR(f)   debuggerAddr((int (Debugger::*)())(&f))
 		#define CLASSCLOSUREADDR(f)   classClosureAddr((int (ClassClosure::*)())(&f))
 
-		static sintptr profAddr( void (DynamicProfiler::*f)() );
 		static sintptr coreAddr( int (AvmCore::*f)() );
 		static sintptr gcAddr( int (MMgc::GC::*f)() );
 		static sintptr envAddr( int (MethodEnv::*f)() );
@@ -1039,15 +1037,6 @@ namespace avmplus
 		// cse table which prevents duplicate instructions in the same bb
 		OP* cseTable[MIR_last];
 		OP* firstCse;
-#ifdef AVMPLUS_PROFILE
-		int cseHits;		// measure effectiveness of cse optimizer
-		#define incCseHits() cseHits++
-		int dceHits;		// measure effectiveness of dead code eliminator
-		#define incDceHits() dceHits++
-#else
-		#define incCseHits()
-		#define incDceHits()
-#endif
 
 #ifdef DEBUGGER
 		void extendDefLifetime(OP* current);
@@ -1826,6 +1815,7 @@ namespace avmplus
 
 		void ALU(int op);
 		void RET()				{ ALU(0xc3); }
+		void LEAVE()			{ ALU(0xc9); }
 		void NOP()				{ ALU(0x90); }
 		#ifdef AVMPLUS_64BIT
 		void PUSH(Register r);
