@@ -342,7 +342,6 @@ start:
 
 		GCAssert((uintptr(item) & ~0xfff) == (uintptr) b);
 		GCAssert((uintptr(item) & 7) == 0);
-
 		return item;
 	}
 

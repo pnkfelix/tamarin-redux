@@ -143,7 +143,6 @@ namespace avmplus
 		// redundantly fill in fields.
 		inline explicit CallStackNode(int) { }
 #endif
-
 		// WARNING!!!! this method is called by CodegenMIR if you change the signature then change the call there.
 		void initialize(MethodEnv *			env,
 						AbstractFunction *	info,

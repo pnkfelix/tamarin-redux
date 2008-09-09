@@ -56,7 +56,6 @@ namespace avmplus
 	{
 		initialize(gc, capacity);
 	}
-
 	void Hashtable::initialize(GC *gc, int capacity)
 	{
 		capacity = MathUtils::nextPowerOfTwo(capacity);

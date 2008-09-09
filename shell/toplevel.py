@@ -46,21 +46,17 @@ if classpath == None:
 	classpath = "../utils/asc.jar"
 	#print "ERROR: ASC environment variable must point to asc.jar"
 	#exit(1)
-
 def mv(oldfile, newfile):
 	shutil.copyfile(oldfile,newfile)
 	os.remove(oldfile)
-
 def rm(file):
 	os.remove(file)
 
 javacmd = "java -ea -DAS3 -DAVMPLUS -classpath "+classpath
 asc = javacmd+" macromedia.asc.embedding.ScriptCompiler "
 thunkgen = javacmd+" adobe.abc.AbcThunkGen "
-
 print("ASC="+classpath)
 print("Building toplevel...")
-
 # compile builtins
 os.system(asc+" -abcfuture -import ../core/builtin.abc -builtin -out toplevel toplevel.as Domain.as StringBuilder.as ByteArray.as ../extensions/Sampler.as ../extensions/Trace.as ../extensions/Dictionary.as Endian.as Java.as")
 

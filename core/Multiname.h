@@ -60,9 +60,6 @@ namespace avmplus
 		#ifdef AVMPLUS_MIR
 		friend class CodegenMIR;
 		#endif 
-		#ifdef AVMPLUS_INTERP
-		friend class Interpreter;
-		#endif
 		friend class HeapMultiname;
 		int flags;
 		Stringp name;
@@ -250,6 +247,28 @@ namespace avmplus
 
 		bool matches (const Multiname *mn) const;
 
+#ifdef AVMPLUS_WORD_CODE
+		// As an optimization a Multiname may be part of a GCRoot.  The following
+		// two methods make sure the reference counted dependents of a Multiname
+		// stick around (or not, as the case may be).  The reference counts are
+		// *not* adjusted by the methods above; multinames on which IncrementRef
+		// and DecrementRef are called *must* be considered constant.
+	public:
+		void IncrementRef() {
+			if (name != NULL)
+				name->IncrementRef();
+			if (ns != NULL && (flags & NSSET) == 0)
+				ns->IncrementRef();
+		}
+		
+		void DecrementRef() {
+			if (name != NULL)
+				name->DecrementRef();
+			if (ns != NULL && (flags & NSSET) == 0)
+				ns->DecrementRef();
+		}
+#endif
+		
 //#ifdef AVMPLUS_VERBOSE
 	public:
 		typedef enum _MultiFormat

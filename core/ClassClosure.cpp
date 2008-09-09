@@ -91,15 +91,11 @@ namespace avmplus
 	ScriptObject* ClassClosure::newInstance() {
 		VTable* ivtable = this->ivtable();
 		AvmAssert(ivtable != NULL);
-
 		if (prototype == NULL) // ES3 spec, 13.2.2 (we've already ensured prototype is either an Object or null)
 			prototype = AvmCore::atomToScriptObject(toplevel()->objectClass->get_prototype());
-
 		ScriptObject *obj = createInstance(ivtable, prototype);
-
 		return obj;
 	}
-
 	// this = argv[0] (ignored)
 	// arg1 = argv[1]
 	// argN = argv[argc]

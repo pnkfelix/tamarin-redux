@@ -527,7 +527,6 @@ namespace avmplus
 	ObjectVectorObject* VectorClass::newVector(ClassClosure* type, uint32 length)
 	{
 		Atom args[1] = {type->atom()};
-
 		ObjectVectorClass* vecclass = (ObjectVectorClass*)AvmCore::atomToScriptObject(applyTypeArgs(1, args));
 		return vecclass->newVector(length);
 	}

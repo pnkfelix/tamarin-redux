@@ -61,7 +61,6 @@ namespace avmplus
 			unsigned multiNS;
 		};
 	private:
-
 		/** property hashtable */
 		DWB(Quad*) quads;
 
@@ -72,7 +71,6 @@ namespace avmplus
 		 */
 		static int find(Stringp name, Namespace* ns, Quad *t, unsigned tLen);
 	    void rehash(Quad *oldAtoms, int oldlen, Quad *newAtoms, int newlen);
-
 		/**
 		 * Called to grow the Hashtable, particularly by add.
 		 *
