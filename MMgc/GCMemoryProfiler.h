@@ -94,19 +94,15 @@ namespace MMgc
 	};
 #endif
 }
-
 #ifndef MEMORY_INFO
-
 #define MMGC_MEM_TAG(_x)
 #define MMGC_MEM_TYPE(_x)
 #define GetRealPointer(_x) _x
 #define GetUserPointer(_x) _x
 #define DebugSize() 0
 #else
-
 #define MMGC_MEM_TAG(_x) MMgc::SetMemTag(_x)
 #define MMGC_MEM_TYPE(_x) MMgc::SetMemType(_x)
-
 namespace MMgc
 {
 #ifdef WIN32
@@ -122,17 +118,14 @@ namespace MMgc
 		{
 			InitializeCriticalSection(&cs);
 		}
-
 		inline void Acquire()
 		{
 			EnterCriticalSection(&cs);
 		}
-
 		inline void Release()
 		{
 			LeaveCriticalSection(&cs);
 		}
-
 	private:
 		CRITICAL_SECTION cs;
 	};

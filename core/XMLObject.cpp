@@ -1976,7 +1976,6 @@ namespace avmplus
 	Atom XMLObject::getNamespace (Atom p_prefix, int argc) // prefix is optional
 	{
 		AvmAssert(argc == 0 || argc == 1);
-
 		AvmCore *core = this->core();
 
 		// step 2

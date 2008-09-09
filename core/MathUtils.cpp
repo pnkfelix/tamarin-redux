@@ -37,14 +37,12 @@
 
 #include "avmplus.h"
 #include "BigInteger.h"
-
 #include <math.h>
 
 
 #if (defined(_MSC_VER) || defined(__GNUC__)) && (defined(AVMPLUS_IA32) || defined(AVMPLUS_AMD64))
     #include <emmintrin.h>
 #endif
-
 namespace avmplus
 {
 	const double kLog2_10 = 0.30102999566398119521373889472449;
@@ -85,7 +83,6 @@ namespace avmplus
 		return f;
 		#endif
 	}
-
 	double MathUtils::neg_infinity()
 	{
 		#ifdef __GNUC__

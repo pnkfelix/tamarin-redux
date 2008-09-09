@@ -121,7 +121,6 @@ namespace avmplus
 #endif
 
 		ScriptObject* newcatch(Traits *traits);
-
 		/**
 		 * used for defining and resolving imported definitions.
 		 */

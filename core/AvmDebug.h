@@ -51,11 +51,9 @@
         void AVMPlusCustomAssertionHandler(const char *message);
     }
 #endif
-
 #ifdef _MAC
     #if !defined(AVMPLUS_MAC_NO_CARBON)
         typedef const unsigned char* ConstStr255Param;
-
         extern "C"
 		{
             #ifdef powerc
