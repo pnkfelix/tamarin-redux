@@ -48,10 +48,92 @@
 #endif
 #endif
 
-#ifdef AVMPLUS_INTERP
+// The macro AVMPLUS_WORD_CODE is true if the representation of ABC code is as an array of words and
+// not an array of bytes.
+
 namespace avmplus
 {	
-	Atom Interpreter::interp32(MethodEnv* env, int argc, uint32 *ap)
+
+#define IS_INTEGER(v)        (((v) & 7) == kIntegerType)
+#define IS_DOUBLE(v)         (((v) & 7) == kDoubleType)
+#define IS_BOOLEAN(v)        (((v) & 7) == kBooleanType)
+#define IS_STRING(v)		 (((v) & 7) == kStringType)
+#define FITS_IN_INTEGER(v)   ((((int32)v << 3) >> 3) == v)
+#define MAKE_INTEGER(v)      (((v) << 3) | kIntegerType)
+#define INTEGER_VALUE(v)     ((int32)(v) >> 3)
+#define DOUBLE_VALUE(v)		 (*(double*)((v) ^ kDoubleType))
+#define IS_BOTH_INTEGER(a,b) ((((a ^ kIntegerType) | (b ^ kIntegerType)) & 7) == 0) // less control flow but more registers -- which is better?
+//#define IS_BOTH_INTEGER(a,b) ((IS_INTEGER(a) && IS_INTEGER(b))
+#define IS_BOTH_DOUBLE(a,b)  ((((a & kDoubleType) | (b ^ kDoubleType)) & 7) == 0)
+	
+#ifndef AVMPLUS_WORD_CODE
+	inline int readS24(const byte *pc) {
+		return AvmCore::readS24(pc);
+	}
+	
+	inline int readU30(const byte *&pc) {
+		return AvmCore::readU30(pc);
+	}
+#endif
+
+// Direct threading in the interpreter.
+//
+// If you have gcc, direct threading should work out of the box and
+// should provide a nice speedup with many platforms and compiler versions.
+//
+// If you are using Microsoft Visual C/C++ then you may turn on direct 
+// threading, and you must select one of the two threading implementations
+// below.  MSVC_X86_ASM_THREADING should "just work" but is likely
+// to be slower than switch dispatch, unless you're using a compiler
+// version with little or no optimization.  MSVC_X86_REWRITE_THREADING
+// usually improves the performance over switch dispatch, but requires
+// a fair amount of manual work if core/Interpreter.cpp has been modified
+// since core/FastInterpreter.asm was generated.  The specific work
+// needed to regenerate core/FastInterpreter.cpp is described in a comment
+// at the head of utils/x86rewrite.as, which you will need to run.
+
+#ifdef AVMPLUS_DIRECT_THREADED
+#  ifndef AVMPLUS_WORD_CODE
+#    error "Need word code enabled for this"
+#  endif
+#  if defined __GNUC__
+#    define GNUC_THREADING
+#    define DIRECT_DISPATCH
+#  elif defined AVMPLUS_WIN32
+	 // Pick one of the two following options
+//#    define MSVC_X86_ASM_THREADING
+#    define MSVC_X86_REWRITE_THREADING
+#    ifdef MSVC_X86_ASM_THREADING
+#      define DIRECT_DISPATCH
+#    endif
+#    ifdef MSVC_X86_REWRITE_THREADING
+#      define SWITCH_DISPATCH
+#    endif
+#  else
+#    error "Threaded code not supported for this platform/compiler"
+#  endif
+#else
+#  define SWITCH_DISPATCH
+#endif // compiler/platform vipers' nest
+
+	Atom interp(MethodEnv* method, int argc, uint32 *ap);
+	Atom* initMultiname(MethodEnv* env, Multiname &name, Atom* sp, bool isDelete=false);
+	Traits* getTraits(Multiname* name, PoolObject* pool, Toplevel* toplevel, AvmCore* core);
+#ifdef SUPERWORD_PROFILING
+	void swprofCode(const uint32* start, const uint32* limit);
+	void swprofPC(const uint32* pc);
+#endif
+#ifdef AVMPLUS_VERBOSE
+	
+	/**
+	 * display contents of current stack frame only.
+	 */
+	void showState(MethodInfo* info, const byte *code_start, const byte *pc,
+							Atom* framep, Atom *spp, int scopeDepth, Atom *scopebasep,
+							int max_scope);
+#endif
+
+	Atom interp32(MethodEnv* env, int argc, uint32 *ap)
 	{
 		Atom a = interp(env, argc, ap);
 		Traits* t = env->method->returnTraits();
@@ -67,18 +149,343 @@ namespace avmplus
 		return a & ~7; // possibly null pointer
 	}
 
-	double Interpreter::interpN(MethodEnv* env, int argc, uint32 * ap)
+	double interpN(MethodEnv* env, int argc, uint32 * ap)
 	{
 		Atom a = interp(env, argc, ap);
 		return AvmCore::number_d(a);
 	}
 
+#ifdef _MSC_VER
+#  pragma warning(disable:4102)    // unreferenced label
+#  ifdef MSVC_X86_ASM_THREADING
+#    pragma warning(disable:4740)  // "inline assembler suppresses global optimization"
+#  endif
+#endif // _MSC_VER
+
+#ifdef AVMPLUS_DIRECT_THREADED
+
+	void** interpGetOpcodeLabels() {
+		return (void**)interp(NULL, 0, NULL);
+	}
+	
+#endif // AVMPLUS_DIRECT_THREADED
+
     /**
      * Interpret the AVM+ instruction set.
      * @return
      */
-    Atom Interpreter::interp(MethodEnv *env, int argc, uint32 *ap)
+    Atom interp(MethodEnv *env, int argc, uint32 *ap)
     {
+#ifdef AVMPLUS_DIRECT_THREADED
+		
+		// If env is NULL return the jump table.  Optionally initialize it here on those
+		// platforms where compile-time initialization is not possible or practical.
+		
+		if (env == NULL) {
+#  if defined GNUC_THREADING
+#      define III(idx, lbl) &&lbl,
+#      define XXX(idx) &&L_illegal_op,
+			static void* opcode_labels[] = {
+#  elif defined MSVC_X86_ASM_THREADING || defined MSVC_X86_REWRITE_THREADING
+	    static void* opcode_labels[300];  // FIXME: need better way of computing the size of that table
+        if (opcode_labels[0] == 0) {
+#    define XXX(idx) III(idx, L_illegal_op)
+#    ifdef MSVC_X86_ASM_THREADING
+#        define III(idx, lbl) __asm { \
+	           __asm mov eax, offset opcode_labels \
+	  	       __asm mov ebx, offset lbl \
+		       __asm mov [eax+4*idx], ebx \
+		     }
+#     else
+		  extern bool LLLLABEL(int);
+#         define III(a,b) extern void LLLLABEL ## _ ## a ## _ ## b(); LLLLABEL ## _ ## a ## _ ## b();
+#     endif
+#  endif // threading discipline
+			 XXX(0x00)
+#if defined DEBUGGER || !defined AVMPLUS_WORD_CODE
+			 III(0x01, L_bkpt)
+#else
+			 XXX(0x01) /* OP_bkpt */
+#endif
+			 XXX(0x02) /* OP_nop */
+			 III(0x03, L_throw)
+			 III(0x04, L_getsuper)
+			 III(0x05, L_setsuper)
+			 III(0x06, L_dxns)
+			 III(0x07, L_dxnslate)
+			 XXX(0x08) /* OP_kill */
+			 XXX(0x09) /* OP_label */
+			 XXX(0x0A)
+			 XXX(0x0B)
+			 III(0x0C, L_ifnlt)
+			 III(0x0D, L_ifnle)
+			 III(0x0E, L_ifngt)
+			 III(0x0F, L_ifnge)
+			 III(0x10, L_jump)
+			 III(0x11, L_iftrue)
+			 III(0x12, L_iffalse)
+			 III(0x13, L_ifeq)
+			 III(0x14, L_ifne)
+			 III(0x15, L_iflt)
+			 III(0x16, L_ifle)
+			 III(0x17, L_ifgt)
+			 III(0x18, L_ifge)
+			 III(0x19, L_ifstricteq)
+			 III(0x1A, L_ifstrictne)
+			 III(0x1B, L_lookupswitch)
+			 III(0x1C, L_pushwith)
+			 III(0x1D, L_popscope)
+			 III(0x1E, L_nextname)
+			 III(0x1F, L_hasnext)
+			 III(0x20, L_pushnull)
+			 III(0x21, L_pushundefined)
+			 XXX(0x22)
+			 III(0x23, L_nextvalue)
+			 XXX(0x24) /* OP_pushbyte */
+			 XXX(0x25) /* OP_pushshort */
+			 III(0x26, L_pushtrue)
+			 III(0x27, L_pushfalse)
+			 III(0x28, L_pushnan)
+			 III(0x29, L_pop)
+			 III(0x2A, L_dup)
+			 III(0x2B, L_swap)
+			 III(0x2C, L_pushstring)
+			 XXX(0x2D) /* OP_pushint */
+			 XXX(0x2E) /* OP_pushuint */
+			 III(0x2F, L_pushdouble)
+			 III(0x30, L_pushscope)
+			 III(0x31, L_pushnamespace)
+			 III(0x32, L_hasnext2)
+			 XXX(0x33)
+			 XXX(0x34)
+			 XXX(0x35)
+			 XXX(0x36)
+			 XXX(0x37)
+			 XXX(0x38)
+			 XXX(0x39)
+			 XXX(0x3A)
+			 XXX(0x3B)
+			 XXX(0x3C)
+			 XXX(0x3D)
+			 XXX(0x3E)
+			 XXX(0x3F)
+			 III(0x40, L_newfunction)
+			 III(0x41, L_call)
+			 III(0x42, L_construct)
+			 III(0x43, L_callmethod)
+			 III(0x44, L_callstatic)
+			 III(0x45, L_callsuper)
+			 III(0x46, L_callproperty)
+			 III(0x47, L_returnvoid)
+			 III(0x48, L_returnvalue)
+			 III(0x49, L_constructsuper)
+			 III(0x4A, L_constructprop)
+			 XXX(0x4B) /* OP_callsuperid */
+			 III(0x4C, L_callproplex)
+			 XXX(0x4D) /* OP_callinterface */
+			 III(0x4E, L_callsupervoid)
+			 III(0x4F, L_callpropvoid)
+			 XXX(0x50)
+			 XXX(0x51)
+			 XXX(0x52)
+			 III(0x53, L_applytype)
+			 XXX(0x54)
+			 III(0x55, L_newobject)
+			 III(0x56, L_newarray)
+			 III(0x57, L_newactivation)
+			 III(0x58, L_newclass)
+			 III(0x59, L_getdescendants)
+			 III(0x5A, L_newcatch)
+			 XXX(0x5B)
+			 XXX(0x5C)
+			 III(0x5D, L_findpropstrict)
+			 III(0x5E, L_findproperty)
+			 III(0x5F, L_finddef)
+			 III(0x60, L_getlex)
+			 III(0x61, L_setproperty)
+			 III(0x62, L_getlocal)
+			 III(0x63, L_setlocal)
+			 III(0x64, L_getglobalscope)
+			 III(0x65, L_getscopeobject)
+			 III(0x66, L_getproperty)
+			 III(0x67, L_getouterscope)
+			 III(0x68, L_initproperty)
+			 XXX(0x69)
+			 III(0x6A, L_deleteproperty)
+			 XXX(0x6B)
+			 III(0x6C, L_getslot)
+			 III(0x6D, L_setslot)
+			 III(0x6E, L_getglobalslot)
+			 III(0x6F, L_setglobalslot)
+			 III(0x70, L_convert_s)
+			 III(0x71, L_esc_xelem)
+			 III(0x72, L_esc_xattr)
+			 III(0x73, L_convert_i)
+			 III(0x74, L_convert_u)
+			 III(0x75, L_convert_d)
+			 III(0x76, L_convert_b)
+			 III(0x77, L_convert_o)
+			 III(0x78, L_checkfilter)
+			 XXX(0x79)
+			 XXX(0x7A)
+			 XXX(0x7B)
+			 XXX(0x7C)
+			 XXX(0x7D)
+			 XXX(0x7E)
+			 XXX(0x7F)
+			 III(0x80, L_coerce)
+			 III(0x81, L_coerce_b)
+			 XXX(0x82) /* OP_coerce_a */
+			 III(0x83, L_coerce_i)
+			 III(0x84, L_coerce_d)
+			 III(0x85, L_coerce_s)
+			 III(0x86, L_astype)
+			 III(0x87, L_astypelate)
+			 III(0x88, L_coerce_u)
+			 III(0x89, L_coerce_o)
+			 XXX(0x8A)
+			 XXX(0x8B)
+			 XXX(0x8C)
+			 XXX(0x8D)
+			 XXX(0x8E)
+			 XXX(0x8F)
+			 III(0x90, L_negate)
+			 III(0x91, L_increment)
+			 III(0x92, L_inclocal)
+			 III(0x93, L_decrement)
+			 III(0x94, L_declocal)
+			 III(0x95, L_typeof)
+			 III(0x96, L_not)
+			 III(0x97, L_bitnot)
+			 XXX(0x98)
+			 XXX(0x99)
+			 XXX(0x9A) /* OP_concat */
+			 XXX(0x9B) /* OP_add_d */
+			 XXX(0x9C)
+			 XXX(0x9D)
+			 XXX(0x9E)
+			 XXX(0x9F)
+			 III(0xA0, L_add)
+			 III(0xA1, L_subtract)
+			 III(0xA2, L_multiply)
+			 III(0xA3, L_divide)
+			 III(0xA4, L_modulo)
+			 III(0xA5, L_lshift)
+			 III(0xA6, L_rshift)
+			 III(0xA7, L_urshift)
+			 III(0xA8, L_bitand)
+			 III(0xA9, L_bitor)
+			 III(0xAA, L_bitxor)
+			 III(0xAB, L_equals)
+			 III(0xAC, L_strictequals)
+			 III(0xAD, L_lessthan)
+			 III(0xAE, L_lessequals)
+			 III(0xAF, L_greaterthan)
+			 III(0xB0, L_greaterequals)
+			 III(0xB1, L_instanceof)
+			 III(0xB2, L_istype)
+			 III(0xB3, L_istypelate)
+			 III(0xB4, L_in)
+			 XXX(0xB5)
+			 XXX(0xB6)
+			 XXX(0xB7)
+			 XXX(0xB8)
+			 XXX(0xB9)
+			 XXX(0xBA)
+			 XXX(0xBB)
+			 XXX(0xBC)
+			 XXX(0xBD)
+			 XXX(0xBE)
+			 XXX(0xBF)
+			 III(0xC0, L_increment_i)
+			 III(0xC1, L_decrement_i)
+			 III(0xC2, L_inclocal_i)
+			 III(0xC3, L_declocal_i)
+			 III(0xC4, L_negate_i)
+			 III(0xC5, L_add_i)
+			 III(0xC6, L_subtract_i)
+			 III(0xC7, L_multiply_i)
+			 XXX(0xC8)
+			 XXX(0xC9)
+			 XXX(0xCA)
+			 XXX(0xCB)
+			 XXX(0xCC)
+			 XXX(0xCD)
+			 XXX(0xCE)
+			 XXX(0xCF)
+			 III(0xD0, L_getlocal0)
+			 III(0xD1, L_getlocal1)
+			 III(0xD2, L_getlocal2)
+			 III(0xD3, L_getlocal3)
+			 III(0xD4, L_setlocal0)
+			 III(0xD5, L_setlocal1)
+			 III(0xD6, L_setlocal2)
+			 III(0xD7, L_setlocal3)
+			 XXX(0xD8)
+			 XXX(0xD9)
+			 XXX(0xDA)
+			 XXX(0xDB)
+			 XXX(0xDC)
+			 XXX(0xDD)
+			 XXX(0xDE)
+			 XXX(0xDF)
+			 XXX(0xE0)
+			 XXX(0xE1)
+			 XXX(0xE2)
+			 XXX(0xE3)
+			 XXX(0xE4)
+			 XXX(0xE5)
+			 XXX(0xE6)
+			 XXX(0xE7)
+			 XXX(0xE8)
+			 XXX(0xE9)
+			 XXX(0xEA)
+			 XXX(0xEB)
+			 XXX(0xEC)
+			 XXX(0xED)
+			 XXX(0xEE) /* OP_abs_jump */
+#if defined DEBUGGER || !defined AVMPLUS_WORD_CODE
+			 III(0xEF, L_debug)
+			 III(0xF0, L_debugline)
+			 III(0xF1, L_debugfile)
+			 III(0xF2, L_bkptline)
+#else
+ 			 XXX(0xEF) /* OP_debug */
+			 XXX(0xF0) /* L_debugline */
+			 XXX(0xF1) /* L_debugfile */
+			 XXX(0xF2) /* L_bkptline */
+#endif
+	 		 XXX(0xF3)  /* OP_timestamp */
+			 XXX(0xF4)
+			 XXX(0xF5)
+			 XXX(0xF6)
+			 XXX(0xF7)
+			 XXX(0xF8)
+			 XXX(0xF9)
+			 XXX(0xFA)
+			 XXX(0xFB)
+			 XXX(0xFC)
+			 XXX(0xFD)
+			 XXX(0xFE)
+			 XXX(0xFF)  /* OP_ext */
+			 XXX(0x100)
+			 III(0x101, L_ext_pushbits)
+			 III(0x102, L_ext_push_doublebits)
+			 III(0x103, L_ext_get2locals)
+			 III(0x104, L_ext_get3locals)
+			 III(0x105, L_ext_storelocal)
+#  if defined GNUC_THREADING
+			};
+			AvmAssert(opcode_labels[0x18] == &&L_ifge);
+			AvmAssert(opcode_labels[0x97] == &&L_bitnot);
+			AvmAssert(opcode_labels[257] == &&L_ext_pushbits);
+#  elif defined MSVC_X86_ASM_THREADING || defined MSVC_X86_REWRITE_THREADING
+			} // conditional run-time initialization of jump table
+#  endif // threading discipline
+		return (Atom)opcode_labels;
+		} // env == 0?
+		
+#endif  // !AVMPLUS_DIRECT_THREADED
 
 		MethodInfo* info = (MethodInfo*)(AbstractFunction*) env->method;
 		AvmCore *core = info->core();
@@ -99,15 +506,33 @@ namespace avmplus
 			core->console << "interp " << info << '\n';
 		#endif
 
+#ifdef AVMPLUS_WORD_CODE
+		const uint32* pos = info->word_code.body_pos;
+		const uint32* volatile code_start = pos;
+		int max_stack = info->word_code.max_stack;
+		int local_count = info->word_code.local_count;
+		int init_scope_depth = info->word_code.init_scope_depth;
+		int max_scope_depth = info->word_code.max_scope_depth;
+#  ifdef SUPERWORD_PROFILING
+#    ifdef AVMPLUS_DIRECT_THREADED
+#       error "Superword profiling requires switch dispatch"
+#    endif
+		if (!info->word_code.dumped) {
+			swprofCode(pos, info->word_code.body_end);
+			info->word_code.dumped = true;
+		}
+#  endif
+#else // !AVMPLUS_WORD_CODE
 		const byte* pos = info->body_pos;
 		int max_stack = AvmCore::readU30(pos);
 		int local_count = AvmCore::readU30(pos);
 		int init_scope_depth = AvmCore::readU30(pos);
 		int max_scope_depth = AvmCore::readU30(pos);
-		int volatile max_scope = MethodInfo::maxScopeDepth(info, max_scope_depth - init_scope_depth);
 		AvmCore::readU30(pos); // code_length
 		const byte * volatile code_start = pos;
-		
+#endif // AVMPLUS_WORD_CODE
+		int volatile max_scope = MethodInfo::maxScopeDepth(info, max_scope_depth - init_scope_depth);
+
 		// these should have been checked in AbcParser
 		AvmAssert(local_count+max_scope+max_stack > 0);
 		Atom* framep = (Atom*)alloca(sizeof(Atom)*(local_count + max_scope + max_stack));
@@ -117,7 +542,7 @@ namespace avmplus
 		#ifdef DEBUGGER
 		CallStackNode callStackNode(env, info, framep, 0, argc, ap, 0 /* later changed to 'pc' */);
 		// don't allow entry into the debugger until we have setup the frame
-		#endif
+#endif
 
 		CodeContextAtom savedCodeContext = core->codeContextAtom;
 		if (info->pool->domain->base != NULL) {
@@ -194,12 +619,12 @@ namespace avmplus
 		// make sure scope chain depth is right before entering.
 		volatile int initialScopeDepth = scopeDepth;
 
-		Atom tempAtom;
-
 		PoolObject *pool = info->pool;
 		const List<Stringp>& cpool_string = pool->cpool_string;
+#ifndef AVMPLUS_WORD_CODE
         const List<int>& cpool_int = pool->cpool_int;
         const List<uint32>& cpool_uint = pool->cpool_uint;
+#endif // !AVMPLUS_WORD_CODE
         const List<double*, LIST_GCObjects>& cpool_double = pool->cpool_double;
 		const List<Namespace*>& cpool_ns = pool->cpool_ns;
 
@@ -214,7 +639,11 @@ namespace avmplus
 		env->debugEnter(argc, ap, NULL, local_count, NULL, framep, 0);  // call it but make sure that callStackNode is not re-init'd
 		#endif
 
+#ifdef AVMPLUS_WORD_CODE
+		const uint32* pc = code_start;
+#else
 		const byte* pc = code_start;
+#endif
 		sintptr volatile expc=0;
 
 		#ifdef DEBUGGER
@@ -230,594 +659,1106 @@ namespace avmplus
 
 		core->branchCheck(env, interruptable, -1);
 
-	  MainLoop:
-		TRY_UNLESS(core, !info->exceptions, kCatchAction_SearchForActionScriptExceptionHandler) {
+		// in case a callee modified core->dxnsAddr, restore it
+		#define restore_dxns() core->dxnsAddr = dxnsAddr
+
+		// when we're leaving this call frame
+		#define restore_caller_dxns() if(info->setsDxns()) core->dxnsAddr = dxnsAddrSave
+
+		// NEXT dispatches the next instruction.
+		//
+		// U30ARG picks up a variable-length unsigned integer argument from the instruction
+		// stream and advances the PC.
+		//
+		// U8ARG picks up a fixed-length unsigned byte argument from the instruction stream
+		// and advances the PC.
+		//
+		// S24ARG picks up a fixed-length signed integer argument from the instruction stream
+		// and advances the PC.
+		//
+		// SAVE_EXPC and variants saves the address of the current opcode in the local 'expc'.
+		// Used in the case of exceptions.
+
+#ifdef AVMPLUS_WORD_CODE
+
+#  if defined AVMPLUS_DIRECT_THREADED
+#    if defined GNUC_THREADING
+#      define INSTR(op)       L_##op:
+#      define NEXT            goto *(*pc++)
+#    elif defined MSVC_X86_REWRITE_THREADING
+#      define INSTR(op)       case OP_##op: L_ ## op: 
+#      define NEXT            continue
+#    elif defined MSVC_X86_ASM_THREADING
+#      define INSTR(op)       L_ ## op: 
+#      define NEXT __asm { \
+				__asm mov ebx, pc \
+				__asm mov eax, [ebx] \
+				__asm add ebx, 4 \
+				__asm mov pc, ebx \
+				__asm jmp eax \
+		   }
+#    endif // threading discipline
+#  else // AVMPLUS_DIRECT_THREADED
+#    define INSTR(op)       case OP_##op:
+#    define NEXT            continue
+#  endif
 		
+#  define U30ARG          (*pc++)
+#  define U8ARG           (*pc++)
+#  define S24ARG          (int32)(*pc++)
+#  define SAVE_EXPC       expc = pc-1-code_start
+#  define SAVE_EXPC_S24   expc = pc-2-code_start
+
+#else // !AVMPLUS_WORD_CODE
+
+#  if defined AVMPLUS_VERBOSE
+#    define INSTR(op) case OP_##op: \
+                        if (pool->verbose) {\
+							showState(info, code_start, pc-1,  framep, sp, scopeDepth, scopeBase, max_scope); \
+						}
+#  else
+#    define INSTR(op) case OP_##op:
+#  endif
+
+#  define NEXT            continue
+#  define U30ARG          (readU30(pc))
+#  define U8ARG           (*pc++)
+#  define S24ARG          (pc+=3, readS24(pc-3))
+#  define SAVE_EXPC	      expc = pc-1-code_start
+#  define SAVE_EXPC_S24   expc = pc-4-code_start
+
+#endif // AVMPLUS_WORD_CODE
+		
+	MainLoop:
+#ifdef AVMPLUS_WORD_CODE
+		TRY_UNLESS(core, !info->word_code.exceptions, kCatchAction_SearchForActionScriptExceptionHandler) {
+#else
+		TRY_UNLESS(core, !info->exceptions, kCatchAction_SearchForActionScriptExceptionHandler) {
+#endif
+		
+		restore_dxns();
 		
 		// the verifier ensures we don't fall off the end of a method.  so
 		// we dont have to check the end pointer here.
-        for (;;)
+#if defined DIRECT_DISPATCH
+
+		NEXT;
+
+#endif // DIRECT_DISPATCH
+
+#if defined SWITCH_DISPATCH
+
+		for (;;)
         {
-			// restore this every time since we might have called out to
-			// code that changes it
-			core->dxnsAddr = dxnsAddr;
-
-			expc = pc-code_start;
-			AbcOpcode opcode = (AbcOpcode) *pc++;
-
-			#ifdef AVMPLUS_VERBOSE
-			if (pool->verbose)
+#  if defined SUPERWORD_PROFILING
+			swprofPC(pc);
+#  endif
+#  if defined AVMPLUS_WORD_CODE
+			// See comments around INSTR(ext) below.
+			AvmAssert((*pc & 65535) == ((*pc >> 16) & 65535));
+			switch ((*pc++) & 255)
+#  else
+            switch (*pc++)
+#  endif // AVMPLUS_WORD_CODE && !AVMPLUS_DIRECT_THREADING
             {
-                showState(info, opcode, (int)(pc - 1 - code_start), framep, (int)(sp-framep),
-					(int)(scopeBase+scopeDepth-1-framep), (int)(scopeBase-framep), (int)(scopeBase+max_scope-framep),
-					code_start);
-            }
-			#endif
 
-			#ifdef AVMPLUS_PROFILE
-			if (core->dprof.dprofile)
-				core->dprof.mark(opcode);
-			#endif
+#endif // SWITCH_DISPATCH
 
-            switch (opcode)
-            {
-            case OP_returnvoid:
-            case OP_returnvalue:
+	#define return_impl(val) \
+            {\
+				SAVE_EXPC;\
+				core->codeContextAtom = savedCodeContext;\
+				tempAtom = toplevel->coerce(val, info->returnTraits());\
+				restore_caller_dxns();\
+			}
+
+			INSTR(returnvoid) {
+				Atom tempAtom;
 				#ifdef DEBUGGER
 				env->debugExit(&callStackNode);
 				#endif				
-				core->codeContextAtom = savedCodeContext;
-
-				tempAtom = toplevel->coerce((opcode==OP_returnvoid) ? undefinedAtom : *sp,
-					info->returnTraits());
-
+				return_impl(undefinedAtom);
 				#ifdef AVMPLUS_VERBOSE
-				if (info->pool->verbose)
+				if (pool->verbose)
 					core->console << "exit " << info << '\n';
 				#endif
-
 				return tempAtom;
+			}
 
-            case OP_nop:
-            case OP_label:
-			case OP_timestamp:
-                continue;
+            INSTR(returnvalue) {
+				Atom tempAtom;
+				#ifdef DEBUGGER
+				env->debugExit(&callStackNode);
+				#endif				
+				return_impl(*sp);
+				#ifdef AVMPLUS_VERBOSE
+				if (pool->verbose)
+					core->console << "exit " << info << '\n';
+				#endif
+				return tempAtom;
+			}
 
-			case OP_bkpt:
+#ifndef AVMPLUS_WORD_CODE
+            INSTR(nop) {
+				// FIXME: In the direct threaded translation these should probably
+				// not be in the instruction stream at all.
+                NEXT;
+			}
+#endif
+					
+#ifndef AVMPLUS_WORD_CODE
+            INSTR(label) {
+				// FIXME: In the direct threaded translation these should probably
+				// not be in the instruction stream at all.
+                NEXT;
+			}
+#endif
+
+#ifndef AVMPLUS_WORD_CODE
+			INSTR(timestamp) {
+				// FIXME: In the direct threaded translation these should probably
+				// not be in the instruction stream at all.
+                NEXT;
+			}
+#endif
+
+#ifndef AVMPLUS_WORD_CODE
+			INSTR(coerce_a) { // no-op since interpreter only uses atoms
+                NEXT;
+			}
+#endif  // AVMPLUS_WORD_CODE
+
+#if defined DEBUGGER || !defined AVMPLUS_WORD_CODE
+			INSTR(bkpt) {
+				SAVE_EXPC;
 				#ifdef DEBUGGER
 				if (debugger)
 				{
 					debugger->enterDebugger();
 				}
 				#endif
-				continue;
-
-			case OP_debugline:
-			{
+				restore_dxns();
+				NEXT;
+			}
+#endif
+					
+#if defined DEBUGGER || !defined AVMPLUS_WORD_CODE
+			INSTR(debugline) {
+				SAVE_EXPC;
+				int line = U30ARG;
 			    #ifdef DEBUGGER
-				int line = readU30(pc);
 				if (debugger)
 				{
 					debugger->debugLine(line);
 				}
 				#else
-				readU30(pc);
+				(void)line;
 				#endif
-				continue;
+				restore_dxns();
+				NEXT;
 			}
-
-			case OP_bkptline:
-			{
+#endif
+					
+#if defined DEBUGGER || !defined AVMPLUS_WORD_CODE
+			INSTR(bkptline) {
+				SAVE_EXPC;
+				int line = U30ARG;
 			    #ifdef DEBUGGER
-				int line = readU30(pc);
 				if (debugger)
 				{
 					debugger->debugLine(line);
 					debugger->enterDebugger();
 				}
 				#else
-				readU30(pc);
+				(void)line;
 				#endif
-				continue;
+				restore_dxns();
+				NEXT;
 			}
+#endif
+					
+#if defined DEBUGGER || !defined AVMPLUS_WORD_CODE
+			INSTR(debug) {
+				pc += 4;
+				NEXT;
+			}
+#endif
 
-			case OP_debug:
-				// tbd
-				pc += AvmCore::calculateInstructionWidth(pc-1) - 1;
-				continue;
-
-			case OP_debugfile:
-			{
+#if defined DEBUGGER || !defined AVMPLUS_WORD_CODE
+			INSTR(debugfile) {
+				SAVE_EXPC;
+				int index = U30ARG;
 				#ifdef DEBUGGER
-				int index = readU30(pc);
 				if (debugger)
 				{
 					debugger->debugFile(pool->getString(index));
 				}
 				#else
-				readU30(pc);
+				(void)index;
 				#endif
-				continue;
+				restore_dxns();
+				NEXT;
+			}
+#endif
+
+			INSTR(jump) {
+				int offset = S24ARG;
+				if (offset < 0) {
+					SAVE_EXPC_S24;
+				    core->branchCheck(env, interruptable, offset);
+					restore_dxns();
+				}
+				pc += offset;
+                NEXT;
 			}
 
-			case OP_jump:
-				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += 3+j;
-				}
-                continue;
+            INSTR(pushnull) {
+                *(++sp) = nullObjectAtom;
+                NEXT;
+			}
 
-            case OP_pushnull:
-				sp++;
-                sp[0] = nullObjectAtom;
-                continue;
-            case OP_pushundefined:
-				sp++;
-                sp[0] = undefinedAtom;
-                continue;
-            case OP_pushstring:
-				sp++;
-                sp[0] = cpool_string[readU30(pc)]->atom();
-                continue;
-            case OP_pushint:
-				sp++;
-                sp[0] = core->intToAtom(cpool_int[readU30(pc)]);
-                continue;
-            case OP_pushuint:
-				sp++;
-                sp[0] = core->uintToAtom(cpool_uint[readU30(pc)]);
-                continue;
-            case OP_pushdouble:
-				sp++;
-                sp[0] = kDoubleType|(uintptr)cpool_double[readU30(pc)];
-                continue;
-            case OP_pushnamespace:
-                sp++;
-                sp[0] = cpool_ns[readU30(pc)]->atom();
-                continue;
-            case OP_getlocal:
-                sp++;
-				sp[0] = framep[readU30(pc)];
-				continue;
-            case OP_getlocal0:
-			case OP_getlocal1:
-			case OP_getlocal2:
-			case OP_getlocal3:
-                sp++;
-				sp[0] = framep[opcode-OP_getlocal0];
-				continue;
-            case OP_pushtrue:
-                sp++;
-				sp[0] = trueAtom;
-                continue;
-            case OP_pushfalse:
-				sp++;
-                sp[0] = falseAtom;
-                continue;
-			case OP_pushnan:
-				sp++;
-				sp[0] = core->kNaN;
-				continue;
+            INSTR(pushundefined) {
+                *(++sp) = undefinedAtom;
+                NEXT;
+			}
 
-            case OP_pop:
+            INSTR(pushstring) {
+                *(++sp) = cpool_string[U30ARG]->atom();
+                NEXT;
+			}
+
+#ifndef AVMPLUS_WORD_CODE
+            INSTR(pushint) {
+				// FIXME
+				// Here we want the translator to direct threaded code
+				// to specialize the operation into a plain 'pushword' that
+				// simply pushes the following word (it could be tagged
+				// already) or a 'pushdouble'
+                *(++sp) = core->intToAtom(cpool_int[U30ARG]);
+                NEXT;
+			}
+#endif
+					
+#ifndef AVMPLUS_WORD_CODE
+            INSTR(pushuint) {
+				// FIXME
+				// Here we want the translator to direct threaded code
+				// to specialize the operation into a plain 'pushword' that
+				// simply pushes the following word (it could be tagged
+				// already) or a 'pushdouble'
+                *(++sp) = core->uintToAtom(cpool_uint[U30ARG]);
+                NEXT;
+			}
+#endif
+					
+            INSTR(pushdouble) {
+                *(++sp) = kDoubleType|(uintptr)cpool_double[U30ARG];
+                NEXT;
+			}
+
+            INSTR(pushnamespace) {
+                *(++sp) = cpool_ns[U30ARG]->atom();
+                NEXT;
+			}
+
+            INSTR(getlocal) {
+				*(++sp) = framep[U30ARG];
+				NEXT;
+			}
+
+            INSTR(getlocal0) {
+                *(++sp) = framep[0];
+				NEXT;
+			}
+
+			INSTR(getlocal1) {
+                *(++sp) = framep[1];
+				NEXT;
+			}
+				
+			INSTR(getlocal2) {
+                *(++sp) = framep[2];
+				NEXT;
+			}
+
+			INSTR(getlocal3) {
+                *(++sp) = framep[3];
+				NEXT;
+			}
+
+            INSTR(pushtrue) {
+				*(++sp) = trueAtom;
+                NEXT;
+			}
+
+            INSTR(pushfalse) {
+                *(++sp) = falseAtom;
+                NEXT;
+			}
+
+			INSTR(pushnan) {
+				*(++sp) = core->kNaN;
+				NEXT;
+			}
+
+            INSTR(pop) {
                 sp--;
-                continue;
+                NEXT;
+			}
 
-            case OP_dup:
+            INSTR(dup) {
 				sp++;
 				sp[0] = sp[-1];
-                continue;
+                NEXT;
+			}
 
-            case OP_swap:
-                tempAtom = sp[0];
+            INSTR(swap) {
+                Atom tempAtom = sp[0];
                 sp[0] = sp[-1];
                 sp[-1] = tempAtom;
-                continue;
+                NEXT;
+			}
 
-            case OP_convert_s:
-                sp[0] = core->string(sp[0])->atom();
-                continue;
+            INSTR(convert_s) {
+				if ((sp[0] & 7) != kStringType) {
+					SAVE_EXPC;
+				    sp[0] = core->string(sp[0])->atom();
+					restore_dxns();
+				}
+                NEXT;
+			}
 
-			case OP_esc_xelem: // ToXMLString will call EscapeElementValue
+			INSTR(esc_xelem) { // ToXMLString will call EscapeElementValue
+				SAVE_EXPC;
 				sp[0] = core->ToXMLString(sp[0])->atom();
-				continue;
+				restore_dxns();
+				NEXT;
+			}
 
-			case OP_esc_xattr:
+			INSTR(esc_xattr) {
+				SAVE_EXPC;
 				sp[0] = core->EscapeAttributeValue(sp[0])->atom();
-				continue;
+				restore_dxns();
+				NEXT;
+			}
 
-            case OP_coerce_d:
-            case OP_convert_d:
-                sp[0] = core->numberAtom(sp[0]);
-                continue;
+#define coerce_d_impl() \
+	if (!IS_DOUBLE(sp[0])) { \
+		SAVE_EXPC; \
+		sp[0] = core->numberAtom(sp[0]); \
+		restore_dxns(); \
+	}
 
-            case OP_convert_b:
-            case OP_coerce_b:
-                sp[0] = core->booleanAtom(sp[0]);
-                continue;
+            INSTR(coerce_d) {
+				coerce_d_impl();
+				NEXT;
+			}
 
-			// if sp[0] is null or undefined, throw TypeError.  otherwise return same value.
-            case OP_convert_o:
-                env->nullcheck(sp[0]);
-                continue;
+            INSTR(convert_d) {
+				coerce_d_impl();
+                NEXT;
+			}
 
-            case OP_negate:
-                sp[0] = core->doubleToAtom(-core->number(sp[0]));
-                continue;
+#define coerce_b_impl() \
+	Atom lhs = sp[0]; \
+	if (IS_BOOLEAN(lhs)) \
+		; \
+	else if (IS_INTEGER(lhs)) \
+		sp[0] = lhs == kIntegerType ? falseAtom : trueAtom; \
+	else \
+		sp[0] = core->booleanAtom(lhs);
 
-			case OP_negate_i:
+            INSTR(convert_b) {
+				coerce_b_impl();
+				NEXT;
+			}
+
+            INSTR(coerce_b) {
+				coerce_b_impl();
+                NEXT;
+			}
+
+            INSTR(convert_o) {
+				if (AvmCore::isNullOrUndefined(sp[0])) {
+					SAVE_EXPC;
+				    env->nullcheck(sp[0]);
+				}
+                NEXT;
+			}
+
+            INSTR(negate) {
+				Atom val = sp[0];
+				if (IS_INTEGER(val) && val != MAKE_INTEGER(0)) {
+					int32 v = -(val >> 3);
+					if (FITS_IN_INTEGER(v)) {
+						sp[0] = MAKE_INTEGER(v);
+						NEXT;
+					}
+				}
+				SAVE_EXPC;
+				sp[0] = core->doubleToAtom(-core->number(val));
+				restore_dxns();
+                NEXT;
+			}
+
+			INSTR(negate_i) {
+				SAVE_EXPC;
                 sp[0] = core->intToAtom(-core->integer(sp[0]));
-                continue;
+				restore_dxns();
+                NEXT;
+			}
 
-            case OP_increment:
-				*sp = core->numberAtom(*sp);
+#ifndef AVMPLUS_WORD_CODE
+			INSTR(kill) {
+				framep[U30ARG] = undefinedAtom;
+				NEXT;
+			}
+#endif
+
+            INSTR(typeof) {
+				*sp = core->_typeof(*sp)->atom();
+                NEXT;
+			}
+
+            INSTR(not) {
+				Atom bval = sp[0];
+				if (IS_BOOLEAN(bval))
+					;
+				else if (IS_INTEGER(bval))
+					bval = bval == kIntegerType ? falseAtom : trueAtom;
+				else
+					bval = core->booleanAtom(bval);
+                sp[0] = bval ^ booleanNotMask;
+                NEXT;
+			}
+
+			INSTR(bitnot) {
+				// OPTIMIZEME
+				SAVE_EXPC;
+				*sp = core->intToAtom(~core->integer(*sp));
+				restore_dxns();
+                NEXT;
+			}
+
+            INSTR(setlocal) {
+                framep[U30ARG] = *(sp--);
+                NEXT;
+			}
+
+            INSTR(setlocal0) {
+                framep[0] = *(sp--);
+				NEXT;
+			}
+
+            INSTR(setlocal1) {
+                framep[1] = *(sp--);
+				NEXT;
+			}
+
+            INSTR(setlocal2) {
+                framep[2] = *(sp--);
+				NEXT;
+			}
+
+            INSTR(setlocal3) {
+                framep[3] = *(sp--);
+                NEXT;
+			}	
+
+// Add lhs and rhs if they are both fixnums and computation does not overflow,
+// or if they are both flonums.  On success, store the result in dest, and NEXT.
+
+#define FAST_ADD_MAYBE(lhs,rhs,dest) \
+	if (IS_BOTH_INTEGER(lhs, rhs)) { \
+		uint32 lop = (uint32)lhs ^ kIntegerType, rop = (uint32)rhs ^ kIntegerType; \
+		uint32 result = lop + rop; \
+		if ((int32)(lop ^ rop) < 0 || (int32)(result ^ lop) >= 0) { \
+			dest = result | kIntegerType; \
+			NEXT; \
+		} \
+	} \
+	else if (IS_BOTH_DOUBLE(lhs, rhs)) { \
+		dest = core->doubleToAtom(DOUBLE_VALUE(lhs) + DOUBLE_VALUE(rhs)); \
+		NEXT; \
+	}
+
+// Add 1 to lhs if it is a fixnum and computation does not overflow, or
+// if lhs is a flonum.  On success, store the result in dest, and NEXT.
+					
+#define FAST_INC_MAYBE(lhs,dest) \
+	if (IS_INTEGER(lhs)) { \
+		uint32 lop = (uint32)lhs ^ kIntegerType; \
+		uint32 result = lop + (1 << 3); \
+		if ((int32)lop < 0 || (int32)(result ^ lop) >= 0) { \
+			dest = result | kIntegerType; \
+			NEXT; \
+		} \
+	} \
+    else if (IS_DOUBLE(lhs)) { \
+		dest = core->doubleToAtom(DOUBLE_VALUE(lhs) + 1.0); \
+		NEXT; \
+	}
+					
+// Subtract rhs from lhs if they are both fixnums and computation does not overflow.
+// On success, store the result in dest, and NEXT.
+#define FAST_SUB_MAYBE(lhs,rhs,dest) \
+	if (IS_BOTH_INTEGER(lhs, rhs)) { \
+		uint32 lop = (uint32)lhs ^ kIntegerType, rop = (uint32)rhs ^ kIntegerType; \
+		uint32 result = lop - rop; \
+		if ((int32)(lop ^ rop) >= 0 || (int32)(result ^ lop) >= 0) { \
+			dest = result | kIntegerType; \
+			NEXT; \
+		} \
+	} \
+	else if (IS_BOTH_DOUBLE(lhs, rhs)) { \
+		dest = core->doubleToAtom(DOUBLE_VALUE(lhs) + DOUBLE_VALUE(rhs)); \
+		NEXT; \
+	}
+
+// Subtract 1 from lhs if lhs is a fixnum and computation does not overflow.
+// On success, store the result in dest, and NEXT.
+#define FAST_DEC_MAYBE(lhs,dest) \
+	if (IS_INTEGER(lhs)) { \
+		uint32 lop = (uint32)lhs ^ kIntegerType; \
+		uint32 result = lop - (1 << 3); \
+		if ((int32)lop >= 0 || (int32)(result ^ lop) >= 0) { \
+			dest = result | kIntegerType; \
+			NEXT; \
+		} \
+	} \
+    else if (IS_DOUBLE(lhs)) { \
+		dest = core->doubleToAtom(DOUBLE_VALUE(lhs) - 1.0); \
+		NEXT; \
+	}
+
+            INSTR(increment) {
+				Atom lhs = *sp;
+				FAST_INC_MAYBE(lhs,sp[0]);
+				SAVE_EXPC;
+				*sp = core->numberAtom(lhs);
 				core->increment_d(sp, 1);
-                continue;
+				restore_dxns();
+                NEXT;
+			}
 
-            case OP_increment_i:
+            INSTR(increment_i) {
+				Atom lhs = *sp;
+				FAST_INC_MAYBE(lhs,sp[0]);
+				SAVE_EXPC;
 				core->increment_i(sp, 1);
-                continue;
+				restore_dxns();
+                NEXT;
+			}
 
-			case OP_inclocal:
-			{
-				Atom* rp = framep+readU30(pc);
+			INSTR(inclocal) {
+				SAVE_EXPC;  // because U30ARG prevents it from being done after FAST_INC_MAYBE.  Clean up for threaded code.
+				Atom* rp = framep+U30ARG;
+				Atom lhs = *rp;
+				FAST_INC_MAYBE(lhs,*rp);
 				*rp = core->numberAtom(*rp);
 				core->increment_d(rp, 1);
-				continue;
+				restore_dxns();
+				NEXT;
 			}
 
-			case OP_kill:
-			{
-				framep[readU30(pc)] = undefinedAtom;
-				continue;
+            INSTR(inclocal_i) {
+				SAVE_EXPC;  // because U30ARG prevents it from being done after FAST_INC_MAYBE.  Clean up for threaded code.
+				Atom* rp = framep+U30ARG;
+				Atom lhs = *rp;
+				FAST_INC_MAYBE(lhs,*rp);
+				core->increment_i(rp, 1);
+				restore_dxns();
+				NEXT;
 			}
 
-            case OP_inclocal_i:
-				core->increment_i(framep+readU30(pc), 1);
-				continue;
-
-            case OP_decrement:
+            INSTR(decrement) {
+				Atom lhs = *sp;
+				FAST_DEC_MAYBE(lhs,sp[0]);
+				SAVE_EXPC;
 				*sp = core->numberAtom(*sp);
 				core->increment_d(sp, -1);
-                continue;
-
-            case OP_decrement_i:
-				core->increment_i(sp, -1);
-                continue;
-
-			case OP_declocal:
-			{
-				Atom* rp = framep+readU30(pc);
-				*rp = core->numberAtom(*rp);
-				core->increment_d(rp, -1);
-				continue;
+				restore_dxns();
+                NEXT;
 			}
 
-			case OP_declocal_i:
-				core->increment_i(framep+readU30(pc), -1);
-                continue;
+            INSTR(decrement_i) {
+				Atom lhs = *sp;
+				FAST_DEC_MAYBE(lhs,sp[0]);
+				SAVE_EXPC;
+				core->increment_i(sp, -1);
+				restore_dxns();
+                NEXT;
+			}
 
-            case OP_typeof:
-				*sp = core->_typeof(*sp)->atom();
-                continue;
+			INSTR(declocal) {
+				SAVE_EXPC;  // because U30ARG prevents it from being done after FAST_DEC_MAYBE.  Clean up for threaded code.
+				Atom* rp = framep+U30ARG;
+				Atom lhs = *rp;
+				FAST_DEC_MAYBE(lhs,*rp);
+				*rp = core->numberAtom(*rp);
+				core->increment_d(rp, -1);
+				restore_dxns();
+				NEXT;
+			}
 
-            case OP_not:
-                *sp = core->booleanAtom(*sp) ^ booleanNotMask;
-                continue;
+			INSTR(declocal_i) {
+				SAVE_EXPC;  // because U30ARG prevents it from being done after FAST_DEC_MAYBE.  Clean up for threaded code.
+				Atom* rp = framep+U30ARG;
+				Atom lhs = *rp;
+				FAST_DEC_MAYBE(lhs,*rp);
+				core->increment_i(rp, -1);
+				restore_dxns();
+                NEXT;
+			}
 
-			case OP_bitnot:
-				*sp = core->intToAtom(~core->integer(*sp));
-                continue;
+            INSTR(add) {
+				Atom lhs = sp[-1], rhs=sp[0];
+				sp--;
+				FAST_ADD_MAYBE(lhs,rhs,sp[0]);
+				SAVE_EXPC;
+                sp[0] = toplevel->add2(lhs, rhs);
+				restore_dxns();
+                NEXT;
+			}
 
-            case OP_setlocal:
-                framep[readU30(pc)] = *(sp--);
-                continue;
-            case OP_setlocal0:
-            case OP_setlocal1:
-            case OP_setlocal2:
-            case OP_setlocal3:
-                framep[opcode-OP_setlocal0] = *(sp--);
-                continue;
+			INSTR(add_i) {
+				Atom lhs = sp[-1], rhs=sp[0];
+				sp--;
+				FAST_ADD_MAYBE(lhs,rhs,sp[0]);
+				SAVE_EXPC;
+				sp[0] = core->intToAtom(core->integer(lhs) + core->integer(rhs));
+				restore_dxns();
+                NEXT;
+			}
 
-            case OP_add:
-                sp[-1] = toplevel->add2(sp[-1], sp[0]);
-                sp--;
-                continue;
+            INSTR(subtract) {
+				Atom lhs = sp[-1], rhs=sp[0];
+				sp--;
+				FAST_SUB_MAYBE(lhs,rhs,sp[0]);
+				SAVE_EXPC;
+                sp[0] = core->doubleToAtom(core->number(lhs) - core->number(rhs));
+				restore_dxns();
+                NEXT;
+			}
 
-			case OP_add_i:
-				sp[-1] = core->intToAtom(core->integer(sp[-1]) + core->integer(sp[0]));
-                sp--;
-                continue;
+            INSTR(subtract_i) {
+				Atom lhs = sp[-1], rhs=sp[0];
+				sp--;
+				FAST_SUB_MAYBE(lhs,rhs,sp[0]);
+				SAVE_EXPC;
+				sp[0] = core->intToAtom(core->integer(lhs) - core->integer(lhs));
+				restore_dxns();
+                NEXT;
+			}
 
-            case OP_subtract:
-                sp[-1] = core->doubleToAtom(core->number(sp[-1]) - core->number(sp[0]));
-                sp--;
-                continue;
+            INSTR(multiply) {
+				// OPTIMIZEME? for small integer
+				Atom lhs = sp[-1], rhs = sp[0];
+				sp--;
+				if (IS_BOTH_DOUBLE(lhs, rhs)) {
+					sp[0] = core->doubleToAtom(DOUBLE_VALUE(lhs) * DOUBLE_VALUE(rhs));
+					NEXT;
+				}
+				SAVE_EXPC;
+                sp[0] = core->doubleToAtom(core->number(lhs) * core->number(rhs));
+				restore_dxns();
+                NEXT;
+			}
 
-            case OP_subtract_i:
-				sp[-1] = core->intToAtom(core->integer(sp[-1]) - core->integer(sp[0]));
-                sp--;
-                continue;
-
-            case OP_multiply:
-                sp[-1] = core->doubleToAtom(core->number(sp[-1]) * core->number(sp[0]));
-                sp--;
-                continue;
-
-			case OP_multiply_i:
+			INSTR(multiply_i) {
+				// OPTIMIZEME? for small integer
+				SAVE_EXPC;
                 sp[-1] = core->intToAtom(core->integer(sp[-1]) * core->integer(sp[0]));
                 sp--;
-                continue;
+				restore_dxns();
+                NEXT;
+			}
 
-            case OP_divide:
-				sp[-1] = core->doubleToAtom(core->number(sp[-1]) / core->number(sp[0]));
-                sp--;
-                continue;
-
-            case OP_modulo:
-				sp[-1] = core->doubleToAtom(MathUtils::mod(core->number(sp[-1]), core->number(sp[0])));
+            INSTR(divide) {
+				Atom lhs = sp[-1], rhs = sp[0];
 				sp--;
-				continue;
+				if (IS_BOTH_DOUBLE(lhs, rhs)) {
+					sp[0] = core->doubleToAtom(DOUBLE_VALUE(lhs) / DOUBLE_VALUE(rhs));
+					NEXT;
+				}
+				SAVE_EXPC;
+				sp[0] = core->doubleToAtom(core->number(lhs) / core->number(rhs));
+				restore_dxns();
+                NEXT;
+			}
 
-            case OP_lshift:
-				sp[-1] = core->intToAtom( core->integer(sp[-1]) << (core->toUInt32(sp[0])&0x1F) );
+            INSTR(modulo) {
+				Atom lhs = sp[-1], rhs = sp[0];
+				sp--;
+				if (IS_BOTH_INTEGER(lhs, rhs) && rhs != kIntegerType) {
+					int result = (lhs >> 3) % (rhs >> 3);  // can this overflow somehow? 
+					if (FITS_IN_INTEGER(result)) {
+						sp[0] = MAKE_INTEGER(result);
+						NEXT;
+					}
+				}
+				else if (IS_BOTH_DOUBLE(lhs, rhs)) {
+					sp[0] = core->doubleToAtom(MathUtils::mod(DOUBLE_VALUE(lhs), DOUBLE_VALUE(rhs)));
+					NEXT;
+				}
+				SAVE_EXPC;
+				sp[0] = core->doubleToAtom(MathUtils::mod(core->number(lhs), core->number(rhs)));
+				restore_dxns();
+				NEXT;
+			}
+
+            INSTR(lshift) {
+				Atom lhs = sp[-1];
+				Atom rhs = sp[0];
+				sp--;
+				if (IS_BOTH_INTEGER(lhs,rhs)) {
+					int32 result = INTEGER_VALUE(lhs) << (INTEGER_VALUE(rhs) & 0x1F);
+					if (FITS_IN_INTEGER(result)) {
+						sp[0] = MAKE_INTEGER(result);
+						NEXT;
+					}
+				}
+				SAVE_EXPC;
+				sp[0] = core->intToAtom( core->integer(lhs) << (core->toUInt32(rhs)&0x1F) );
+				restore_dxns();
+                NEXT;
+			}
+
+            INSTR(rshift) {
+				Atom lhs = sp[-1];
+				Atom rhs = sp[0];
+				sp--;
+				if (IS_BOTH_INTEGER(lhs,rhs)) {
+					sp[0] = MAKE_INTEGER(INTEGER_VALUE(lhs) >> (INTEGER_VALUE(rhs) & 0x1F));
+					NEXT;
+				}
+				SAVE_EXPC;
+				sp[0] = core->intToAtom( core->integer(lhs) >> (core->toUInt32(rhs)&0x1F) );
+				restore_dxns();
+                NEXT;
+			}
+
+            INSTR(urshift) {
+				Atom lhs = sp[-1];
+				Atom rhs = sp[0];
+				sp--;
+				if (IS_BOTH_INTEGER(lhs,rhs)) {
+					uint32 result = ((uint32)INTEGER_VALUE(lhs) >> (INTEGER_VALUE(rhs) & 0x1F));
+					if ((result & 0xF0000000U) == 0) {
+						sp[0] = MAKE_INTEGER(result);
+						NEXT;
+					}
+				}
+				SAVE_EXPC;
+                sp[0] = core->uintToAtom( core->toUInt32(lhs) >> (core->toUInt32(rhs)&0x1F) );
+                NEXT;
+			}
+
+            INSTR(bitand) {
+				Atom lhs = sp[-1];
+				Atom rhs = sp[0];
+				sp--;
+				if (IS_BOTH_INTEGER(lhs,rhs)) {
+					sp[0] = lhs & rhs;
+					NEXT;
+				}
+				SAVE_EXPC;
+				sp[0] = core->intToAtom(core->integer(lhs) & core->integer(rhs));
+				restore_dxns();
+				NEXT;
+			}
+
+            INSTR(bitor) {
+				Atom lhs = sp[-1];
+				Atom rhs = sp[0];
+				sp--;
+				if (IS_BOTH_INTEGER(lhs,rhs)) {
+					sp[0] = lhs | rhs;
+					NEXT;
+				}
+				SAVE_EXPC;
+                sp[0] = core->intToAtom(core->integer(lhs) | core->integer(rhs));
+				restore_dxns();
+                NEXT;
+			}
+
+            INSTR(bitxor) {
+				Atom lhs = sp[-1];
+				Atom rhs = sp[0];
+				sp--;
+				if (IS_BOTH_INTEGER(lhs,rhs)) {
+					sp[0] = (lhs ^ rhs) | kIntegerType;
+					NEXT;
+				}
+				SAVE_EXPC;
+				sp[0] = core->intToAtom(core->integer(lhs) ^ core->integer(rhs));
+				restore_dxns();
+                NEXT;
+			}
+
+            INSTR(equals) {
+				// OPTIMIZEME?
+				SAVE_EXPC;
+				sp[-1] = core->equals(sp[-1], sp[0]);
                 sp--;
-                continue;
+				restore_dxns();
+                NEXT;
+			}
 
-            case OP_rshift:
-				sp[-1] = core->intToAtom( core->integer(sp[-1]) >> (core->toUInt32(sp[0])&0x1F) );
-                sp--;
-                continue;
-
-            case OP_urshift:
-                sp[-1] = core->uintToAtom( core->toUInt32(sp[-1]) >> (core->toUInt32(sp[0])&0x1F) );
-                sp--;
-                continue;
-
-            case OP_bitand:
-				sp[-1] = core->intToAtom(core->integer(sp[-1]) & core->integer(sp[0]));
-                sp--;
-				continue;
-
-            case OP_bitor:
-                sp[-1] = core->intToAtom(core->integer(sp[-1]) | core->integer(sp[0]));
-                sp--;
-                continue;
-
-            case OP_bitxor:
-				sp[-1] = core->intToAtom(core->integer(sp[-1]) ^ core->integer(sp[0]));
-                sp--;
-                continue;
-
-            case OP_equals:
-				sp[-1] = core->eq(sp[-1], sp[0]);
-                sp--;
-                continue;
-
-            case OP_strictequals:
+            INSTR(strictequals) {
+				// OPTIMIZEME?
                 sp[-1] = core->stricteq(sp[-1], sp[0]);
                 sp--;
-                continue;
+                NEXT;
+			}
 				
-			case OP_lookupswitch: 
-			{
+			INSTR(lookupswitch) {
+#ifdef AVMPLUS_WORD_CODE
+				const uint32* base = pc-1;
+				uint32 index = AvmCore::integer_u(*(sp--));
+				uint32 default_offset = S24ARG;
+				uint32 case_count = U30ARG;
+				if (index <= case_count)
+					pc = base + pc[index];
+				else
+					pc = base + default_offset;
+#else
 				const byte* base = pc-1;
 				// safe to assume int since verifier checks for int
 				uint32 index = AvmCore::integer_u(*(sp--));
 				const byte* switch_pc = pc+3;
 				uint32 case_count = readU30(switch_pc) + 1;
                 pc = base+readS24( index < case_count ? (switch_pc + 3*index) : pc );
-
-				continue;
+#endif
+				NEXT;
 			}
 
-            case OP_iftrue:
-				if (core->booleanAtom(*(sp--)) & booleanNotMask)
-				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += 3+j;
-				}
+            INSTR(iftrue) {
+				Atom bval = *(sp--);
+				if (IS_BOOLEAN(bval))
+					;
+				else if (IS_INTEGER(bval))
+					bval = bval == kIntegerType ? falseAtom : trueAtom;
 				else
-                    pc += 3;
-                continue;
-
-            case OP_iffalse:
-				if (!(core->booleanAtom(*(sp--)) & booleanNotMask))
+					bval = core->booleanAtom(bval);  // does not throw or change the XML namespace
+				int offset = S24ARG;
+				if (bval & booleanNotMask)
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += 3+j;
+					if (offset < 0) {
+						SAVE_EXPC_S24;
+						core->branchCheck(env, interruptable, offset);
+					}
+                    pc += offset;
 				}
+                NEXT;
+			}
+
+            INSTR(iffalse) {
+				Atom bval = *(sp--);
+				if (IS_BOOLEAN(bval))
+					;
+				else if (IS_INTEGER(bval))
+					bval = bval == kIntegerType ? falseAtom : trueAtom;
 				else
-                    pc += 3;
-				continue;
-
-			case OP_ifeq:
-				sp -= 2;
-				if (core->eq(sp[1], sp[2]) == trueAtom)
+					bval = core->booleanAtom(bval);  // does not throw or change the XML namespace
+				int offset = S24ARG;
+				if (!(bval & booleanNotMask))
 				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
+					if (offset < 0) {
+						SAVE_EXPC_S24;
+						core->branchCheck(env, interruptable, offset);
+					}
+                    pc += offset;
 				}
-				pc += 3;
-                continue;
+				NEXT;
+			}
 
-			case OP_ifne:
-				sp -= 2;
-                if (core->eq(sp[1], sp[2]) == falseAtom)
-				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
-				}
-				pc += 3;
-                continue;
+#define IFEQ(intcmp, comparator, truish) \
+	do { \
+		SAVE_EXPC; \
+		Atom lhs = sp[-1], rhs=sp[0]; \
+		bool result; \
+		if (IS_BOTH_INTEGER(lhs, rhs)) \
+			result = lhs intcmp rhs; \
+		else if (IS_BOTH_DOUBLE(lhs, rhs)) \
+			result = DOUBLE_VALUE(lhs) intcmp DOUBLE_VALUE(rhs); \
+		else \
+			result = core->comparator(lhs, rhs) == truish; \
+		sp -= 2; \
+		int offset = S24ARG; \
+		if (result) \
+		{ \
+			if (offset < 0) \
+				core->branchCheck(env, interruptable, offset); \
+			pc += offset; \
+		} \
+		restore_dxns(); \
+	} while(0)
+	
+		   INSTR(ifeq) {
+				IFEQ(==, equals, trueAtom);
+                NEXT;
+			}
+					
+			INSTR(ifne) {
+				IFEQ(!=, equals, falseAtom);
+                NEXT;
+			}
 
-			case OP_ifstricteq:
-				sp -= 2;
-                if (core->stricteq(sp[1], sp[2]) == trueAtom)
-				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
-				}
-				pc += 3;
-                continue;
+		    INSTR(ifstricteq) {
+				IFEQ(==, stricteq, trueAtom);
+				NEXT;
+			}
 
-            case OP_ifstrictne:
-				sp -= 2;
-                if (core->stricteq(sp[1], sp[2]) == falseAtom)
-				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
-				}
-				pc += 3;
-                continue;
+			INSTR(ifstrictne) {
+				IFEQ(!=, stricteq, falseAtom);
+				NEXT;
+			}
 
-			case OP_iflt:
-				sp -= 2;
-                if (core->compare(sp[1], sp[2]) == trueAtom)
-				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
-				}
-				pc += 3;
-                continue;
+#define IFCMP(numeric_cmp, generic_cmp) \
+		SAVE_EXPC; \
+		Atom lhs = sp[-1], rhs=sp[0]; \
+		sp -= 2; \
+		bool result; \
+		if (IS_BOTH_INTEGER(lhs, rhs)) \
+			result = lhs numeric_cmp rhs; \
+		else if (IS_BOTH_DOUBLE(lhs, rhs)) \
+			result = DOUBLE_VALUE(lhs) numeric_cmp DOUBLE_VALUE(rhs); \
+		else \
+			result = generic_cmp; \
+		int offset = S24ARG; \
+		if (result) \
+		{ \
+			if (offset < 0) \
+				core->branchCheck(env, interruptable, offset); \
+			pc += offset; \
+		} \
+		restore_dxns();
 
-			case OP_ifnlt:
-				sp -= 2;
-                if (core->compare(sp[1], sp[2]) != trueAtom)
-				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
-				}
-				pc += 3;
-                continue;
+			INSTR(iflt) {
+				IFCMP(<, core->compare(lhs,rhs) == trueAtom);
+                NEXT;
+			}
 
-			case OP_ifle:
-				sp -= 2;
-                if (core->compare(sp[2], sp[1]) == falseAtom)
-				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
-				}
-				pc += 3;
-                continue;
+			INSTR(ifnlt) {
+				IFCMP(>=, core->compare(lhs, rhs) != trueAtom);
+                NEXT;
+			}
 
-			case OP_ifnle:
-				sp -= 2;
-                if (core->compare(sp[2], sp[1]) != falseAtom)
-				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
-				}
-				pc += 3;
-                continue;
+			INSTR(ifle) {
+				IFCMP(<=, core->compare(rhs, lhs) == falseAtom);
+                NEXT;
+			}
 
-			case OP_ifgt:
-				sp -= 2;
-                if (core->compare(sp[2], sp[1]) == trueAtom)
-				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
-				}
-				pc += 3;
-                continue;
+			INSTR(ifnle) {
+				IFCMP(>, core->compare(rhs, lhs) != falseAtom);
+                NEXT;
+			}
 
-			case OP_ifngt:
-				sp -= 2;
-                if (core->compare(sp[2], sp[1]) != trueAtom)
-				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
-				}
-				pc += 3;
-                continue;
+			INSTR(ifgt) {
+				IFCMP(>, core->compare(rhs, lhs) == trueAtom);
+                NEXT;
+			}
+
+			INSTR(ifngt) {
+				IFCMP(<=, core->compare(rhs, lhs) != trueAtom);
+                NEXT;
+			}
+
+			INSTR(ifge) {
+				IFCMP(>=, core->compare(lhs, rhs) == falseAtom);
+                NEXT;
+			}
 			
-			case OP_ifge:
-				sp -= 2;
-                if (core->compare(sp[1], sp[2]) == falseAtom)
-				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
-				}
-				pc += 3;
-                continue;
+			INSTR(ifnge) {
+				IFCMP(<, core->compare(lhs, rhs) != falseAtom);
+                NEXT;
+			}
 
-			case OP_ifnge:
-				sp -= 2;
-                if (core->compare(sp[1], sp[2]) != falseAtom)
-				{
-					int j = readS24(pc);
-					core->branchCheck(env, interruptable, j);
-                    pc += j;
-				}
-				pc += 3;
-                continue;
+#define CMP(numeric_cmp, generic_cmp) \
+	Atom lhs=sp[-1], rhs=sp[0]; \
+	sp--; \
+	if (IS_BOTH_INTEGER(lhs,rhs)) \
+		sp[0] = lhs numeric_cmp rhs ? trueAtom : falseAtom; \
+	else if (IS_BOTH_DOUBLE(lhs, rhs)) \
+		sp[0] = DOUBLE_VALUE(lhs) numeric_cmp DOUBLE_VALUE(rhs) ? trueAtom : falseAtom; \
+	else { \
+		SAVE_EXPC; \
+		sp[0] = generic_cmp ? trueAtom : falseAtom; \
+		restore_dxns(); \
+	}
 
-            case OP_lessthan:
-                sp--;
-				sp[0] = core->compare(sp[0],sp[1]) == trueAtom ? trueAtom : falseAtom;
-                continue;
+            INSTR(lessthan) {
+				CMP(<, core->compare(lhs, rhs) == trueAtom);
+                NEXT;
+			}
 
-            case OP_lessequals:
-				sp--;
-				sp[0] = core->compare(sp[1],sp[0]) == falseAtom ? trueAtom : falseAtom;
-                continue;
+            INSTR(lessequals) {
+				CMP(<=, core->compare(rhs,lhs) == falseAtom);
+                NEXT;
+			}
 
-            case OP_greaterthan:
-				sp--;
-				sp[0] = core->compare(sp[1],sp[0]) == trueAtom ? trueAtom : falseAtom;
-                continue;
+            INSTR(greaterthan) {
+				CMP(>, core->compare(rhs, lhs) == trueAtom);
+                NEXT;
+			}
 
-            case OP_greaterequals:
-				sp--;
-				sp[0] = core->compare(sp[0],sp[1]) == falseAtom ? trueAtom : falseAtom;
-                continue;
+            INSTR(greaterequals) {
+				CMP(>=, core->compare(lhs, rhs) == falseAtom);
+                NEXT;
+			}
 
-            case OP_newobject:
-                argc = readU30(pc);
-                tempAtom = env->op_newobject(sp, argc)->atom();
+            INSTR(newobject) {
+				SAVE_EXPC;
+                int32 argc = U30ARG;
+                Atom tempAtom = env->op_newobject(sp, argc)->atom();
                 *(sp -= 2*argc-1) = tempAtom;
-                continue;
+				restore_dxns();
+                NEXT;
+			}
 
-            case OP_newarray:
-                argc = readU30(pc);
-                tempAtom = toplevel->arrayClass->newarray(sp-argc+1, argc)->atom();
+            INSTR(newarray) {
+				SAVE_EXPC;
+                int32 argc = U30ARG;
+                Atom tempAtom = toplevel->arrayClass->newarray(sp-argc+1, argc)->atom();
                 *(sp -= argc-1) = tempAtom;
-                continue;
+				restore_dxns();
+                NEXT;
+			}
 
-			case OP_getlex:
-			{
+// We can do better than this if, in the optimized case, 'name' is a "const Multiname&" or "const Multiname*" that
+// points into the table.  The const-ness is crucial, we do not want anyone, anywhere, to modify the pointed-to
+// structure.  Code that does modify it (like initMultiname) would make an explicit copy and work on that.  (Edwin
+// even suggest that it would be better to keep the Multiname constant and variable parts separate, and that
+// that's what they did in TT.)  But that change spreads "const" throughout the system; need to check with a 
+// Higher Authority before doing that.
+
+#ifdef AVMPLUS_WORD_CODE
+#  define GET_MULTINAME(name, arg)  do { uint32 tmp=arg; name = pool->word_code.cpool_mn->multinames[tmp]; } while(0)
+#else
+#  define GET_MULTINAME(name, arg)  do { uint32 tmp=arg; pool->parseMultiname(name, tmp); } while(0)
+#endif
+
+			INSTR(getlex) {
+				SAVE_EXPC;
 				// findpropstrict + getproperty
 				// stack in:  -
 				// stack out: value
 				Multiname name;
-				pool->parseMultiname(name, readU30(pc));
-
+				GET_MULTINAME(name, U30ARG);
 				// only non-runtime names are allowed.  but this still includes
 				// wildcard and attribute names.
 				Atom obj = env->findproperty(scope, scopeBase, scopeDepth, &name, true, withBase);
 				*(++sp) = toplevel->getproperty(obj, &name, toplevel->toVTable(obj));
-				continue;
+				restore_dxns();
+				NEXT;
 			}	
 
 			// get a property using a multiname ref
-            case OP_getproperty:
-			{
+            INSTR(getproperty) {
+				SAVE_EXPC;
 				Multiname multiname;
-				pool->parseMultiname(multiname, readU30(pc));
+				GET_MULTINAME(multiname, U30ARG);
 				if (!multiname.isRuntime())
 				{
 					sp[0] = toplevel->getproperty(sp[0], &multiname, toplevel->toVTable(sp[0]));
@@ -832,15 +1773,15 @@ namespace avmplus
 						sp[0] = AvmCore::atomToScriptObject(sp[0])->getAtomProperty(key);
 					}
 				}
-
-				continue;
+				restore_dxns();
+				NEXT;
 			}
 
 			// set a property using a multiname ref
-			case OP_setproperty: 
-			{
+			INSTR(setproperty) {
+				SAVE_EXPC;
 				Multiname multiname; 
-				pool->parseMultiname(multiname, readU30(pc));
+				GET_MULTINAME(multiname, U30ARG);
 				Atom value = *(sp--);
 				if (!multiname.isRuntime())
 				{
@@ -859,13 +1800,14 @@ namespace avmplus
 						AvmCore::atomToScriptObject(obj)->setAtomProperty(key, value);
 					}
 				}
-                continue;
+				restore_dxns();
+                NEXT;
 			}
 
-			case OP_initproperty: 
-			{
+			INSTR(initproperty) {
+				SAVE_EXPC;
 				Multiname multiname; 
-				pool->parseMultiname(multiname, readU30(pc));
+				GET_MULTINAME(multiname, U30ARG);
 				Atom value = *(sp--);
 				if (!multiname.isRuntime())
 				{
@@ -878,13 +1820,14 @@ namespace avmplus
 					Atom obj = *(sp--);
 					env->initproperty(obj, &multiname, value, toplevel->toVTable(obj));
 				}
-                continue;
+				restore_dxns();
+                NEXT;
 			}
 
-			case OP_getdescendants:
-			{
+			INSTR(getdescendants) {
+				SAVE_EXPC;
 				Multiname name;
-				pool->parseMultiname(name, readU30(pc));
+				GET_MULTINAME(name, U30ARG);
 				if (!name.isRuntime())
 				{
 					sp[0] = env->getdescendants(sp[0], &name);
@@ -894,82 +1837,108 @@ namespace avmplus
 					sp = initMultiname(env, name, sp);
 					sp[0] = env->getdescendants(sp[0], &name);
 				}
-				continue;
+				restore_dxns();
+				NEXT;
 			}
 
-			case OP_checkfilter:
-			{
+			INSTR(checkfilter) {
+				SAVE_EXPC;
 				env->checkfilter(sp[0]);
-				continue;
+				restore_dxns();
+				NEXT;
 			}
 
 			// search the scope chain for a given property and return the object
 			// that contains it.  the next instruction will usually be getpropname
 			// or setpropname.
-            case OP_findpropstrict:
-            case OP_findproperty:
-			{
+            INSTR(findpropstrict) {
 				// stack in:  [ns [name]]
 				// stack out: obj
+				SAVE_EXPC;
 				Multiname multiname;
-				pool->parseMultiname(multiname, readU30(pc));
-				if (!multiname.isRuntime())
-				{
-					*(++sp) = env->findproperty(scope, scopeBase, scopeDepth, &multiname, opcode == OP_findpropstrict, withBase);
-				}
-				else
-				{
+				GET_MULTINAME(multiname, U30ARG);
+				if (multiname.isRuntime())
 					sp = initMultiname(env, multiname, sp);
-					*(++sp) = env->findproperty(scope, scopeBase, scopeDepth, &multiname, opcode == OP_findpropstrict, withBase);
-				}
-				continue;
+				*(++sp) = env->findproperty(scope, scopeBase, scopeDepth, &multiname, true, withBase);
+				restore_dxns();
+				NEXT;
 			}
 
-			case OP_finddef:
-			{
+            INSTR(findproperty) {
+				// stack in:  [ns [name]]
+				// stack out: obj
+				SAVE_EXPC;
+				Multiname multiname;
+				GET_MULTINAME(multiname, U30ARG);
+				if (multiname.isRuntime())
+					sp = initMultiname(env, multiname, sp);
+				*(++sp) = env->findproperty(scope, scopeBase, scopeDepth, &multiname, false, withBase);
+				restore_dxns();
+				NEXT;
+			}
+
+			INSTR(finddef) {
 				// stack in: 
 				// stack out: obj
+				SAVE_EXPC;
 				Multiname multiname;
-				pool->parseMultiname(multiname, readU30(pc));
+				GET_MULTINAME(multiname, U30ARG);
 				*(++sp) = env->finddef(&multiname)->atom();
-				continue;
+				restore_dxns();
+				NEXT;
 			}
 
-			case OP_nextname:
+			INSTR(nextname) {
+				SAVE_EXPC;
+				Atom lhs = sp[-1];
+				Atom rhs = sp[0];
 				sp--;
 				// verifier checks for int
-				sp[0] = env->nextname(sp[0], AvmCore::integer_i(sp[1]));
-				continue;
+				sp[0] = env->nextname(lhs, AvmCore::integer_i(rhs));
+				restore_dxns();
+				NEXT;
+			}
 
-			case OP_nextvalue:
+			INSTR(nextvalue) {
+				SAVE_EXPC;
+				Atom lhs = sp[-1];
+				Atom rhs = sp[0];
 				sp--;
 				// verifier checks for int
-				sp[0] = env->nextvalue(sp[0], AvmCore::integer_i(sp[1]));
-				continue;
+				sp[0] = env->nextvalue(lhs, AvmCore::integer_i(rhs));
+				restore_dxns();
+				NEXT;
+			}
 				
-			case OP_hasnext:
+			INSTR(hasnext) {
+				SAVE_EXPC;
+				Atom lhs = sp[-1];
+				Atom rhs = sp[0];
 				sp--;
 				// verifier checks for int
-				sp[0] = core->intToAtom(env->hasnext(sp[0], AvmCore::integer_i(sp[1])));
-				continue;
+				sp[0] = core->intToAtom(env->hasnext(lhs, AvmCore::integer_i(rhs)));
+				restore_dxns();
+				NEXT;
+			}
 
-			case OP_hasnext2:
-				{
-					int objectReg = readU30(pc);
-					int indexReg  = readU30(pc);
-					Atom objAtom = framep[objectReg];
-					int index = core->integer(framep[indexReg]);
-					*(++sp) = env->hasnext2(objAtom, index) ? trueAtom : falseAtom;
-					framep[objectReg] = objAtom;
-					framep[indexReg] = core->intToAtom(index);
-				}
-				break;
+			INSTR(hasnext2) {
+				SAVE_EXPC;
+				int objectReg = U30ARG;
+				int indexReg  = U30ARG;
+				Atom objAtom = framep[objectReg];
+				int index = core->integer(framep[indexReg]);
+				*(++sp) = env->hasnextproto(objAtom, index) ? trueAtom : falseAtom;
+				framep[objectReg] = objAtom;
+				framep[indexReg] = core->intToAtom(index);
+				restore_dxns();
+				NEXT;
+			}
 
 			// delete property using multiname
-			case OP_deleteproperty: 
-			{
+			INSTR(deleteproperty) {
+				SAVE_EXPC;
 				Multiname multiname;
-				pool->parseMultiname(multiname, readU30(pc));
+				GET_MULTINAME(multiname, U30ARG);
 				if (!multiname.isRuntime())
 				{
 					sp[0] = env->delproperty(sp[0], &multiname);
@@ -985,235 +1954,254 @@ namespace avmplus
 						sp[0] = res ? trueAtom : falseAtom;
 					}
 				}
-				continue;
+				restore_dxns();
+				NEXT;
 			}
 
-            case OP_setslot:
-			{
+            INSTR(setslot) {
+				SAVE_EXPC;
+				Atom lhs = sp[-1];
+				Atom rhs = sp[0];
 				sp -= 2;
-				env->nullcheck(sp[1]);
-				int slot_id = readU30(pc)-1;
-				ScriptObject* o = AvmCore::atomToScriptObject(sp[1]);
-				o->setSlotAtom(slot_id,
-					toplevel->coerce(sp[2], o->traits()->getSlotTraits(slot_id)));
-				continue;
+				env->nullcheck(lhs);
+				int slot_id = U30ARG-1;
+				ScriptObject* o = AvmCore::atomToScriptObject(lhs);
+				o->setSlotAtom(slot_id, toplevel->coerce(rhs, o->traits()->getSlotTraits(slot_id)));
+				restore_dxns();
+				NEXT;
 			}
 
-			case OP_getslot:
+			INSTR(getslot) {
+				SAVE_EXPC;
 				env->nullcheck(sp[0]);
-				sp[0] = AvmCore::atomToScriptObject(sp[0])->getSlotAtom(readU30(pc)-1);
-				continue;
+				// FIXME: when we get rid of the ABC interpreter then do the -1 translation 
+				// in the bytecode translator, not here every time.
+				sp[0] = AvmCore::atomToScriptObject(sp[0])->getSlotAtom(U30ARG-1);
+				restore_dxns();
+				NEXT;
+			}
 
-			case OP_setglobalslot:
-			{
+			INSTR(setglobalslot) {
+				SAVE_EXPC;
 				// find the global activation scope (object at depth 0 on scope chain)
 				ScriptObject *global;
 				if (outer_depth == 0)
-				{
 					global = AvmCore::atomToScriptObject(scopeBase[0]);
-				}
 				else
-				{
 					global = AvmCore::atomToScriptObject(scope->getScope(0));
-				}
 
-				int slot_id = readU30(pc)-1;
+				// FIXME: when we get rid of the ABC interpreter then do the -1 translation 
+				// in the bytecode translator, not here every time.
+				int slot_id = U30ARG-1;
+				Atom op = sp[0];
 				sp--;
-				global->setSlotAtom(slot_id, 
-					toplevel->coerce(sp[1], global->traits()->getSlotTraits(slot_id)));
-				continue;
+				global->setSlotAtom(slot_id, toplevel->coerce(op, global->traits()->getSlotTraits(slot_id)));
+				restore_dxns();
+				NEXT;
 			}
 
-			case OP_getglobalslot:
-			{
+			INSTR(getglobalslot) {
+				SAVE_EXPC;
 				// find the global activation scope (object at depth 0 on scope chain)
 				ScriptObject *global;
 				if (outer_depth == 0)
-				{
 					global = AvmCore::atomToScriptObject(scopeBase[0]);
-				}
 				else
-				{
 					global = AvmCore::atomToScriptObject(scope->getScope(0));
-				}
 
+				// FIXME: when we get rid of the ABC interpreter then do the -1 translation 
+				// in the bytecode translator, not here every time.
 				sp++;
-				sp[0] = global->getSlotAtom(readU30(pc)-1);
-				continue;
+				sp[0] = global->getSlotAtom(U30ARG-1);
+				restore_dxns();
+				NEXT;
 			}
 
-			case OP_call: 
-			{
-                argc = readU30(pc);
+			INSTR(call) {
+				SAVE_EXPC;
+                int32 argc = U30ARG;
                 // stack in: function, receiver, arg1, ... argN
                 // stack out: result
-                tempAtom = toplevel->op_call(sp[-argc-1]/*function*/, argc, sp-argc);
+                Atom tempAtom = toplevel->op_call(sp[-argc-1]/*function*/, argc, sp-argc);
                 *(sp = sp-argc-1) = tempAtom;
-                continue;
+				restore_dxns();
+                NEXT;
 			}
 
-			case OP_construct: 
-			{
-                argc = readU30(pc);
+			INSTR(construct) {
+				SAVE_EXPC;
+                int32 argc = U30ARG;
                 // stack in: function, arg1, ..., argN
                 // stack out: new instance
-                tempAtom = toplevel->op_construct(sp[-argc]/*function*/, argc, sp-argc);				
+                Atom tempAtom = toplevel->op_construct(sp[-argc]/*function*/, argc, sp-argc);				
                 *(sp = sp-argc) = tempAtom;
-                continue;
+				restore_dxns();
+                NEXT;
 			}
 
-            case OP_newfunction: 
-			{
+            INSTR(newfunction) {
+				SAVE_EXPC;
 				sp++;
-				AbstractFunction *body = pool->getMethodInfo(readU30(pc));
+				AbstractFunction *body = pool->getMethodInfo(U30ARG);
 				sp[0] = env->newfunction(body, scope, scopeBase)->atom();
-                continue;
+				restore_dxns();
+                NEXT;
             }
 
-            case OP_newclass:
-				{
-					int class_index = readU30(pc);
-					AbstractFunction *cinit = pool->cinits[class_index];
-					ClassClosure* base = (ClassClosure*)(~7&toplevel->coerce(sp[0], CLASS_TYPE));
-					sp[0] = env->newclass(cinit, base, scope, scopeBase)->atom();
-				}
-                continue;
+            INSTR(newclass) {
+				SAVE_EXPC;
+				int class_index = U30ARG;
+				AbstractFunction *cinit = pool->cinits[class_index];
+				ClassClosure* base = (ClassClosure*)(~7&toplevel->coerce(sp[0], CLASS_TYPE));
+				sp[0] = env->newclass(cinit, base, scope, scopeBase)->atom();
+				restore_dxns();
+				NEXT;
+			}
 				
-            case OP_callstatic:
-				{
-					// stack in: receiver, arg1..N
-					// stack out: result
-					int method_id = readU30(pc);
-					argc = readU30(pc);
-					env->nullcheck(sp[-argc]);
-					// ISSUE if arg types were checked in verifier, this coerces again.
-					MethodEnv* f = env->vtable->abcEnv->methods[method_id];
-					tempAtom = f->coerceEnter(argc, sp-argc);
-					*(sp -= argc) = tempAtom;
-				}
-				continue;
+            INSTR(callstatic) {
+				SAVE_EXPC;
+				// stack in: receiver, arg1..N
+				// stack out: result
+				int method_id = U30ARG;
+				int32 argc = U30ARG;
+				env->nullcheck(sp[-argc]);
+				// ISSUE if arg types were checked in verifier, this coerces again.
+				MethodEnv* f = env->vtable->abcEnv->methods[method_id];
+				Atom tempAtom = f->coerceEnter(argc, sp-argc);
+				*(sp -= argc) = tempAtom;
+				restore_dxns();
+				NEXT;
+			}
 
-            case OP_callmethod:
-				{
-					// stack in: receiver, arg1..N
-					// stack out: result
-					uint32 disp_id = readU30(pc)-1;
-					argc = readU30(pc);
-					// null check included in env->callmethod
-					//tempAtom = env->callmethod(disp_id, argc, sp-argc);
-					Atom* atomv = sp-argc;
+            INSTR(callmethod) {
+				SAVE_EXPC;
+				// stack in: receiver, arg1..N
+				// stack out: result
+				uint32 disp_id = U30ARG-1;
+				int32 argc = U30ARG;
+				// null check included in env->callmethod
+				//tempAtom = env->callmethod(disp_id, argc, sp-argc);
+				Atom* atomv = sp-argc;
 
-					// must be a real class instance for this to be used.  primitives that have
-					// methods will only have final bindings and no dispatch table.
-					VTable* vtable = toplevel->toVTable(atomv[0]); // includes null check
-					AvmAssert(disp_id < vtable->traits->methodCount);
-					MethodEnv *f = vtable->methods[disp_id];
-					// ISSUE if arg types were checked in verifier, this coerces again.
-					tempAtom = f->coerceEnter(argc, atomv);
+				// must be a real class instance for this to be used.  primitives that have
+				// methods will only have final bindings and no dispatch table.
+				VTable* vtable = toplevel->toVTable(atomv[0]); // includes null check
+				AvmAssert(disp_id < vtable->traits->methodCount);
+				MethodEnv *f = vtable->methods[disp_id];
+				// ISSUE if arg types were checked in verifier, this coerces again.
+				Atom tempAtom = f->coerceEnter(argc, atomv);
 
-					*(sp -= argc) = tempAtom;
-				}
-				continue;
+				*(sp -= argc) = tempAtom;
+				restore_dxns();
+				NEXT;
+			}
 
-			case OP_callproperty:
-			case OP_callpropvoid:
-			case OP_callproplex:
-				{
-					// stack in: obj [ns [name]] arg1..N
-					// stack out: result
-					Multiname multiname;
-					pool->parseMultiname(multiname, readU30(pc));
-					argc = readU30(pc);
-					if (!multiname.isRuntime())
-					{
-						// np check in toVTable
-						Atom base = sp[-argc];
-						if (opcode == OP_callproplex)
-							sp[-argc] = nullObjectAtom;
-						tempAtom = toplevel->callproperty(base, &multiname, argc, sp-argc, toplevel->toVTable(base));
-						*(sp -= argc) = tempAtom;
-					}
-					else
-					{
-						Atom* atomv = sp-argc;
-						sp = initMultiname(env, multiname, sp-argc);
-						Atom base = *sp;
-						atomv[0] = opcode == OP_callproplex ? nullObjectAtom : base;
-						*sp = toplevel->callproperty(base, &multiname, argc, atomv, toplevel->toVTable(base));
-					}
-					if (opcode == OP_callpropvoid)
-					{
-						sp--;
-					}
-				}
-				continue;
+	#define callprop_impl(atomv0) \
+            {\
+				SAVE_EXPC;\
+				/* ( obj [ns [name]] arg1..N -- result ) */ \
+				Multiname multiname;\
+				GET_MULTINAME(multiname, U30ARG);\
+				int32 argc = U30ARG;\
+				Atom base;\
+				Atom *atomv = sp - argc;\
+				sp = multiname.isRuntime() ? initMultiname(env, multiname, atomv) : atomv;\
+				base = *sp;\
+				atomv[0] = atomv0;\
+				*sp = toplevel->callproperty(base, &multiname, argc, atomv, toplevel->toVTable(base));\
+			}\
+			restore_dxns();
+				
+			INSTR(callproperty) {
+				callprop_impl(base);
+				NEXT;
+			}
 
-			case OP_constructprop:
-				{
-					// stack in: obj [ns [name]] arg1..N
-					// stack out: result
-					Multiname name;
-					pool->parseMultiname(name, readU30(pc));
-					argc = readU30(pc);
-					if (!name.isRuntime())
-					{
-						// np check in toVTable
-						tempAtom = toplevel->constructprop(&name, argc, sp-argc, toplevel->toVTable(sp[-argc]));
-						*(sp -= argc) = tempAtom;
-					}
-					else
-					{
-						Atom* atomv = sp-argc;
-						sp = initMultiname(env, name, sp-argc);
-						atomv[0] = *sp;
-						*sp = toplevel->constructprop(&name, argc, atomv, toplevel->toVTable(atomv[0]));
-					}
-				}
-				continue;
+			INSTR(callproplex) {
+				callprop_impl(nullObjectAtom);
+				NEXT;
+			}
 
-			case OP_applytype: 
-				{
-					argc = readU30(pc);
-					// stack in: factory, arg1, ... argN
-					// stack out: result
-					tempAtom = toplevel->op_applytype(sp[-argc]/*function*/, argc, sp-argc+1);				
-					*(sp = sp-argc) = tempAtom;
-					continue;
-				}
+			INSTR(callpropvoid) {
+				callprop_impl(base);
+				sp--;
+				NEXT;
+			}
 
-			case OP_callsuper:
-			case OP_callsupervoid:
-				{
-					// stack in: obj [ns [name]] arg1..N
-					Multiname name;
-					pool->parseMultiname(name, readU30(pc));
-					argc = readU30(pc);
-
-					if (!name.isRuntime())
-					{
-						env->nullcheck(sp[-argc]); // null check
-						tempAtom = env->callsuper(&name, argc, sp-argc);
-						*(sp -= argc) = tempAtom;
-					}
-					else
-					{
-						Atom* atomv = sp-argc;
-						sp = initMultiname(env, name, sp-argc);
-						atomv[0] = *sp;
-						env->nullcheck(atomv[0]);
-						*sp = env->callsuper(&name, argc, atomv);
-					}
-					if (opcode == OP_callsupervoid)
-					{
-						sp--;
-					}
-				}
-				continue;
-
-			case OP_getsuper:
-			{
+			INSTR(constructprop) {
+				SAVE_EXPC;
+				// stack in: obj [ns [name]] arg1..N
+				// stack out: result
 				Multiname name;
-				pool->parseMultiname(name, readU30(pc));
+				GET_MULTINAME(name, U30ARG);
+				int32 argc = U30ARG;
+				if (!name.isRuntime())
+				{
+					// np check in toVTable
+					Atom tempAtom = toplevel->constructprop(&name, argc, sp-argc, toplevel->toVTable(sp[-argc]));
+					*(sp -= argc) = tempAtom;
+				}
+				else
+				{
+					Atom* atomv = sp-argc;
+					sp = initMultiname(env, name, sp-argc);
+					atomv[0] = *sp;
+					*sp = toplevel->constructprop(&name, argc, atomv, toplevel->toVTable(atomv[0]));
+				}
+				restore_dxns();
+				NEXT;
+			}
+
+			INSTR(applytype) {
+				SAVE_EXPC;
+				int32 argc = U30ARG;
+				// stack in: factory, arg1, ... argN
+				// stack out: result
+				Atom tempAtom = toplevel->op_applytype(sp[-argc]/*function*/, argc, sp-argc+1);				
+				*(sp = sp-argc) = tempAtom;
+				restore_dxns();
+				NEXT;
+			}
+
+	#define callsuper_impl() \
+			{\
+				SAVE_EXPC; \
+				/* ( obj [ns [name]] arg1..N -- ) */ \
+				Multiname name; \
+				GET_MULTINAME(name, U30ARG); \
+				int32 argc = U30ARG; \
+				if (!name.isRuntime()) \
+				{ \
+					env->nullcheck(sp[-argc]); \
+					Atom tempAtom = env->callsuper(&name, argc, sp-argc); \
+					*(sp -= argc) = tempAtom; \
+				} \
+				else \
+				{ \
+					Atom* atomv = sp-argc; \
+					sp = initMultiname(env, name, sp-argc); \
+					atomv[0] = *sp; \
+					env->nullcheck(atomv[0]); \
+					*sp = env->callsuper(&name, argc, atomv); \
+				}\
+			}\
+			restore_dxns()
+
+			INSTR(callsuper) {
+				callsuper_impl();
+				NEXT;
+			}
+
+			INSTR(callsupervoid) {
+				callsuper_impl();	
+				sp--;
+				NEXT;
+			}
+
+			INSTR(getsuper) {
+				SAVE_EXPC;
+				Multiname name;
+				GET_MULTINAME(name, U30ARG);
 				if (!name.isRuntime())
 				{
 					Atom objAtom = *sp;
@@ -1227,14 +2215,15 @@ namespace avmplus
 					env->nullcheck(objAtom);//null check
 					*sp = env->getsuper(objAtom, &name);
 				}
-				continue;
+				restore_dxns();
+				NEXT;
 			}
 
-			case OP_setsuper:
-			{
-				int index = readU30(pc);
+			INSTR(setsuper) {
+				SAVE_EXPC;
+				int index = U30ARG;
 				Multiname name;
-				pool->parseMultiname(name, index);
+				GET_MULTINAME(name, index);
 				Atom valueAtom = *(sp--);
 				if (!name.isRuntime())
 				{
@@ -1249,231 +2238,381 @@ namespace avmplus
 					env->nullcheck(objAtom);
 					env->setsuper(objAtom, &name, valueAtom);
 				}
-				continue;
+				restore_dxns();
+				NEXT;
 			}
 
 			// obj arg1 arg2
 		    //           sp
-			case OP_constructsuper:
-			{
+			INSTR(constructsuper) {
+				SAVE_EXPC;
 				// stack in:  obj arg1..N
 				// stack out: 
-				argc = readU30(pc);
+				int32 argc = U30ARG;
 				env->nullcheck(sp[-argc]);
 				env->vtable->base->init->coerceEnter(argc, sp-argc);
 				sp -= argc+1;
-				continue;
+				restore_dxns();
+				NEXT;
 			}
 				
-            case OP_pushshort:
+#ifndef AVMPLUS_WORD_CODE
+            INSTR(pushshort) {
                 // this just pushes an integer since we dont have short atoms
-                *(++sp) = ((signed short)readU30(pc))<<3|kIntegerType;
-				continue;
+                *(++sp) = ((signed short)U30ARG)<<3|kIntegerType;
+				NEXT;
+			}
+#endif
 
-			case OP_astype:
-			{
+			INSTR(astype) {
+				SAVE_EXPC;
 				Multiname multiname;
-				pool->parseMultiname(multiname, readU30(pc));
+				GET_MULTINAME(multiname, U30ARG);
 				sp[0] = env->astype(sp[0], getTraits(&multiname, pool, toplevel, core));
-				break;
+				// this used to be after the switch
+				restore_dxns();
+				NEXT;
 			}
 
-			case OP_astypelate: 
-			{
+			INSTR(astypelate) {
+				SAVE_EXPC;
+				Atom lhs = sp[-1];
+				Atom rhs = sp[0];
 				sp--;
-				sp[0] = env->astype(sp[0], env->toClassITraits(sp[1]));
-                continue;
+				sp[0] = env->astype(lhs, env->toClassITraits(rhs));
+				restore_dxns();
+                NEXT;
 			}
 
-            case OP_coerce:
-			{
+            INSTR(coerce) {
+				SAVE_EXPC;
                 // expects a CONSTANT_Multiname cpool index
 				// this is the ES4 implicit coersion
 				Multiname multiname;
-				pool->parseMultiname(multiname, readU30(pc));
+				GET_MULTINAME(multiname, U30ARG);
 				sp[0] = toplevel->coerce(sp[0], getTraits(&multiname, pool, toplevel, core));
-                continue;
+				restore_dxns();
+                NEXT;
 			}
 
-			case OP_coerce_a:
-				// no-op since interpreter only uses atoms
-				continue;
-
-			case OP_coerce_o:
+			INSTR(coerce_o) {
 				if (sp[0] == undefinedAtom)
 					sp[0] = nullObjectAtom;
-				continue;
+				NEXT;
+			}
 
-			case OP_coerce_s:
-				sp[0] = AvmCore::isNullOrUndefined(sp[0]) ? nullStringAtom : core->string(sp[0])->atom();
-				continue;
+			INSTR(coerce_s) {
+				Atom val = sp[0];
+				if (!IS_STRING(val)) {
+					SAVE_EXPC;
+					sp[0] = AvmCore::isNullOrUndefined(val) ? nullStringAtom : core->string(val)->atom();
+					restore_dxns();
+				}
+				NEXT;
+			}
 
-			case OP_istype: 
-			{
+			INSTR(istype) {
+				SAVE_EXPC;
                 // expects a CONSTANT_Multiname cpool index
 				// used when operator "is" RHS is a compile-time type constant
 				Multiname multiname;
-				pool->parseMultiname(multiname, readU30(pc));
+				GET_MULTINAME(multiname, U30ARG);
 				Traits* itraits = getTraits(&multiname, pool, toplevel, core);
 				sp[0] = core->istypeAtom(sp[0], itraits);
-                continue;
+				restore_dxns();
+                NEXT;
 			}
 
-			case OP_istypelate: 
-			{
+			INSTR(istypelate) {
+				SAVE_EXPC;
+				Atom lhs = sp[-1];
+				Atom rhs = sp[0];
 				sp--;
-				sp[0] = core->istypeAtom(sp[0], env->toClassITraits(sp[1]));
-                continue;
+				sp[0] = core->istypeAtom(lhs, env->toClassITraits(rhs));
+				restore_dxns();
+                NEXT;
 			}
 
-            case OP_pushbyte:
+#ifndef AVMPLUS_WORD_CODE
+            INSTR(pushbyte) {
 				sp++;
-                sp[0] = ((sint8)*pc++)<<3|kIntegerType;
-                continue;
+                sp[0] = MAKE_INTEGER((sint8)U8ARG);
+                NEXT;
+			}
+#endif
 
-            case OP_getscopeobject:
-			{
-				int scope_index = *pc++;
+            INSTR(getscopeobject) {
+				int scope_index = U8ARG;
 				sp++;
 				sp[0] = scopeBase[scope_index];
-				continue;
+				NEXT;
 			}
 
-            case OP_getouterscope:
-            {
-                int scope_index = readU30(pc);
+            INSTR(getouterscope) {
+                int scope_index = U30ARG;
 				sp++;
                 sp[0] = scope->getScope(scope_index);
-                continue;
+                NEXT;
             }
 
-            case OP_getglobalscope:
-			{
+            INSTR(getglobalscope) {
 				sp++;
-				if (outer_depth > 0)
-				{
-					sp[0] = scope->getScope(0);
-				}
-				else
-				{
-					sp[0] = scopeBase[0];
-				}
-				continue;
+				sp[0] = (outer_depth > 0) ? scope->getScope(0) : scopeBase[0];
+				NEXT;
 			}
 
-            case OP_pushscope:
-			{
+            INSTR(pushscope) {
+				Atom s = sp[0];
 				sp--;
-				Atom s = sp[1];
-				env->nullcheck(s);
+				if (AvmCore::isNullOrUndefined(s)) {
+					SAVE_EXPC;
+					env->nullcheck(s);
+				}
 				scopeBase[scopeDepth++] = s;
-				continue;
+				NEXT;
 			}
 			
-            case OP_pushwith:
-			{
+            INSTR(pushwith) {
+				Atom s = sp[0];
 				sp--;
-				Atom s = sp[1];
-				env->nullcheck(s);
-				if (!withBase)
-				{
-					withBase = scopeBase+scopeDepth;
+				if (AvmCore::isNullOrUndefined(s)) {
+					SAVE_EXPC;
+					env->nullcheck(s);
 				}
+				if (!withBase)
+					withBase = scopeBase+scopeDepth;
 				scopeBase[scopeDepth++] = s;
-				continue;
+				NEXT;
 			}
 
-            case OP_newactivation:
-			{
+            INSTR(newactivation) {
+				SAVE_EXPC;
 				sp++;
 				sp[0] = core->newActivation(env->getActivation(), NULL)->atom();
-				continue;
+				restore_dxns();
+				NEXT;
 			}
 
-            case OP_newcatch:
-			{
-				int catch_index = readU30(pc);
+            INSTR(newcatch) {
+				SAVE_EXPC;
+				int catch_index = U30ARG;
+#ifdef AVMPLUS_WORD_CODE
+				Traits *t = info->word_code.exceptions->exceptions[catch_index].scopeTraits;
+#else
 				Traits *t = info->exceptions->exceptions[catch_index].scopeTraits;
+#endif
 				sp++;
 				sp[0] = env->newcatch(t)->atom();
-				continue;
+				restore_dxns();
+				NEXT;
 			}
 
-            case OP_popscope:
+            INSTR(popscope) {
 				scopeDepth--;
 				if (withBase >= scopeBase+scopeDepth)
-				{
 					withBase = NULL;
+				NEXT;
+			}
+
+			INSTR(coerce_i) {
+				Atom val = sp[0];
+				if (!IS_INTEGER(val)) {
+					SAVE_EXPC;
+					sp[0] = core->intAtom(val);
+					restore_dxns();
 				}
-				continue;
+				NEXT;
+			}
 
-			case OP_coerce_i:
-            case OP_convert_i:
-                sp[0] = core->intAtom(sp[0]);
-                continue;
+            INSTR(convert_i) {
+				Atom val = sp[0];
+				if (!IS_INTEGER(val)) {
+					SAVE_EXPC;
+					sp[0] = core->intAtom(val);
+					restore_dxns();
+				}
+                NEXT;
+			}
 
-			case OP_coerce_u:
-			case OP_convert_u:
-                sp[0] = core->uintAtom(sp[0]);
-                continue;
+			INSTR(coerce_u) {
+				Atom val = sp[0];
+				if (!IS_INTEGER(val) || val < 0) {
+					SAVE_EXPC;
+					sp[0] = core->uintAtom(val);
+					restore_dxns();
+				}
+                NEXT;
+			}
 
-			case OP_throw:
+			INSTR(convert_u) {
+				Atom val = sp[0];
+				if (!IS_INTEGER(val) || val < 0) {
+					SAVE_EXPC;
+					sp[0] = core->uintAtom(val);
+					restore_dxns();
+				}
+                NEXT;
+			}
+
+			INSTR(throw) {
+				SAVE_EXPC;
 				core->throwAtom(*sp--);
-				continue;
+				// unreachable
+				NEXT;
+			}
 				
-            case OP_instanceof:
+            INSTR(instanceof) {
+				SAVE_EXPC;
+				Atom lhs = sp[-1];
+				Atom rhs = sp[0];
 				sp--;
-				sp[0] = toplevel->instanceof(sp[0], sp[1]);
-				continue;
+				sp[0] = toplevel->instanceof(lhs, rhs);
+				restore_dxns();
+				NEXT;
+			}
 
-            case OP_in:
+            INSTR(in) {
+				SAVE_EXPC;
+				Atom lhs = sp[-1];
+				Atom rhs = sp[0];
 				sp--;
-				sp[0] = env->in(sp[0], sp[1]);
-				continue;
+				sp[0] = env->in(lhs, rhs);
+				restore_dxns();
+				NEXT;
+			}
 
-			case OP_dxns:
-				dxns = core->newPublicNamespace(cpool_string[readU30(pc)]);
-				continue;
+			INSTR(dxns) {
+				SAVE_EXPC;
+				dxns = core->newPublicNamespace(cpool_string[U30ARG]);
+				restore_dxns();
+				NEXT;
+			}
 
-			case OP_dxnslate:
+			INSTR(dxnslate) {
+				SAVE_EXPC;
 				dxns = core->newPublicNamespace(core->intern(*sp));
 				sp--;
-				break;
+				// this used to be after the switch
+				restore_dxns();
+				NEXT;
+			}
 
-			case OP_abs_jump:
-			{
-				if (interruptable && core->interrupted)
+			// 'OP_abs_jump' always boils away in the translation to word code, see
+			// comments in Translator.cpp.
+#ifndef AVMPLUS_WORD_CODE
+			INSTR(abs_jump)	{
+				if (interruptable && core->interrupted) {
+					SAVE_EXPC;
 					env->interrupt();
-				#ifdef AVMPLUS_64BIT
+				}
+#  ifdef AVMPLUS_64BIT
 				uint32 base = AvmCore::readU30(pc);
 				byte *target = (byte *) ((uintptr(AvmCore::readU30(pc)) << 32));
 				target = (byte*)((uintptr)target | base);
-				#else
-				const byte *target = (const byte *) AvmCore::readU30(pc);
-				#endif
 				code_start = pc = (const byte*) target;
-				break;
-			}
-			default:
-				AvmAssert(false);
+#  else // !AVMPLUS_64BIT
+				const byte *target = (const byte *) U30ARG;
+				code_start = pc = target;
+#  endif // AVMPLUS_64BIT
+				NEXT;
             }
-			
-			if(info->setsDxns()) {
-				core->dxnsAddr = dxnsAddrSave;
+#endif // !AVMPLUS_WORD_CODE
+
+#if defined(AVMPLUS_WORD_CODE) && !defined(AVMPLUS_DIRECT_THREADED)
+			// Fleshes out the dispatch table so that it's 0..255, allows
+			// some compilers to generate better code for the switch at the
+			// top, which switches on the low 8 bits.  (0 is an illegal
+			// opcode; 255 is OP_ext, for which there's a case below.)
+			case 0: {
+				AvmAssert(false);
+			}
+#endif
+
+#ifdef AVMPLUS_WORD_CODE
+#  ifndef AVMPLUS_DIRECT_THREADED
+			INSTR(ext) {
+			// When using token threading, opcodes for introduced (rewritten) instructions are 
+			// represented with the low byte being OP_ext (0xFF) and the second byte being one
+			// of the OP_ext_ opcodes.  The main dispatch loop must mask off the higher bits
+			// during initial dispatch; this incurs a slight cost but (a) the normal case is
+			// that direct threading will be used and (b) the effect of the optimizations enabled
+			// by the extended opcodes should make up for it.
+#    ifdef _DEBUG
+			switch (pc[-1] & 65535) {
+#    else
+			switch (pc[-1]) {
+#    endif
+			default:
+				goto L_illegal_op;
+#  endif // !AVMPLUS_DIRECT_THREADED
+#  ifdef MSVC_X86_REWRITE_THREADING
+			default:
+				// Keep L_illegal_op and L_ext_push_doublebits alive...
+				if ((int)pc > 0x100000)
+					goto L_ext_push_doublebits;
+				break;
+#  endif
+
+			INSTR(ext_pushbits) {
+				*++sp = *pc++;
+				NEXT;
 			}
 
-		}
+			INSTR(ext_push_doublebits) {
+				union {
+					double d;
+					uint32 bits[2];
+				} u;
+				u.bits[0] = *pc++;
+				u.bits[1] = *pc++;
+				*++sp = core->doubleToAtom(u.d);
+				NEXT;
+			}
 
-		
-		}
+			INSTR(ext_get2locals) {
+				uint32 regs = *pc++;
+				*(++sp) = framep[regs & 65535];
+				*(++sp) = framep[regs >> 16];
+				NEXT;
+			}
+					
+			INSTR(ext_get3locals) {
+				uint32 regs = *pc++;
+				*(++sp) = framep[regs & 1023];
+				regs >>= 10;
+				*(++sp) = framep[regs & 1023];
+				*(++sp) = framep[regs >> 10];
+				NEXT;
+			}
+					
+			INSTR(ext_storelocal) {
+				framep[*pc++] = *sp;
+				NEXT;
+			}
+					
+#  ifndef AVMPLUS_DIRECT_THREADED
+			} // switch
+			} // INSTR(ext)
+#  endif
+
+#endif
+#if defined SWITCH_DISPATCH
+			} // switch
+			// illegal instruction or accidental break
+			goto L_illegal_op;
+		} // for
+#else
+			goto L_illegal_op;
+#endif
+
+		}  // TRY
 
 		CATCH (Exception *exception)
 		{
-			if(info->setsDxns()) {
-				core->dxnsAddr = dxnsAddrSave;
-			}
+			restore_caller_dxns();
 			// find handler; rethrow if no handler.
 			ExceptionHandler *handler = core->findExceptionHandler(info, expc, exception);
+			restore_dxns();
 			// handler found in current method
 			pc = code_start + handler->target;
 			scopeDepth = initialScopeDepth; // ISSUE with() { try {} }
@@ -1484,12 +2623,17 @@ namespace avmplus
 		END_CATCH
 		END_TRY 
 
+		// Target of various error cases
+
+		L_illegal_op:
+			AvmAssert(!"Illegal operation!");
+			goto MainLoop;
 		//
 		// we never get here. verifier doesn't allow code to fall off end.
 		//
     }
 
-	Atom* Interpreter::initMultiname(MethodEnv* env, Multiname &name, Atom* sp, bool isDelete/*=false*/)
+	Atom* initMultiname(MethodEnv* env, Multiname &name, Atom* sp, bool isDelete/*=false*/)
 	{
 		if (name.isRtname())
 		{
@@ -1534,13 +2678,13 @@ namespace avmplus
 		return sp;
 	}
 
-	Traits* Interpreter::getTraits(Multiname* name, PoolObject* pool, Toplevel* toplevel, AvmCore* core)
+	Traits* getTraits(Multiname* name, PoolObject* pool, Toplevel* toplevel, AvmCore* core)
 	{
 		Traits* t = pool->getTraits(name, toplevel);
 		if( name->isParameterizedType() )
 		{
 			Multiname param_name;
-			pool->parseMultiname(param_name, name->getTypeParameter());
+			GET_MULTINAME(param_name, name->getTypeParameter());
 
 			Traits* param_traits = getTraits(&param_name, pool, toplevel, core);
 			Stringp fullname = core->internString( core->concatStrings(t->name, 
@@ -1557,13 +2701,18 @@ namespace avmplus
 	    /**
      * display contents of current stack frame only.
      */
-	void Interpreter::showState(MethodInfo* info, AbcOpcode opcode, int off,
-							Atom* framep, int sp, int scopep, int scopeBase, int stackBase,
-							const byte *code_start)
+	void showState(MethodInfo* info, const byte *code_start, const byte *pc,
+							Atom* framep, Atom *spp, int scopeDepth, Atom *scopebasep,
+							int max_scope)
     {
+		AbcOpcode opcode = (AbcOpcode) *pc;
 		PoolObject* pool = info->pool;
 		AvmCore* core = pool->core;
-		const byte* pc = code_start + off;
+		int off = pc - code_start;
+		int sp = spp - framep;
+		int scopep = scopebasep + scopeDepth - 1 - framep;
+		int scopeBase = scopebasep - framep;
+		int stackBase = scopebasep + max_scope - framep;
 
 		// stack
 		core->console << "                        stack:";
@@ -1598,6 +2747,65 @@ namespace avmplus
 		core->formatOpcode(core->console, pc, opcode, off, pool);
 		core->console << '\n';
     }
+#endif // AVMPLUS_VERBOSE
+			
+#ifdef SUPERWORD_PROFILING
+	// 32-bit only
+
+	static FILE *swprof_code_fp = NULL;
+	static FILE *swprof_sample_fp = NULL;
+#ifdef SUPERWORD_LIMIT
+	static unsigned int sample_count = 0;
 #endif
+
+	void swprofStart()
+	{
+		swprof_code_fp = fopen("superwordprof_code.txt", "wb");
+		if (swprof_code_fp == NULL)
+			fprintf(stderr, "SUPERWORD PROFILING: COULD NOT OPEN CODE FILE.\n");
+		else
+		{
+			unsigned int signature = 0xC0DEC0DE;
+			fwrite(&signature, sizeof(uint32), 1, swprof_code_fp);
+		}
+		swprof_sample_fp = fopen("superwordprof_sample.txt", "wb");
+		if (swprof_sample_fp == NULL)
+			fprintf(stderr, "SUPERWORD PROFILING: COULD NOT OPEN SAMPLE FILE.\n");
+		else
+		{
+			unsigned int signature = 0xDA1ADA1A;
+			fwrite(&signature, sizeof(uint32), 1, swprof_sample_fp);
+		}
+	}
+	
+	void swprofStop() 
+	{
+		if (swprof_code_fp != NULL)	{ fclose(swprof_code_fp); swprof_code_fp = NULL; }
+		if (swprof_sample_fp != NULL) { fclose(swprof_sample_fp); swprof_sample_fp = NULL; }
+	}
+			
+	void swprofCode(const uint32* start, const uint32* limit)
+	{
+		if (swprof_code_fp != NULL) {
+			fwrite(&start, sizeof(uint32*), 1, swprof_code_fp);
+			fwrite(&limit, sizeof(uint32*), 1, swprof_code_fp);
+			fwrite(start, sizeof(uint32), limit-start, swprof_code_fp);
+			fflush(swprof_code_fp);
+		}
+	}
+
+	void swprofPC(const uint32* pc)
+	{
+		if (swprof_sample_fp != NULL) {
+			fwrite(&pc, sizeof(uint32*), 1, swprof_sample_fp);
+#ifdef SUPERWORD_LIMIT
+			if (++sample_count == SUPERWORD_LIMIT) {
+				swprofStop();
+				fprintf(stderr, "SAMPLING HALTED.\n");
+			}
+#endif
+		}
+	}
+#endif  // SUPERWORD_PROFILING
+			
 }
-#endif /* AVMPLUS_INTERP */

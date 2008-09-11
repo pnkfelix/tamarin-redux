@@ -143,8 +143,8 @@ namespace avmplus
 		// redundantly fill in fields.
 		inline explicit CallStackNode(int) { }
 #endif
-
-		// WARNING!!!! this method is called by CodegenMIR if you change the signature then change the call there.
+		// WARNING!!!! this method is called by CodegenMIR and CodegenLIR,
+		// if you change the signature then change the call site there, too
 		void initialize(MethodEnv *			env,
 						AbstractFunction *	info,
 						Atom*				framep,
@@ -171,9 +171,7 @@ namespace avmplus
 		Traits**			traits;		// array of traits for AS registers
 		sintptr volatile*	eip; 	// ptr to where the current pc is stored
 		uint32_t*			ap;
-		#ifdef AVMPLUS_INTERP
 		int32_t*			scopeDepth; // Only used by the interpreter! With MIR, look for NULL entires in the scopeBase array.
-		#endif
 		int32_t				linenum;
 		int32_t				depth;
 		uint32_t			argc;

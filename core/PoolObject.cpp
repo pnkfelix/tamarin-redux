@@ -61,7 +61,7 @@ namespace avmplus
 	{
 		namedTraits = new(core->GetGC()) MultinameHashtable();
 		m_code = sb.getImpl();
-#ifdef AVMPLUS_MIR
+#if defined(AVMPLUS_MIR)
 		codeBuffer = new (core->GetGC()) GrowableBuffer(core->GetGC()->GetGCHeap());
 #endif
 		version = AvmCore::readU16(&code()[0]) | AvmCore::readU16(&code()[2])<<16;
@@ -71,6 +71,9 @@ namespace avmplus
 	{
 		#ifdef AVMPLUS_MIR
 		delete codeBuffer;
+		#endif
+		#ifdef AVMPLUS_WORD_CODE
+		delete word_code.cpool_mn;
 		#endif
 	}
 	
@@ -512,7 +515,6 @@ namespace avmplus
 			int info = 0;
 			int value_index = 0;
 			CPoolKind value_kind = (CPoolKind)0;
-
 			// Check for version metadata
 			switch (kind)
 			{
@@ -961,4 +963,25 @@ namespace avmplus
 		}
 		return f;
 	}
+	
+#ifdef AVMPLUS_WORD_CODE
+	PrecomputedMultinames::PrecomputedMultinames(MMgc::GC* gc, PoolObject* pool)
+		: MMgc::GCRoot(gc)
+		, nNames (0)
+	{
+		nNames = pool->constantMnCount;
+		for ( uint32 i=1 ; i < nNames ; i++ ) {
+			Multiname mn;
+			pool->parseMultiname(mn, i);
+			mn.IncrementRef();
+			multinames[i] = mn;
+		}
+	}
+	
+	PrecomputedMultinames::~PrecomputedMultinames() {
+		for ( uint32 i=1 ; i < nNames ; i++ ) 
+			multinames[i].DecrementRef();
+	}
+#endif
+	
 }

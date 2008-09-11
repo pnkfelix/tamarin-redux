@@ -37,6 +37,9 @@
 
 
 #include "avmplus.h"
+#ifdef AVMPLUS_MIR
+#include "CodegenMIR.h"
+#endif
 
 #if (defined(_MSC_VER) || defined(__GNUC__)) && (defined(AVMPLUS_IA32) || defined(AVMPLUS_AMD64))
     #include <emmintrin.h>
@@ -127,42 +130,45 @@ namespace avmplus
 			
 		// set default mode flags
 		#ifdef AVMPLUS_VERBOSE
-		verbose = false;
+		config.verbose = false;
+		config.verbose_addrs = false;
 		#endif
 
-		#ifdef AVMPLUS_INTERP
- 		    SetMIREnabled(true);
-		#endif
+	    SetMIREnabled(true);
 
 		#ifdef AVMPLUS_VERIFYALL
-		verifyall = false;
+	    	config.verifyall = false;
+		#endif
+
+		#ifdef FEATURE_NANOJIT
+			config.show_stats = false;
+			config.tree_opt = false;
+			config.verbose_live = false;;
+			config.verbose_exits = false;
 		#endif
 
 		#ifdef AVMPLUS_MIR
-
-			#ifdef AVMPLUS_INTERP
-			// forcemir flag forces use of MIR instead of interpreter
-			forcemir = false;
-			#endif
-	
-			cseopt = true;
-			dceopt = true;
-
-		    #if defined(AVMPLUS_IA32) || defined(AVMPLUS_AMD64)
-    		sse2 = true;
-			#endif
-
+			config.dceopt = true;
 			#ifdef AVMPLUS_VERBOSE
-			bbgraph = false;
+			config.bbgraph = false;
 			#endif
+        #endif
 
-		#endif // AVMPLUS_MIR
+        #if defined AVMPLUS_MIR || defined FEATURE_NANOJIT
+			// forcemir flag forces use of MIR instead of interpreter
+			config.forcemir = false;
+			config.cseopt = true;
+
+    	    #if defined(AVMPLUS_IA32) || defined(AVMPLUS_AMD64)
+    		config.sse2 = true;
+	    	#endif
+        #endif
 
 	#ifdef VTUNE
 			VTuneStatus = CheckVTuneStatus();
 	#endif // VTUNE
 
-		interrupts = false;
+		config.interrupts = false;
 
 		gcInterface.SetCore(this);
 		resources          = NULL;
@@ -258,16 +264,22 @@ namespace avmplus
 		booleanStrings[0] = kfalse;
         booleanStrings[1] = ktrue;
 
+		for (int i=0 ; i < 256 ; i++ )
+			index_strings[i] = NULL;
+
 		// create public namespace 
 		publicNamespace = internNamespace(newNamespace(kEmptyString));
 
-		#if defined(AVMPLUS_MIR) && defined(AVMPLUS_VERBOSE)
+		#if defined AVMPLUS_MIR && defined(AVMPLUS_VERBOSE)
 		codegenMethodNames = CodegenMIR::initMethodNames(this);
 		#endif
 
 		#ifdef FEATURE_JNI
 		java = NULL;
 		#endif
+#ifdef SUPERWORD_PROFILING
+		swprofStart();
+#endif
 	}
 
 	AvmCore::~AvmCore()
@@ -279,7 +291,7 @@ namespace avmplus
 			gc->SetGCContextVariable(GC::GCV_AVMCORE, NULL);
 		}
 
-		#if defined(AVMPLUS_MIR) && defined(AVMPLUS_VERBOSE)
+		#if defined AVMPLUS_MIR && defined(AVMPLUS_VERBOSE)
 		delete codegenMethodNames;
 		#endif
 
@@ -292,6 +304,9 @@ namespace avmplus
 		// free all the mir buffers
 		while(mirBuffers.size() > 0)
 			mirBuffers.removeFirst()->free();
+#endif
+#ifdef SUPERWORD_PROFILING
+		swprofStop();
 #endif
 	}
 
@@ -460,10 +475,6 @@ namespace avmplus
 		}
 		CATCH(Exception *exception)
 		{
-			#ifdef AVMPLUS_PROFILE
-			if (dprof.dprofile)
-				dprof.mark((AbcOpcode)0);
-			#endif
 			// Re-throw exception
 			throwException(exception);
 		}
@@ -650,7 +661,7 @@ return the result of the comparison ToPrimitive(x) == y.
 22. Return false.
 	*/
 
-    Atom AvmCore::eq(Atom lhs, Atom rhs)
+    Atom AvmCore::equals(Atom lhs, Atom rhs)
     {
 		if (isNull(lhs)) lhs = 0;
 		if (isNull(rhs)) rhs = 0;
@@ -728,12 +739,12 @@ return the result of the comparison ToPrimitive(x) == y.
 			// 16. If Type(x) is Number and Type(y) is String,
 			// return the result of the comparison x == ToNumber(y).
             if (isNumber(lhs) && isString(rhs))
-                return eq(lhs, doubleToAtom(number(rhs)));
+                return equals(lhs, doubleToAtom(number(rhs)));
 			
 			// 17. If Type(x) is String and Type(y) is Number,
 			// return the result of the comparison ToNumber(x) == y.
             if (isString(lhs) && isNumber(rhs))
-                return eq(doubleToAtom(number(lhs)), rhs);
+                return equals(doubleToAtom(number(lhs)), rhs);
 
 			// E4X 11.5.1, step 4.  Placed slightly lower then in the spec
 			// to handle quicker cases earlier.  No cases above should be comparing
@@ -746,22 +757,22 @@ return the result of the comparison ToPrimitive(x) == y.
 
 			// 18. If Type(x) is Boolean, return the result of the comparison ToNumber(x) == y.
             if (ltype == kBooleanType)
-                return eq(lhs&~7|kIntegerType, rhs);  // equal(toInteger(lhs), rhs)
+                return equals(lhs&~7|kIntegerType, rhs);  // equal(toInteger(lhs), rhs)
 			
 			// 19. If Type(y) is Boolean, return the result of the comparison x == ToNumber(y).
             if (rtype == kBooleanType)
-                return eq(lhs, rhs&~7|kIntegerType);  // equal(lhs, toInteger(rhs))
+                return equals(lhs, rhs&~7|kIntegerType);  // equal(lhs, toInteger(rhs))
 
 			// 20. If Type(x) is either String or Number and Type(y) is Object,
 			// return the result of the comparison x == ToPrimitive(y).
 
             if ((isString(lhs) || isNumber(lhs)) && rtype == kObjectType)
-				return eq(lhs, atomToScriptObject(rhs)->defaultValue());
+				return equals(lhs, atomToScriptObject(rhs)->defaultValue());
 
 			// 21. If Type(x) is Object and Type(y) is either String or Number,
 			// return the result of the comparison ToPrimitive(x) == y.
             if ((isString(rhs) || isNumber(rhs)) && ltype == kObjectType)
-				return eq(atomToScriptObject(lhs)->defaultValue(), rhs);
+				return equals(atomToScriptObject(lhs)->defaultValue(), rhs);
         }
 		return falseAtom;
     }
@@ -946,7 +957,12 @@ return the result of the comparison ToPrimitive(x) == y.
 					for (callStackNode = callStack; callStackNode; callStackNode = callStackNode->next)
 					{
 						MethodInfo* info = (MethodInfo*) callStackNode->info;
-						if (info->exceptions != NULL && callStackNode->eip && *callStackNode->eip)
+#ifdef AVMPLUS_WORD_CODE
+						ExceptionHandlerTable* exceptions = info->word_code.exceptions;
+#else
+						ExceptionHandlerTable* exceptions = info->exceptions;
+#endif
+						if (exceptions != NULL && callStackNode->eip && *callStackNode->eip)
 						{
 							// Check if this particular frame of the callstack
 							// is going to catch the exception.
@@ -1357,7 +1373,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			case kSpecialType:
 				return atomToDouble(kNaN);
 			case kBooleanType:
-				return (double) ((sint32)atom>>3);
+				return atom == trueAtom ? 1.0 : 0.0;
 			case kNamespaceType:
 				return number(atomToNamespace(atom)->getURI()->atom());
 			default: // number
@@ -1368,7 +1384,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		else
 		{
 			// ES3 9.3, toNumber(null) == 0
-			return 0;
+			return 0.0;
 		}
     }
 
@@ -1540,7 +1556,8 @@ return the result of the comparison ToPrimitive(x) == y.
 
 		case OP_newclass: 
 			{
-				AbstractFunction* c = pool->cinits[readU30(pc)];
+                uint32_t id = readU30(pc);
+				AbstractFunction* c = pool->cinits[id];
 				buffer << opNames[opcode] << " " << c;
 				break;
 			}
@@ -1656,9 +1673,23 @@ return the result of the comparison ToPrimitive(x) == y.
 
 		//[ed] we only call this from methods with catch blocks, when exceptions != NULL
 		AvmAssert(info->exceptions != NULL);
+#ifdef AVMPLUS_WORD_CODE
+		// This is hacky and will go away.  If the target method was not jitted, use
+        // word_code.exceptions, otherwise use info->exceptions.  methods may or may
+        // not be JITted based on memory, configuration, or heuristics.
 
-		int exception_count = info->exceptions->exception_count;
-		ExceptionHandler* handler = info->exceptions->exceptions;
+		ExceptionHandlerTable* exceptions;
+        if (info->impl32 == avmplus::interp32 || info->implN == avmplus::interpN)
+            exceptions = info->word_code.exceptions;
+        else
+			exceptions = info->exceptions;
+		AvmAssert(exceptions != NULL);
+#else
+		ExceptionHandlerTable* exceptions = info->exceptions;
+#endif
+		
+		int exception_count = exceptions->exception_count;
+		ExceptionHandler* handler = exceptions->exceptions;
 		Atom atom = exception->atom;
 		
 		while (--exception_count >= 0) 
@@ -1670,7 +1701,7 @@ return the result of the comparison ToPrimitive(x) == y.
 				if (istype(atom, handler->traits)) 
 				{
 					#ifdef AVMPLUS_VERBOSE
-					if (verbose)
+					if (config.verbose)
 					{
 						console << "enter " << info << " catch " << handler->traits << '\n';
 					}
@@ -1830,15 +1861,6 @@ return the result of the comparison ToPrimitive(x) == y.
 			return knull;
 		}
     }
-
-#ifdef AVMPLUS_PROFILE
-	void AvmCore::dump()
-	{
-		sprof.dump(console);
-		dprof.dump(console);
-	}
-#endif
-
 
 	void AvmCore::setConsoleStream(OutputStream *stream)
 	{
@@ -2756,10 +2778,27 @@ return the result of the comparison ToPrimitive(x) == y.
 
     Stringp AvmCore::internInt(int value)
     {
+		// This simple cache of interned strings representing integers greatly benefits
+		// array-heavy code in the interpreter, at least for the time being (2008-08-13).
+		// But it would be better not to intern integers at all.
+
+		int index = value & 255;
+		if (value >= 0 && index_strings[index] != NULL && index_strings[index]->value == value)
+			return index_strings[index]->string;
+		
 		wchar buffer[65];
 		int len;
 		MathUtils::convertIntegerToString(value, buffer, len);
-		return internAlloc(buffer, len);
+		Stringp s = internAlloc(buffer, len);
+
+		if (value >= 0) {
+			if (index_strings[index] == NULL)
+				index_strings[index] = new (GetGC()) IndexString;
+			index_strings[index]->value = value;
+			index_strings[index]->string = s;
+		}
+
+		return s;
 
 		// This optimized routine below works fine and is faster than calling
 		// convertIntegerToString but with our support of integer keys in our
@@ -3160,11 +3199,6 @@ return the result of the comparison ToPrimitive(x) == y.
 	#endif
 	Atom AvmCore::doubleToAtom_sse2(double n)
 	{
-		#ifdef AVMPLUS_PROFILE
-		if (dprof.dprofile)
-			DynamicProfiler::StackMark mark(OP_doubletoatom, &dprof);
-		#endif
-
 		// handle integer values w/out allocation
 		// this logic rounds in the wrong direction for E3, but
 		// we never use a rounded value, only cleanly converted values.
@@ -3267,11 +3301,6 @@ return the result of the comparison ToPrimitive(x) == y.
 #ifndef AVMPLUS_AMD64
 	Atom AvmCore::doubleToAtom(double n)
 	{
-		#ifdef AVMPLUS_PROFILE
-		if (dprof.dprofile)
-			DynamicProfiler::StackMark mark(OP_doubletoatom, &dprof);
-		#endif
-
 		// There is no need for special logic for NaN or +/-Inf since we don't
         // ever test for those values in coreplayer.  As far as we're concerned
         // they are regular numeric values.
@@ -3663,7 +3692,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			// |d|<2^31
 			return int32(d);
 		}
-	    
+
 		if(u_tmp > 0x01f00000) {
 			// |d|>=2^32
 			expon = u_tmp >> 20;
@@ -3958,7 +3987,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		return (Atom)obj|kDoubleType;
 	}
 
-#ifdef AVMPLUS_MIR
+#if defined AVMPLUS_MIR || defined FEATURE_NANOJIT
 
 	void AvmCore::initMultinameLate(Multiname& name, Atom index)
 	{
@@ -3977,5 +4006,5 @@ return the result of the comparison ToPrimitive(x) == y.
 
 		name.setName(intern(index));
 	}		
-#endif
+#endif // MIR or NANOJIT
 }
