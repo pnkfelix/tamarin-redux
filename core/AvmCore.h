@@ -1004,7 +1004,7 @@ const int kBufferPadding = 16;
 		 */
 		String* toErrorString(int d);
 		String* toErrorString(AbstractFunction* m);
-		String* toErrorString(Multiname* n);
+		String* toErrorString(const Multiname* n);
 		String* toErrorString(Namespace* ns);
 		String* toErrorString(Traits* t);
 		String* toErrorString(const char* s);
@@ -1377,8 +1377,11 @@ const int kBufferPadding = 16;
 			DRCWB(Stringp) string;
 		};
 		
+#ifdef AVMPLUS_INTERNINT_CACHE
+		// See code in AvmCore::internInt
 		IndexString* index_strings[256];
-
+#endif
+		
 		// avoid multiple inheritance issues
 		class GCInterface : MMgc::GCCallback
 		{
