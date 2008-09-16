@@ -394,7 +394,6 @@ namespace avmplus
 		}
 		
 		uint32 num;
-
 		if(sample.stack.depth > 0)
 		{
 			VTable *stackFrameVT = toplevel()->getBuiltinExtensionClass(NativeID::abcclass_flash_sampler_StackFrame)->vtable->ivtable;		

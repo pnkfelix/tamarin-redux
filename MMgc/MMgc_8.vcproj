@@ -108,6 +108,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
+				FavorSizeOrSpeed="1"
 				AdditionalIncludeDirectories=".;..\core;..\codegen"
 				PreprocessorDefinitions="WIN32_LEAN_AND_MEAN;WIN32;AVMPLUS_IA32;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
@@ -178,6 +179,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
+				FavorSizeOrSpeed="1"
 				AdditionalIncludeDirectories="..\core;..\codegen"
 				PreprocessorDefinitions="WIN32_LEAN_AND_MEAN;WIN32;DEBUGGER;AVMPLUS_IA32;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"

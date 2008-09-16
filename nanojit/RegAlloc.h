@@ -1,3 +1,4 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -11,11 +12,11 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is [Open Source Virtual Machine.].
+ * The Original Code is [Open Source Virtual Machine].
  *
  * The Initial Developer of the Original Code is
  * Adobe System Incorporated.
- * Portions created by the Initial Developer are Copyright (C) 2004-2006
+ * Portions created by the Initial Developer are Copyright (C) 2004-2007
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,52 +36,52 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __avmplus_StaticProfiler__
-#define __avmplus_StaticProfiler__
+
+#ifndef __nanojit_RegAlloc__
+#define __nanojit_RegAlloc__
 
 
-#ifdef AVMPLUS_PROFILE
-namespace avmplus
+namespace nanojit
 {
-	/**
-	 * Provides static profiling support for the AVM+.
-	 */	
-	class StaticProfiler
+	inline RegisterMask rmask(Register r)
 	{
-	public:
-		StaticProfiler();
+		return 1 << r;
+	}
 
-		bool sprofile;
-		
-		int counts[256];
-		int sizes[256];
-		int totalCount;
-		int totalSize;
-		int cpoolSize;
-		int cpoolIntSize;
-		int cpoolUIntSize;
-		int cpoolDoubleSize;
-		int cpoolStrSize;
-		int cpoolNsSize;
-		int cpoolNsSetSize;
-		int cpoolMnSize;
-		int methodsSize;
-		int bodiesSize;
-		int classesSize;
-		int instancesSize;
-		int scriptsSize;
+	class RegAlloc MMGC_SUBCLASS_DECL
+	{
+		public:
+            RegAlloc() : free(0), used(0), priority(0) {}
+			void	clear();
+			bool	isFree(Register r); 
+			void	addFree(Register r);
+			void	removeFree(Register r);
+			void	addActive(Register r, LIns* ins);
+            void    useActive(Register r);
+			void	removeActive(Register r);
+			LIns*	getActive(Register r); 
+			void	retire(Register r);
+            bool    isValid() {
+                return (free|used) != 0;
+            }
+            int32_t getPriority(Register r);
 
-		void dump(PrintWriter& console);
+			debug_only( uint32_t	countFree(); )
+			debug_only( uint32_t	countActive(); )
+			debug_only( void		checkCount(); )
+			debug_only( bool		isConsistent(Register r, LIns* v); )
+			debug_only( uint32_t	count; )
+			debug_only( RegisterMask managed; )    // bitfield of 0..NJ_MAX_REGISTERS denoting which are under our management                     
 
-		void tally(AbcOpcode opcode, int size)
-		{
-			counts[opcode]++;
-			totalCount++;
-			sizes[opcode] += size;
-			totalSize += size;
-		}
+			LIns*	active[NJ_MAX_REGISTERS];  // active[r] = OP that defines r
+            int32_t usepri[NJ_MAX_REGISTERS]; // used priority. lower = more likely to spill.
+			RegisterMask	free;
+			RegisterMask	used;
+            int32_t         priority;
+
+			verbose_only( static void formatRegisters(RegAlloc& regs, char* s, Fragment*); )
+
+			DECLARE_PLATFORM_REGALLOC()
 	};
 }
-#endif
-
-#endif /* __avmplus_StaticProfiler__ */
+#endif // __nanojit_RegAlloc__
