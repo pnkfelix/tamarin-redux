@@ -4161,7 +4161,7 @@ namespace avmplus
         LirBuffer *lirbuf = frag->lirbuf;
         LirReader in(lirbuf);
         LIns *catcher = exBranch ? exBranch->getTarget() : 0;
-        int iter = deadvars_analyze(gc, lirbuf, catcher, labels);
+        int iter = deadvars_analyze(gc, lirbuf, catcher, labels); (void) iter;
 
         // now make a final pass, modifying LIR to delete dead stores (make them LIR_neartramps)
         verbose_only( if (verbose()) 
@@ -4215,8 +4215,8 @@ namespace avmplus
         );
 
 #ifdef PERFM
-		_nvprof("IR-bytes", lirbuf->byteCount());
-		_nvprof("IR", lirbuf->insCount());		
+		_nvprof("IR-bytes", frag->lirbuf->byteCount());
+		_nvprof("IR", frag->lirbuf->insCount());		
 #endif /* PERFM */
 		
         LirBuffer *lirbuf = frag->lirbuf;
