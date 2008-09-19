@@ -108,6 +108,9 @@ namespace avmplus
 #ifdef FEATURE_SAMPLER
 		,_sampler(g)
 #endif
+#ifdef AVMPLUS_WORD_CODE
+		, lookup_cache_timestamp(1)
+#endif
     {
 		// sanity check for all our types
 		AvmAssert (sizeof(int8) == 1);
@@ -515,7 +518,7 @@ namespace avmplus
 			// otherwise we keep the first one that was encountered.
 			if (!ns->isPrivate())
 			{				
-				if (!domainEnv->namedScripts->get(name, ns))
+				if (!domainEnv->getNamedScript(name, ns))
 				{
 					// add ns/name to global table
 					// ISSUE should we filter out Object traits and/or private members?
@@ -523,7 +526,7 @@ namespace avmplus
 					if (scriptTraits->pool->verbose)
 						console << "exporting " << ns << "::" << name << "\n";
 					#endif
-					domainEnv->namedScripts->add(name, ns, (Binding)scriptEnv);
+					domainEnv->addNamedScript(name, ns, (Binding)scriptEnv);
 				}
 			}
 			else
@@ -534,6 +537,10 @@ namespace avmplus
 				}
 			}
 		}
+#ifdef AVMPLUS_WORD_CODE
+		// Adding scripts to a domain always invalidates the lookup cache.
+		invalidateLookupCache();
+#endif
 	}
 
 	PoolObject* AvmCore::parseActionBlock(ScriptBuffer code,

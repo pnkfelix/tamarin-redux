@@ -219,6 +219,11 @@ namespace avmplus
 
 	PoolObject* AbcParser::parse()
 	{
+#ifdef AVMPLUS_WORD_CODE
+		// Loading a new ABC file always invalidates the lookup cache
+		core->invalidateLookupCache();
+#endif
+
 #ifdef FEATURE_BUFFER_GUARD // no Carbon
 		TRY(this->core, kCatchAction_Rethrow)
 		{
@@ -300,7 +305,7 @@ namespace avmplus
 	{
 		const byte* traits_pos = pos;
 		unsigned int nameCount = readU30(pos);
-
+		
 		// Very generous check for nameCount being way too large.
 		if (nameCount > (unsigned int)(abcEnd - pos))
 			toplevel->throwVerifyError(kCorruptABCError);
@@ -1564,9 +1569,9 @@ namespace avmplus
 
 	void AbcParser::addNamedTraits(Namespace* ns, Stringp name, Traits* itraits)
 	{
-		if (!ns->isPrivate() && !domain->namedTraits->get(name, ns))
+		if (!ns->isPrivate() && !domain->getNamedTrait(name, ns))
 		{
-			domain->namedTraits->add(name, ns, (Atom)itraits);
+			domain->addNamedTrait(name, ns, (Atom)itraits);
 		}
 		else
 		{
@@ -1578,7 +1583,7 @@ namespace avmplus
 	
 	void AbcParser::addNamedScript(Namespace* ns, Stringp name, AbstractFunction* script)
 	{
-		AbstractFunction* s = (AbstractFunction*) domain->namedScripts->get(name, ns);
+		AbstractFunction* s = (AbstractFunction*) domain->getNamedScript(name, ns);
 		if (!s)
 		{
 			if(ns->isPrivate())
@@ -1587,7 +1592,7 @@ namespace avmplus
 			}
 			else
 			{
-				domain->namedScripts->add(name, ns, (Atom)script);
+				domain->addNamedScript(name, ns, (Atom)script);
 			}
 		}
 		else

@@ -520,6 +520,8 @@ namespace avmplus
 			 III(0x12F, L_ext_ifstrictne_lb)
 			 III(0x130, L_ext_swap_pop)
 #  endif // AVMPLUS_PEEPHOLE_OPTIMIZER
+			 III(0x131, L_ext_findpropglobal)
+			 III(0x132, L_ext_findpropglobalstrict)
 #  if defined GNUC_THREADING
 			};
 			AvmAssert(opcode_labels[0x18] == &&L_ifge);
@@ -580,6 +582,11 @@ namespace avmplus
 		AvmCore::readU30(pos); // code_length
 		const byte * volatile code_start = pos;
 #endif // AVMPLUS_WORD_CODE
+		
+		// OPTIMIZEME - precompute max_scope?
+		// All the values are known.  This probably evaluates to just max_scope_depth - init_scope_depth on
+		// most reasonable compilers.  Doesn't need to be a volatile local; can just be accessed from info when needed,
+		// I imagine, if info is volatile (and why not?)
 		int volatile max_scope = MethodInfo::maxScopeDepth(info, max_scope_depth - init_scope_depth);
 
 		// these should have been checked in AbcParser
@@ -588,7 +595,7 @@ namespace avmplus
 		Atom* scopeBase = framep + local_count;
 		Atom* withBase = NULL;
 
-		#ifdef DEBUGGER
+#ifdef DEBUGGER
 		CallStackNode callStackNode(env, info, framep, 0, argc, ap, 0 /* later changed to 'pc' */);
 		// don't allow entry into the debugger until we have setup the frame
 #endif
@@ -599,8 +606,12 @@ namespace avmplus
 		}
 
 		Atom* atomv = (Atom*)ap;
+		
+		// OPTIMIZEME - if boxed args were passed from the call they should end up boxed here,
+		// we should not have to unbox and then rebox.
 		info->boxArgs(argc, ap, atomv);
 
+		// OPTIMIZEME - avoid copying by using overlapping frames if possible
 		// 1. copy instance and args to local frame
 		for (int i=0, n = argc < info->param_count ? argc : info->param_count; i <= n; i++)
 		{
@@ -3071,6 +3082,53 @@ namespace avmplus
 			}
 
 #  endif // AVMPLUS_PEEPHOLE_OPTIMIZER
+					
+			INSTR_EXT(ext_findpropglobal) {
+				uint32 multiname_index = *pc++;
+				uint32 cache_slot = *pc++;
+				if (core->lookupCacheIsValid(env->lookup_cache[cache_slot].timestamp)) {
+					*(++sp) = env->lookup_cache[cache_slot].object->atom();
+					NEXT;
+				}
+				SAVE_EXPC;
+				GET_MULTINAME_PTR(multiname, multiname_index);
+				AvmAssert(multiname->isBinding());
+				ScriptObject* global = AvmCore::atomToScriptObject((outer_depth > 0) ? scope->getScope(0) : scopeBase[0]);
+				ScriptObject* container = env->findglobalproperty(global, multiname);
+				if (container == NULL) 
+					*(++sp) = global->atom();
+				else {
+					*(++sp) = container->atom();
+					env->lookup_cache[cache_slot].timestamp = core->lookupCacheTimestamp();
+					env->lookup_cache[cache_slot].object = AvmCore::atomToScriptObject(sp[0]);
+				}
+				restore_dxns();
+				NEXT;
+			}
+					
+			INSTR_EXT(ext_findpropglobalstrict) {
+				uint32 multiname_index = *pc++;
+				uint32 cache_slot = *pc++;
+				if (core->lookupCacheIsValid(env->lookup_cache[cache_slot].timestamp)) {
+					*(++sp) = env->lookup_cache[cache_slot].object->atom();
+					NEXT;
+				}
+				SAVE_EXPC;
+				GET_MULTINAME_PTR(multiname, multiname_index);
+				AvmAssert(multiname->isBinding());
+				ScriptObject* global = AvmCore::atomToScriptObject((outer_depth > 0) ? scope->getScope(0) : scopeBase[0]);
+				ScriptObject* container = env->findglobalproperty(global, multiname);
+				if (container == NULL)
+					toplevel->throwReferenceError(kUndefinedVarError, multiname);
+				else {
+					*(++sp) = container->atom();
+					env->lookup_cache[cache_slot].timestamp = core->lookupCacheTimestamp();
+					env->lookup_cache[cache_slot].object = AvmCore::atomToScriptObject(sp[0]);
+				}
+				restore_dxns();
+				NEXT;
+			}
+
 #  ifndef AVMPLUS_DIRECT_THREADED
 			} // switch
 			} // INSTR(ext)

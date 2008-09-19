@@ -278,6 +278,18 @@ namespace avmplus
 	Atom MethodEnv::delegateInvoke(MethodEnv* env, int argc, uint32 *ap)
 	{
 		env->impl32 = env->method->impl32;
+#ifdef AVMPLUS_WORD_CODE
+		{
+			// Install the lookup cache here, if the information is available to create it.
+			// Otherwise it's done in verifyEnter, inside env->impl32() below.
+			using namespace MMgc;
+			MethodInfo* info = (MethodInfo*)(AbstractFunction*) env->method;
+			int n;
+			if ((n = info->word_code.cache_size) > 0) {
+				env->lookup_cache = (LookupCache*)env->core()->GetGC()->Alloc(sizeof(LookupCache)*n, GC::kContainsPointers|GC::kZero);
+			}
+		}
+#endif
 		return env->impl32(env, argc, ap);
 	}
 
@@ -288,7 +300,9 @@ namespace avmplus
 	}
 
 	MethodEnv::MethodEnv(AbstractFunction* method, VTable *vtable)
-		: vtable(vtable), method(method), declTraits(method->declaringTraits)
+		: vtable(vtable)
+		, method(method)
+		, declTraits(method->declaringTraits)
 	{
 		// make the first call go to the method impl
 		impl32 = delegateInvoke;
@@ -1249,6 +1263,12 @@ namespace avmplus
 			if (b == BIND_NONE) 
 			{
 				bool b = AvmCore::atomToScriptObject(obj)->deleteMultinameProperty(multiname);
+#ifdef AVMPLUS_WORD_CODE
+				// Deleting a deletable bound property means deleting a dynamic global property, so
+				// invalidate the lookup cache (because subsequent lookups should fail).
+				if (b)
+					core()->invalidateLookupCache();
+#endif
 				return b ? trueAtom : falseAtom;
 			}
 			else if (AvmCore::isMethodBinding(b))
@@ -1518,6 +1538,21 @@ namespace avmplus
 		}
 
 		// now we have searched all the scopes, except global
+		{
+			ScriptObject* global = AvmCore::atomToScriptObject(outer->getSize() > 0 ? outer->getScope(0) : *scopes);
+			ScriptObject* obj = findglobalproperty(global, multiname);
+			if (obj == NULL) {
+				if (strict)
+					toplevel->throwReferenceError(kUndefinedVarError, multiname);
+				obj = global;
+			}
+			return obj->atom();
+		}
+	}
+	
+	ScriptObject* MethodEnv::findglobalproperty(ScriptObject* target_global, const Multiname* multiname)
+	{
+		Toplevel* toplevel = this->toplevel();
 		
 		// look for imported definition (similar logic to OP_finddef).  This will
 		// find definitions in this script and in other scripts.
@@ -1534,15 +1569,13 @@ namespace avmplus
 				Atom argv[1] = { script->global->atom() };
 				script->coerceEnter(0, argv);
 			}
-			return global->atom();
+			return global;
 		}
 
 		// no imported definition found.  look for dynamic props
 		// on the global object
 
-		ScriptObject* global = AvmCore::atomToScriptObject(
-			outer_depth > 0 ? outer->getScope(0) : *scopes
-		);
+		ScriptObject* global = target_global;
 
 		// search the delegate chain for a value.  The delegate
 		// chain for the global object will only contain vanilla
@@ -1552,17 +1585,11 @@ namespace avmplus
 		do
 		{
 			if (o->hasMultinameProperty(multiname))
-				return global->atom();
+				return global;
 		}
 		while ((o = o->getDelegate()) != NULL);
 
-		// If a variable cannot be found
-		// throw reference error if strict
-
-		if (strict)
-			toplevel->throwReferenceError(kUndefinedVarError, multiname);
-
-		return global->atom();
+		return NULL;
     }
 
 	Namespace* MethodEnv::internRtns(Atom nsAtom)

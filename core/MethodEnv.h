@@ -215,6 +215,12 @@ namespace avmplus
 						  const Multiname* multiname,
 						  bool strict,
 						  Atom* withBase);
+		
+		/** Like findproperty, but ignoring all lexical and 'this' scopes.  Returns NULL if
+		 *  property could not be found; caller should signal strict error or return the
+		 *  target_global as appropriate.
+		 */
+		ScriptObject* findglobalproperty(ScriptObject* target_global, const Multiname* multiname);
 
 		Namespace* internRtns(Atom ns);
 
@@ -292,6 +298,16 @@ namespace avmplus
 	private:
 		uintptr_t					activationOrMCTable;
 	// ------------------------ DATA SECTION END
+	public:
+#ifdef AVMPLUS_WORD_CODE
+		class LookupCache : public MMgc::GCObject
+		{
+		public:
+			uint32 timestamp;
+			DRCWB(ScriptObject*) object;
+		};
+		DWB(LookupCache*) lookup_cache;
+#endif
 	};
 
 	class ScriptEnv : public MethodEnv
