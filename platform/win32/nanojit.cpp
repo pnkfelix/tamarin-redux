@@ -1,3 +1,4 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -15,7 +16,7 @@
  *
  * The Initial Developer of the Original Code is
  * Adobe System Incorporated.
- * Portions created by the Initial Developer are Copyright (C) 2004-2006
+ * Portions created by the Initial Developer are Copyright (C) 2004-2007
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,52 +36,26 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __avmplus_StaticProfiler__
-#define __avmplus_StaticProfiler__
 
+//
+// This is the source file for the nanojit project's precompiled header.
+//
 
-#ifdef AVMPLUS_PROFILE
-namespace avmplus
-{
-	/**
-	 * Provides static profiling support for the AVM+.
-	 */	
-	class StaticProfiler
-	{
-	public:
-		StaticProfiler();
+#include "nanojit.h"
 
-		bool sprofile;
-		
-		int counts[256];
-		int sizes[256];
-		int totalCount;
-		int totalSize;
-		int cpoolSize;
-		int cpoolIntSize;
-		int cpoolUIntSize;
-		int cpoolDoubleSize;
-		int cpoolStrSize;
-		int cpoolNsSize;
-		int cpoolNsSetSize;
-		int cpoolMnSize;
-		int methodsSize;
-		int bodiesSize;
-		int classesSize;
-		int instancesSize;
-		int scriptsSize;
+// The default precompiled header setting on project nanojit is
+// to replace up to #include "nanojit.h" with nanojit.pch, the
+// precompiled header.
 
-		void dump(PrintWriter& console);
+// nanojit.cpp has custom precompiled header settings to create
+// nanojit.pch by precompiling this file up until the 
+// #include "nanojit.h".
 
-		void tally(AbcOpcode opcode, int size)
-		{
-			counts[opcode]++;
-			totalCount++;
-			sizes[opcode] += size;
-			totalSize += size;
-		}
-	};
-}
-#endif
+// #include "nanojit.h" should be the first non-comment line in
+// any CPP in this project, as the default will be to substitute
+// the contents of the pch for everything up to the include.
 
-#endif /* __avmplus_StaticProfiler__ */
+// If a file cannot #include "nanojit.h", or cannot include it
+// first, then it should disable the precompiled header for that file only
+// (for instance, pcre.cpp).
+

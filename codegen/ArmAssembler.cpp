@@ -39,6 +39,7 @@
 #include "avmplus.h"
 
 #ifdef AVMPLUS_MIR
+#include "CodegenMIR.h"
 
 //hack
 #ifdef AVMPLUS_ARM

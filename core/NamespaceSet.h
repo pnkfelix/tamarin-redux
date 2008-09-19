@@ -47,14 +47,6 @@ namespace avmplus
 	 */
 	class NamespaceSet : public MMgc::GCObject
 	{
-		friend class Codegen;
-		#ifdef AVMPLUS_MIR
-		friend class CodegenMIR;
-		#endif 
-		#ifdef AVMPLUS_INTERP
-		friend class Interpreter;
-		#endif
-
 	public:
 		int size;
 		Namespace* namespaces[1/*namespaceCount*/];

@@ -37,6 +37,16 @@
 
 
 #include "avmplus.h"
+#ifdef AVMPLUS_MIR
+#include "../codegen/CodegenMIR.h"
+#endif
+#ifdef FEATURE_NANOJIT
+#include "../codegen/CodegenLIR.h"
+#endif
+
+#ifdef PERFM
+#include "../vprof/vprof.h"
+#endif /* PERFM */
 
 namespace avmplus
 {
@@ -63,7 +73,7 @@ namespace avmplus
 
 		#ifdef AVMPLUS_VERIFYALL
 		f->flags |= VERIFIED;
-		if (f->pool->core->verifyall && f->pool)
+		if (f->pool->core->config.verifyall && f->pool)
 			f->pool->processVerifyQueue(env->toplevel());
 		#endif
 
@@ -86,41 +96,52 @@ namespace avmplus
 			toplevel->throwVerifyError(kNotImplementedError, toplevel->core()->toErrorString(this));
 		}
 
-		#ifdef AVMPLUS_MIR
+		#if defined AVMPLUS_MIR || defined FEATURE_NANOJIT
 
 		Verifier verifier(this, toplevel);
 
 		AvmCore* core = this->core();
 		if ((core->IsMIREnabled()) && !isFlagSet(AbstractFunction::SUGGEST_INTERP))
 		{
-			CodegenMIR mir(this);
+            #ifdef PERFM
+            _ntprof("verify & IR gen");
+            #endif
+
+			#if defined AVMPLUS_MIR
+			CodegenMIR jit(this);
+			#elif defined FEATURE_NANOJIT
+			CodegenLIR jit(this);
+			#endif
+
 			TRY(core, kCatchAction_Rethrow)
 			{
-				verifier.verify(&mir);	// pass 2 - data flow
-				if (!mir.overflow)
-					mir.emitMD(); // pass 3 - generate code
+				verifier.verify(&jit);	// pass 2 - data flow
+                #ifdef PERFM
+                _tprof_end();
+                #endif
+        
+				if (!jit.overflow)
+					jit.emitMD(); // pass 3 - generate code
 
 				// the MD buffer can overflow so we need to re-iterate
 				// over the whole thing, since we aren't yet robust enough
 				// to just rebuild the MD code.
 
 				// mark it as interpreted and try to limp along
-				if (mir.overflow)
+				if (jit.overflow)
 				{
-					#ifdef AVMPLUS_INTERP
 					AvmCore* core = this->core();
 					if (returnTraits() == NUMBER_TYPE)
-						implN = Interpreter::interpN;
+						implN = avmplus::interpN;
 					else
-						impl32 = Interpreter::interp32;
-					#else
-					toplevel()->throwError(kOutOfMemoryError);
-					#endif //AVMPLUS_INTERP
+						impl32 = avmplus::interp32;
 				}
 			}
 			CATCH (Exception *exception) 
 			{
-				mir.clearMIRBuffers();
+                #ifdef AVMPLUS_MIR
+				jit.clearMIRBuffers();
+                #endif
 
 				// re-throw exception
 				core->throwException(exception);
@@ -204,11 +225,9 @@ namespace avmplus
 		int size = srcPos+length;
 		int at = destPos;
 
-		// if we are running mir then the types are native and we
+		// if we are running jit then the types are native and we
 		// need to box em.
-		#ifdef AVMPLUS_INTERP
 		if (isFlagSet(TURBO))
-		#endif //AVMPLUS_INTERP
 		{
 			// each entry is a pointer into the function's stack frame
 			void **in = (void**)src;			// WARNING this must match with MIR generator
@@ -259,7 +278,6 @@ namespace avmplus
 				at++;
 			}
 		}
-		#ifdef AVMPLUS_INTERP
 		else
 		{
 			// no MIR then we know they are Atoms and we just copy them
@@ -267,7 +285,6 @@ namespace avmplus
 			for(int i=srcPos; i<size; i++)
 				dest[at++] = in[i];
 		}
-		#endif //AVMPLUS_INTERP
 	}
 
 	/**
@@ -289,9 +306,7 @@ namespace avmplus
 
 		// If the method has been jit'd then we need to box em, otherwise just
 		// copy them 
-		#ifdef AVMPLUS_INTERP
 		if (isFlagSet(TURBO))
-		#endif //AVMPLUS_srcTERP
 		{
 			// we allocated double sized entry for each local src CodegenMIR
 			void** out = (void**)dest;		// WARNING this must match with MIR generator
@@ -329,7 +344,6 @@ namespace avmplus
 				}
 			}
 		}
-		#ifdef AVMPLUS_INTERP
 		else
 		{
 			// no MIR then we know they are Atoms and we just copy them
@@ -337,7 +351,6 @@ namespace avmplus
 			for(int i=destPos; i<size; i++)
 				out[i] = src[at++];
 		}
-		#endif //AVMPLUS_srcTERP
 	}
 
 	uint32 MethodInfo::size() const

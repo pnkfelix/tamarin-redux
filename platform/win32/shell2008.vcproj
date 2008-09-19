@@ -1378,6 +1378,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\vprof\vprof.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Vtune.cpp"
 				>
 			</File>

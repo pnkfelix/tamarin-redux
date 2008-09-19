@@ -248,10 +248,6 @@ namespace avmshell
 		#endif
 		printf("          [-memstats]   generate statistics on memory usage\n");
 		printf("          [-memlimit d] limit the heap size to d pages\n");
-		#ifdef AVMPLUS_PROFILE
-			printf("          [-Ddprofile]  dynamic instruction stats\n");
-			printf("          [-Dsprofile]  show static instruction stats\n");
-		#endif /* AVMPLUS_PROFILE */
 		#ifdef _DEBUG
 			printf("          [-Dgreedy]    collect before every allocation\n");
 		#endif /* _DEBUG */
@@ -263,24 +259,24 @@ namespace avmshell
 			printf("                        en,de,es,fr,it,ja,ko,zh-CN,zh-TW\n");
 		#endif
 
-		#ifdef AVMPLUS_INTERP
-			printf("          [-Dinterp]    do not generate machine code, interpret instead\n");
-		#endif /* AVMPLUS_INTERP */
-
+		printf("          [-Dinterp]    do not generate machine code, interpret instead\n");
 		#ifdef AVMPLUS_VERBOSE
 			printf("          [-Dverbose]   trace every instruction (verbose!)\n");
+			printf("          [-Dverbose_init] trace the builtins too\n");
 			printf("          [-Dbbgraph]   output MIR basic block graphs for use with Graphviz\n");
 		#endif
 
     #ifdef AVMPLUS_MIR
-		#ifdef AVMPLUS_INTERP
-		    printf("          [-Dforcemir]  use MIR always, never interp\n");
-        #endif /* AVMPLUS_INTERP */
-
 		printf("          [-Dmem]       show compiler memory usage \n");
 		printf("          [-Dnodce]     disable DCE optimization \n");
+		#ifdef AVMPLUS_VERBOSE
+			printf("          [-Dbbgraph]   output MIR basic block graphs for use with Graphviz\n");
+		#endif
+    #endif
+    #if defined AVMPLUS_MIR || defined FEATURE_NANOJIT
+		printf("          [-Dforcemir]  deprecated, use forcejit\n");
+		printf("          [-Ojit]       use jit always, never interp\n");
 		printf("          [-Dnocse]     disable CSE optimization \n");
-
         #ifdef AVMPLUS_IA32
             printf("          [-Dnosse]     use FPU stack instead of SSE2 instructions\n");
         #endif /* AVMPLUS_IA32 */
@@ -559,10 +555,6 @@ namespace avmshell
 		END_CATCH
 		END_TRY
 				
-		#ifdef AVMPLUS_PROFILE
-			dump();
-		#endif
-
 		exitCode = 0;
 		return true;
 	}
@@ -577,13 +569,13 @@ namespace avmshell
 
 		TRY(this, kCatchAction_ReportAsError)
 		{
-#ifdef AVMPLUS_MIR
+#if defined AVMPLUS_MIR || defined FEATURE_NANOJIT
 			#if defined (AVMPLUS_IA32) || defined(AVMPLUS_AMD64)
 			#ifdef AVMPLUS_MAC
-			sse2 = true;
+			config.sse2 = true;
 			#else
 			if (!P4Available()) {
-				sse2 = false;
+				config.sse2 = false;
 			}
 			#endif
 			#endif
@@ -629,18 +621,18 @@ namespace avmshell
 				{
 					if (arg[1] == 'D') {
 						if (!strcmp(arg+2, "timeout")) {
-							interrupts = true;
+							config.interrupts = true;
 
 						#ifdef AVMPLUS_IA32
 						} else if (!strcmp(arg+2, "nosse")) {
-#ifdef AVMPLUS_MIR
-							sse2 = false;
-#endif
+                            #if defined AVMPLUS_MIR || defined FEATURE_NANOJIT
+							config.sse2 = false;
+                            #endif
 						#endif
 
 	                    #ifdef AVMPLUS_VERIFYALL
 						} else if (!strcmp(arg+2, "verifyall")) {
-							verifyall = true;
+							config.verifyall = true;
 		                #endif /* AVMPLUS_VERIFYALL */
 
 	                    #ifdef _DEBUG
@@ -648,12 +640,6 @@ namespace avmshell
 							GetGC()->greedy = true;
 		                #endif /* _DEBUG */
 
-						#ifdef AVMPLUS_PROFILE
-						} else if (!strcmp(arg+2, "dprofile")) {
-							dprof.dprofile = true;
-						} else if (!strcmp(arg+2, "sprofile")) {
-							sprof.sprofile = true;
-						#endif /* AVMPLUS_PROFILE */
 	                    #ifdef DEBUGGER
 						} else if (!strcmp(arg+2, "nogc")) {
 							GetGC()->nogc = true;
@@ -674,39 +660,42 @@ namespace avmshell
 							}
 							i++;
                     	#endif /* DEBUGGER */
-						#ifdef AVMPLUS_INTERP
 						} else if (!strcmp(arg+2, "interp")) {
-							turbo = false;
-		                #endif /* AVMPLUS_INTERP */
+							config.turbo = false;
 						#ifdef AVMPLUS_VERBOSE
 						} else if (!strcmp(arg+2, "verbose")) {
 							do_verbose = true;
+						} else if (!strcmp(arg+2, "verbose_init")) {
+                            do_verbose = this->config.verbose = true;
+                        
 						#endif
 
 	                #ifdef AVMPLUS_MIR
-						#ifdef AVMPLUS_INTERP
-						} else if (!strcmp(arg+2, "forcemir")) {
-							forcemir = true;
-                        #endif /* AVMPLUS_INTERP */
-
 						} else if (!strcmp(arg+2, "nodce")) {
-							dceopt = false;
-							
-						} else if (!strcmp(arg+2, "nocse")) {
-							cseopt = false;
-
+							config.dceopt = false;
 						} else if (!strcmp(arg+2, "mem")) {
 							show_mem = true;
-
                         #ifdef AVMPLUS_VERBOSE
 						} else if (!strcmp(arg+2, "bbgraph")) {
-							bbgraph = true;  // generate basic block graph (only valid with mir switch)
+							config.bbgraph = true;  // generate basic block graph (only valid with MIR)
                         #endif
-                    #endif /* AVMPLUS_MIR */
+                    #endif
+
+                    #if defined AVMPLUS_MIR || defined FEATURE_NANOJIT
+						} else if (!strcmp(arg+2, "forcemir")) {
+							config.jit = true;
+							
+						} else if (!strcmp(arg+2, "nocse")) {
+							config.cseopt = false;
+                    #endif
 
 						} else {
 							usage();
 						}
+                #if defined AVMPLUS_MIR || defined FEATURE_NANOJIT
+                    } else if (!strcmp(arg, "-Ojit")) {
+                        config.jit = true;
+                #endif
 					} else if (!strcmp(arg, "-memstats")) {
 						GetGC()->gcstats = true;
 					} else if (!strcmp(arg, "-memlimit")) {
@@ -813,7 +802,7 @@ namespace avmshell
 
 #ifdef AVMPLUS_VERBOSE
 			if (do_verbose)
-				verbose = true;
+				config.verbose = true;
 #endif
 
 			#ifdef DEBUGGER
@@ -834,7 +823,7 @@ namespace avmshell
 			#endif
 
 			// start the 15 second timeout if applicable
-			if (interrupts) {
+			if (config.interrupts) {
 				#ifdef WIN32
 				timeSetEvent(kScriptTimeout*1000,
 							 kScriptTimeout*1000,
@@ -874,7 +863,7 @@ namespace avmshell
 				filename = argv[i];
 
 				#ifdef AVMPLUS_VERBOSE
-				if (verbose) {
+				if (config.verbose) {
 					console << "run " << filename << "\n";
 				}
 				#endif
@@ -1170,9 +1159,6 @@ namespace avmshell
 		END_CATCH
 		END_TRY
 				
-		#ifdef AVMPLUS_PROFILE
-			dump();
-		#endif
 		if (show_mem)
 		{
 			MMgc::GCHeap* heap = GetGC()->GetGCHeap();

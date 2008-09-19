@@ -39,6 +39,7 @@
 #include "avmplus.h"
 
 #ifdef AVMPLUS_MIR
+#include "CodegenMIR.h"
 
 #ifdef DARWIN
 #include <Carbon/Carbon.h>
