@@ -69,7 +69,7 @@ def _configGuess():
     return _configSub(ostest, cputest)
 
 def _configSub(ostest, cputest):
-    if ostest.startswith('win'):
+    if ostest.startswith('win') or ostest.startswith('cygwin'):
         os = 'windows'
     elif ostest.startswith('darwin') or ostest.startswith('apple-darwin'):
         os = 'darwin'
@@ -151,20 +151,7 @@ class Configuration:
         if self._debug:
             self._acvars['ENABLE_DEBUG'] = 1
 
-    def getObjDir(self):
-        """Returns the build directory being configured."""
-        return self._objdir
-
-    def getHost(self):
-        """Returns an (os, cpu) tuple of the host machine."""
-        return self._host
-
-    def getTarget(self):
-        """Returns an (os, cpu) tuple of the target machine."""
-        return self._target
-
-    def getCompiler(self, static_crt=False):
-        self.COMPILER_IS_GCC = True
+        self._compiler = 'GCC'
         self._acvars.update({
             'I_SUFFIX': 'i',
             'II_SUFFIX': 'ii',
@@ -181,17 +168,18 @@ class Configuration:
             })
 
         if self._target[0] == 'windows':
-            self.COMPILER_IS_GCC = False
+            self._compiler = 'VS'
             del self._acvars['USE_COMPILER_DEPS']
             
+            static_crt = options.getBoolArg('static-crt')
             self._acvars.update({
                 'OBJ_SUFFIX'   : 'obj',
                 'LIB_PREFIX'   : '',
                 'LIB_SUFFIX'   : 'lib',
                 'DLL_SUFFIX'   : 'dll',
                 'PROGRAM_SUFFIX': '.exe',
-                'CPPFLAGS'     : static_crt and (self._debug and '-MTd' or '-MT') or (self._debug and '-MDd' or '-MD'),
-                'CXX'          : 'cl.exe',
+                'CPPFLAGS'     : (self._debug and '-MTd' or '-MT') or (self._debug and '-MDd' or '-MD'),
+                'CXX'          : 'cl.exe -nologo',
                 'CXXFLAGS'     : '-TP',
                 'DLL_CFLAGS'   : '',
                 'AR'           : 'lib.exe',
@@ -205,6 +193,8 @@ class Configuration:
                 'OUTOPTION' : '-Fo',
                 'LIBPATH'   : '-LIBPATH:'
                 })
+            if sys.platform.startswith('cygwin'):
+                self._acvars.update({'CXX'          : '$(topsrcdir)/build/cygwin-wrapper.sh cl.exe -nologo'})
 
         # Hackery! Make assumptions that we want to build with GCC 3.3 on MacPPC
         # and GCC4 on MacIntel
@@ -246,6 +236,7 @@ class Configuration:
                 })
         elif self._target[0] == 'sunos':
             self.COMPILER_IS_GCC = False
+            self._compiler = 'SunStudio'
             self._acvars.update({
                 'I_SUFFIX': 'i',
                 'II_SUFFIX': 'i',
@@ -257,6 +248,28 @@ class Configuration:
                 'MKSTATICLIB'  : '$(AR) cr $(1)',
                 'MKPROGRAM'    : '$(CXX) -o $(1)'
                 })
+        self._acvars['COMPILER'] = self._compiler
+
+    def getObjDir(self):
+        """Returns the build directory being configured."""
+        return self._objdir
+
+    def getHost(self):
+        """Returns an (os, cpu) tuple of the host machine."""
+        return self._host
+
+    def getTarget(self):
+        """Returns an (os, cpu) tuple of the target machine."""
+        return self._target
+        
+    def getCompiler(self):
+        """Returns the compiler in use, as a string.
+Possible values are:
+- 'GCC': the GNU Compiler Collection, including GCC and G++
+- 'VS': Microsoft Visual Studio
+- 'SunStudio': Sun Studio
+- 'rvct: RealView Compiler"""
+        return self._compiler
 
     def getDebug(self):
         return self._debug
@@ -279,7 +292,9 @@ class Configuration:
         writeFileIfChanged(outpath, contents)
 
 def toMSYSPath(path):
-    if path[1] != ':':
-        raise ValueError("win32 path without drive letter!")
-
-    return '/%s%s' % (path[0], path[2:].replace('\\', '/'))
+    if sys.platform.startswith('cygwin'):
+        return path
+    elif path[1] != ':':
+        raise ValueError("win32 path without drive letter! %s" % path)
+    else:
+        return '/%s%s' % (path[0], path[2:].replace('\\', '/'))
