@@ -120,6 +120,7 @@ const int kBufferPadding = 16;
 
         #if defined (AVMPLUS_IA32) || defined(AVMPLUS_AMD64)
 		bool sse2;
+		bool use_cmov;
 		#endif
 
 		#ifdef AVMPLUS_VERBOSE
@@ -1344,6 +1345,9 @@ const int kBufferPadding = 16;
 		Stringp newString(const char *str) const;
 		Stringp newString(const wchar *str) const;
 		Stringp newString(const char *str, int len) const;		
+		void freeString(Stringp s) {
+			delete s;
+		}
 
 		Stringp uintToString(uint32 i);
 		Stringp intToString(int i);

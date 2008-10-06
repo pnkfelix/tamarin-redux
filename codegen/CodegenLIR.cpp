@@ -1516,7 +1516,7 @@ namespace avmplus
                     // v == undefinedAtom ? nullObjectAtom : v;
                     LIns *v = localGet(loc);
                     v = lirout->ins_choose(binaryIns(LIR_eq, v, InsConst(undefinedAtom)),
-                        InsConst(nullObjectAtom), v, core->config.sse2);
+                        InsConst(nullObjectAtom), v);
                     localSet(loc, v);
                 }
 			}
@@ -4483,6 +4483,15 @@ namespace nanojit
     void Assembler::initGuardRecord(LIns*, GuardRecord*) {
         AvmAssert(false);
     }
+
+	void Fragment::onDestroy() {
+		if (root == this) {
+			delete mergeCounts;
+			delete lirbuf;
+			mergeCounts = 0;
+			lirbuf = 0;
+		}
+	}
 }
 
 #endif // FEATURE_NANOJIT
