@@ -1,4 +1,3 @@
-/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -36,74 +35,22 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifdef DEBUG
-#ifndef _DEBUG
-#define _DEBUG
-#endif
-#endif
+#ifndef __mmgc_stdint__
+#define __mmgc_stdint__
 
-/**
- * Critical section on GCHeap allocations.
- */
-#define GCHEAP_LOCK
-
-/**
- * IA-32
- */
-#ifdef __i386__
-#define MMGC_IA32
-#elif defined(__x86_64__)
-#define MMGC_AMD64
-#define MMGC_64BIT
-#elif defined(__powerpc__)
-#define MMGC_PPC
-#elif defined(__arm__)
-#define MMGC_ARM
+#ifdef _MSC_VER
+	// MSVC doesn't support inttypes.h or most C99 types directly
+	#include <crtdefs.h>	// defines intrptr_t and uintptr_t, but not the rest of C99 int types
+	typedef __int8				int8_t;
+	typedef __int16				int16_t;
+	typedef __int32				int32_t;
+	typedef __int64				int64_t;
+	typedef unsigned __int8		uint8_t;
+	typedef unsigned __int16	uint16_t;
+	typedef unsigned __int32	uint32_t; 
+	typedef unsigned __int64	uint64_t;
 #else
-#error Unknown CPU type
+	#include <inttypes.h>
 #endif
 
-/**
- * Define this to get stack traces.  Helps with memory leaks.
- */
-#ifdef DEBUG
-#define MEMORY_INFO
-#endif
-
-/**
- * This turns on incremental collection as well as all of
- * the write barriers.
- */
-#define WRITE_BARRIERS
-
-/**
- * Define this if MMgc is being integrated with avmplus.
- * Activates dynamic profiling support, etc.
- */
-#define MMGC_AVMPLUS
-
-/**
- * Use VirtualAlloc to reserve/commit memory
- */
-#define USE_MMAP
-
-/**
- *
- */
-#define DECOMMIT_MEMORY
-
-/**
- * Controls whether DRC is in use
- */
-
-#define MMGC_DRC
-
-/**
- * This makes JIT code buffers read-only to reduce the probability of
- * heap overflow attachs
- */
-
-#define AVMPLUS_JIT_READONLY
-
-#define HAVE_PTHREADS
-#define HAVE_STDARG
+#endif /* __mmgc_stdint__ */

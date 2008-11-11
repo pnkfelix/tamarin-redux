@@ -118,6 +118,7 @@ elif config.getCompiler() == 'VS':
         APP_CXXFLAGS = "-W4 -WX -wd4291 -wd4201 -wd4189 -wd4740 -wd4127 "
         if config.getDebug():
             DEBUG_CXXFLAGS = "-Od "
+            APP_CXXFLAGS += "-GR- -fp:fast -GS- -Zc:wchar_t- -Zc:forScope "
         else:
             OPT_CXXFLAGS = "-O2 "
             APP_CXXFLAGS += "-GR- -fp:fast -GS- -Zc:wchar_t- "
@@ -132,6 +133,9 @@ elif config.getCompiler() == 'VS':
             APP_CXXFLAGS += "-GF -GR- -fp:fast -GS- -Zc:wchar_t- "
     DEBUG_CXXFLAGS += "-Zi "
     DEBUG_LDFLAGS += "-DEBUG "
+elif config.getCompiler() == 'SunStudio':
+    OPT_CXXFLAGS = "-xO5 "
+    DEBUG_CXXFLAGS += "-g "
 else:
     raise Exception('Unrecognized compiler: ' + config.getCompiler())
 
@@ -167,6 +171,7 @@ if os == "darwin":
 elif os == "windows" or os == "cygwin":
     MMGC_DEFINES.update({'WIN32': None,
                          '_CRT_SECURE_NO_DEPRECATE': None})
+    OS_LDFLAGS +="-MAP "
     if cpu == "arm":
         APP_CPPFLAGS += "-DARM -D_ARM_ -DARMV5 -DUNICODE -DUNDER_CE=1 -DMMGC_ARM -QRarch5t "
         OS_LIBS.append('mmtimer corelibc coredll')

@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   Adobe AS3 Team
- *   leon.sha@sun.com
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -43,17 +42,27 @@
 #endif
 #endif
 
-#define HAVE_ALLOCA_H
-
 /**
  * Critical section on GCHeap allocations.
  */
 #define GCHEAP_LOCK
 
-#if defined(__sparc) || defined(__sparc__)
-#define MMGC_SPARC
-#elif defined(__i386) || defined(__i386__)
+/**
+ * IA-32
+ */
+#if defined(__i386__) || defined(__i386)
 #define MMGC_IA32
+#elif defined(__x86_64__)
+#define MMGC_AMD64
+#define MMGC_64BIT
+#elif defined(__powerpc__)
+#define MMGC_PPC
+#elif defined(__sparc__) || defined(__sparc)
+#define MMGC_SPARC
+#elif defined(__arm__)
+#define MMGC_ARM
+#else
+#error Unknown CPU type
 #endif
 
 /**
@@ -78,9 +87,8 @@
 /**
  * Use VirtualAlloc to reserve/commit memory
  */
-#ifdef MMGC_IA32
 #define USE_MMAP
-#endif
+
 /**
  *
  */
@@ -98,3 +106,14 @@
  */
 
 #define AVMPLUS_JIT_READONLY
+
+/**
+ * Do not Use VirtualAlloc to reserve/commit memory for sparc
+ * The pagesize of sparc is 8192 which is not supported yet.
+ */
+#ifdef MMGC_SPARC
+#undef USE_MMAP
+#endif
+
+#define HAVE_PTHREADS
+#define HAVE_STDARG

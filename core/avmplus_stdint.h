@@ -1,4 +1,3 @@
-/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -21,7 +20,6 @@
  *
  * Contributor(s):
  *   Adobe AS3 Team
- *   leon.sha@sun.com
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -37,73 +35,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __GCSpinLock__
-#define __GCSpinLock__
+#ifndef __avmplus_stdint__
+#define __avmplus_stdint__
 
-#include <pthread.h>
+#include "mmgc_stdint.h"
 
-namespace MMgc
-{
-	/**
-	 * GCSpinLock is a simple spin lock class used by GCHeap to
-	 * ensure mutually exclusive access.  The GCHeap may be accessed
-	 * by multiple threads, so this is necessary to ensure that
-	 * the threads do not step on each other.
-	 */
-	class GCSpinLock
-	{
-	public:
-
-		GCSpinLock()
-		{
-			pthread_spin_init( &m1, 0 );
-		}
-	
-		~GCSpinLock()
-		{
-			pthread_spin_destroy( &m1 );
-		}
-
-		inline void Acquire()
-		{
-			pthread_spin_lock( &m1 );
-		}
-		
-		inline void Release()
-		{
-			pthread_spin_unlock( &m1 );
-		}
-
-	private:
-		pthread_spinlock_t m1;
-	};
-
-	/**
-	 * GCAcquireSpinlock is a convenience class which acquires
-	 * the specified spinlock at construct time, then releases
-	 * the spinlock at desruct time.  The single statement
-	 *
-	 *    GCAcquireSpinlock acquire(spinlock);
-	 *
-	 * ... will acquire the spinlock at the top of the function
-	 * and release it at the end.  This makes for less error-prone
-	 * code than explicit acquire/release.
-	 */
-	class GCAcquireSpinlock
-	{
-	public:
-		GCAcquireSpinlock(GCSpinLock& spinlock) : m_spinlock(spinlock)
-		{
-			m_spinlock.Acquire();
-		}
-		~GCAcquireSpinlock()
-		{
-			m_spinlock.Release();
-		}
-
-	private:
-		GCSpinLock& m_spinlock;
-	};
-}
-
-#endif /* __GCSpinLock__ */
+#endif /* __avmplus_stdint__ */
