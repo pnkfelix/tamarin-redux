@@ -402,7 +402,7 @@ namespace MMgc
 	}
 #endif
 
-	uint64_t GCPolicyManager::blocksOwnedByGC() {
+	size_t GCPolicyManager::blocksOwnedByGC() {
 		return blocksOwned;
 	}
 	
@@ -1273,11 +1273,6 @@ namespace MMgc
 		return item;
 	}
 
-	void *GC::Calloc(size_t count, size_t elsize, int flags)
-	{
-		return Alloc(GCHeap::CheckForCallocSizeOverflow(count, elsize), flags);
-	}
-
 	void GC::Free(const void *item)
 	{
 		GCAssertMsg(onThread(), "GC called from a different thread or not associated with a thread, missing MMGC_GCENTER macro perhaps.");
@@ -1556,7 +1551,7 @@ bail:
 		UnmarkGCPages(ptr, size);
 	}
 
-	void GC::SetPageMapValue(uintptr_t addr, int val)
+	REALLY_INLINE void GC::SetPageMapValue(uintptr_t addr, int val)
 	{
 		uintptr_t index = (addr-memStart) >> 12;
 #ifdef MMGC_64BIT
@@ -1567,7 +1562,7 @@ bail:
 		pageMap[index >> 2] |= (val<<((index&0x3)*2));
 	}	
 
-	void GC::ClearPageMapValue(uintptr_t addr)
+	REALLY_INLINE void GC::ClearPageMapValue(uintptr_t addr)
 	{
 		uintptr_t index = (addr-memStart) >> 12;
 #ifdef MMGC_64BIT
