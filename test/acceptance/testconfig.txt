@@ -67,11 +67,11 @@ util/shell_ats, .*, skip, shell file for ats media creation
 ####################
 # force JIT -Ojit
 ####################
-as3/RuntimeErrors/Error1115NotAConstructor:.*   , [^ppc].*(-Ojit|-Djitordie).*  , expectedfail , bug https://bugzilla.mozilla.org/show_bug.cgi?id=456852
-as3/Vector/nonindexproperty:index -6.*          , [^ppc].*((-Ojit|-Djitordie).*|diff)  , expectedfail , bug https://bugzilla.mozilla.org/show_bug.cgi?id=456852
-as3/Statements/Exceptions/NestedTryBlockWithMultipleCatchBlocksTypeWithNoInnerCatchType:.*, [^ppc].*(-Ojit|-Djitordie).*, expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=521879
-as3/Statements/Exceptions/NestedTryWithMultipleCatchInsideSecondCatchWithoutMatchingCatch:.*, [^ppc].*(-Ojit|-Djitordie).*, expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=521879
-as3/Statements/Exceptions/NestedTryWithMultipleCatchInsideFourthCatchWithoutMatchingCatch:.*, [^ppc].*(-Ojit|-Djitordie).*, expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=521879
+as3/RuntimeErrors/Error1115NotAConstructor:.*   , .*(-Ojit|-Djitordie).*  , expectedfail , bug https://bugzilla.mozilla.org/show_bug.cgi?id=456852
+as3/Vector/nonindexproperty:index -6.*          , .*((-Ojit|-Djitordie).*|diff)  , expectedfail , bug https://bugzilla.mozilla.org/show_bug.cgi?id=456852
+as3/Statements/Exceptions/NestedTryBlockWithMultipleCatchBlocksTypeWithNoInnerCatchType:.*, .*(-Ojit|-Djitordie).*, expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=521879
+as3/Statements/Exceptions/NestedTryWithMultipleCatchInsideSecondCatchWithoutMatchingCatch:.*, .*(-Ojit|-Djitordie).*, expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=521879
+as3/Statements/Exceptions/NestedTryWithMultipleCatchInsideFourthCatchWithoutMatchingCatch:.*, .*(-Ojit|-Djitordie).*, expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=521879
 
 ####################
 # abcasm:
@@ -146,29 +146,6 @@ ecma3/String/split_504567:'babab',   .*   , expectedfail, bug https://bugzilla.m
 ####################
 as3/Vector/concat:concat multiple int vectors, .*, expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=504525
 
-####################
-# -Djitordie
-####################
-# The following testcases are not able to be jitted
-# https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-as3/Definitions/Function/functionReturnTypes, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-as3/ShellClasses/Domain, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/Array/e15_4_4_4_1, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/Expressions/e11_2_1_1, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/Expressions/e11_4_6, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/Expressions/e11_4_7, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/GlobalObject/e15_1_2_3_1, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/GlobalObject/e15_1_2_3_2, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/LexicalConventions/e7_7_3, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/LexicalConventions/e7_7_4, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/RegExp/eperlstress_001, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/RegExp/eperlstress_002, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/String/e15_5_3_2_1, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/String/e15_5_3_2_2, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/TypeConversion/e9_3_1_1, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/Unicode/uc_006, .*-Djitordie , expectedfail , https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-regress/vector_domain_bug, .*-Djitordie , expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=493949
-ecma3/String/e15_5_4_4_4_rt, .*-Djitordie , expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=493949
 
 ####################
 # Windows Mobile
@@ -285,25 +262,6 @@ ecma3/Unicode/uAC00_HangulSyllables, .*, ats_skip, bug 499685 skip slow tests
 ####################
 versioning/.*, .*, apiversioning, skip versioning when not defined in avm
 
-
-####################
-#  String failures on solaris after "String Class Cleanup" (bug 514084)
-####################
-e4x/Expressions/e11_1_5,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
-e4x/Expressions/e11_1_4,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
-e4x/TypeConversion/e10_2_1_2,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
-e4x/Global/e13_1_2_1,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
-ecma3/GlobalObject/e15_1_2_5_.*,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
-ecma3/GlobalObject/e15_1_2_4,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
-ecma3/Unicode/.*,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
-ecma3/TypeConversion/e9_7,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
-ecma3/String/e15_5_3_2_3,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
-ecma3/String/e15_5_4_12_.*,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
-ecma3/String/e15_5_4_5_4,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
-ecma3/String/e15_5_4_11_.*,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
-ecma3/String/toLocaleLowerCase.*,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
-ecma3/String/toLocaleUpperCase.*,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
-ecma3/RegExp/multibyte_regress,  (sparc|x86)-sol-.* ,  skip , https://bugzilla.mozilla.org/show_bug.cgi?id=515340
 
 ####################
 #  --verify skips

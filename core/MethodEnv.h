@@ -256,8 +256,6 @@ namespace avmplus
 		 */
 		void checkfilter(Atom obj);
 
-		ScriptObject* coerceAtom2SO(Atom atom, Traits *expected) const;
-
 #ifdef DEBUGGER
 		void debugEnter(Traits** frameTraits, 
 						CallStackNode* callstack,
@@ -334,10 +332,8 @@ namespace avmplus
 	class ScriptEnv : public MethodEnv
 	{
 	public:
-		ScriptEnv(MethodInfo* _method, VTable* _vtable, AbcEnv* _abcEnv);
+		ScriptEnv(MethodInfo* _method, ScopeChain* _scope);
 		ScriptObject* initGlobal();
-	
-	private:
 		static ScopeChain* createScriptScope(const ScopeTypeChain* stc, VTable* _vtable, AbcEnv* _abcEnv);
 		
 	// ------------------------ DATA SECTION BEGIN

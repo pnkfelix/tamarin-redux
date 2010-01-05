@@ -39,7 +39,7 @@
 
 namespace avmplus
 {
-#ifdef AVMPLUS_WORD_CODE
+#ifdef VMCFG_WORDCODE
 
 	class TranslatedCode : public MMgc::GCObject
 	{
@@ -50,7 +50,7 @@ namespace avmplus
 	class WordcodeEmitter : public WordcodeTranslator {
 	public:
 		WordcodeEmitter(MethodInfo* info, Toplevel* toplevel);
-#    ifdef AVMPLUS_SELFTEST
+#    ifdef VMCFG_SELFTEST
 		WordcodeEmitter(AvmCore* core, uint8_t* code_start);
 #    endif
 		virtual ~WordcodeEmitter();
@@ -168,7 +168,7 @@ namespace avmplus
 		buffer_info* buffers;			// newest buffer first
 		uint32_t buffer_offset;			// offset of first word of current buffer
 		buffer_info* spare_buffer;		// may be populated during peephole optimization; reused by refill
-#ifdef AVMPLUS_DIRECT_THREADED
+#ifdef VMCFG_DIRECT_THREADED
 		void** opcode_labels;
 #endif
 		PoolObject *pool;
@@ -183,7 +183,7 @@ namespace avmplus
 		void makeAndInsertBackpatch(const uint8_t* target_pc, uintptr_t patch_offset);
 		void boot();
 
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		
 		// The structures are laid out so as to improve packing and conserve space.  The
 		// included initialization code below knows the order of fields.
@@ -231,7 +231,7 @@ namespace avmplus
 		uint32_t calculateInstructionWidth(uintptr_t opcode) {
 			return wopAttrs[opcode].width;
 		}
-#endif	// AVMPLUS_PEEPHOLE_OPTIMIZER
+#endif	// VMCFG_WORDCODE_PEEPHOLE
 
 		LookupCacheBuilder cache_builder;
 	};

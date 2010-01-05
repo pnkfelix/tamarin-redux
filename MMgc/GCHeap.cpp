@@ -277,7 +277,8 @@ namespace MMgc
 		VMPI_lockDestroy(&list_lock);
 		
 		if(enterFrame)
-			enterFrame->Destroy();
+			enterFrame->Destroy();	// Destroy the pointed-to value
+		enterFrame.destroy();		// Destroy the thread-local itself
 	}
 
 	void* GCHeap::Alloc(size_t size, uint32_t flags)
@@ -461,9 +462,9 @@ namespace MMgc
 					}
 					else
 					{
-#ifdef _MAC
+#ifdef MMGC_MAC
 						// this can happen on mac where we release and re-reserve the memory and another thread may steal it from us
-						RemoveBlock(block);
+						RemovePartialBlock(block);
 						goto restart;
 #else
 						// if the VM API's fail us bail
@@ -597,6 +598,98 @@ namespace MMgc
 				StatusChangeNotify(kMemNormal);
 		}
 	}
+
+#ifdef MMGC_MAC
+
+	void GCHeap::RemovePartialBlock(HeapBlock *block)
+	{
+		if(config.verbose) {
+			GCLog("Removing block %p %d\n", block->baseAddr, block->size);
+			DumpHeapRep();
+		}
+
+		{
+			Region *region = AddrToRegion(block->baseAddr);
+			if(region->baseAddr == block->baseAddr && region->reserveTop == block->endAddr()) {
+				RemoveBlock(block);
+				return;
+			}
+		}
+
+		while(AddrToRegion(block->baseAddr) != AddrToRegion(block->endAddr()-1)) {
+			// split block into parts mapping to regions
+			Region *r = AddrToRegion(block->baseAddr);
+			size_t numBlocks = (r->commitTop - block->baseAddr) / kBlockSize;
+			char *next = Split(block, numBlocks)->baseAddr;
+			// remove it
+			RemovePartialBlock(block);
+			block = AddrToBlock(next);
+		}
+
+		Region *region = AddrToRegion(block->baseAddr);
+		// save these off since we'll potentially shift region
+		char *regionBaseAddr = region->baseAddr;
+		size_t regionBlockId = region->blockId;
+
+		// if we don't line up with beginning or end we need a new region
+		if(block->baseAddr != region->baseAddr && region->commitTop != block->endAddr()) {
+			if(nextRegion == NULL) {
+				// usually this is handled in ExpandHeap but could run out here
+				bool zero = false;
+				block = AllocBlock(1, zero);
+				if(block) {
+					nextRegion = (Region*)(void *)block->baseAddr;	
+				} else {
+					ExpandHeap(1, false);
+					// just calling ExpandHeap should set nextRegion
+					GCAssertMsg(nextRegion != NULL, "ExpandHeap didn't set nextRegion");
+				}
+			}
+
+			NewRegion(block->endAddr(), region->reserveTop, 
+					  region->commitTop > block->endAddr() ? region->commitTop : block->endAddr(),
+					  region->blockId + (block->endAddr() - region->baseAddr) / kBlockSize);
+			
+			if(region->baseAddr != block->baseAddr) {
+				// end this region at the start of block going away
+				region->reserveTop = block->baseAddr;			
+				if(region->commitTop > block->baseAddr)
+					region->commitTop = block->baseAddr;
+			}
+
+		} else if(region->baseAddr == block->baseAddr) {
+			region->blockId += block->size;
+			region->baseAddr = block->endAddr();
+		} else if(region->commitTop == block->endAddr()) {
+			// end this region at the start of block going away
+			region->reserveTop = block->baseAddr;
+			if(region->commitTop > block->baseAddr)
+				region->commitTop = block->baseAddr;			
+		} else {
+			GCAssertMsg(false, "This shouldn't be possible");
+		}
+
+
+		// create temporary region for this block
+		Region temp(this, block->baseAddr, block->endAddr(), block->endAddr(), regionBlockId +  (block->baseAddr - regionBaseAddr) / kBlockSize);
+
+		RemoveBlock(block);
+		
+		// pop temp from freelist, put there by RemoveBlock
+		freeRegion = *(Region**)freeRegion;
+
+		
+
+#ifdef DEBUG
+		// doing this here is an extra validation step
+		if(config.verbose) 
+		{
+			DumpHeapRep();
+		}
+#endif
+	}
+
+#endif
 
 	void GCHeap::RemoveBlock(HeapBlock *block)
 	{	
@@ -780,6 +873,15 @@ namespace MMgc
 		return NULL;
 	}
 	
+	size_t GCHeap::SafeSize(const void *item)
+	{
+		MMGC_LOCK(m_spinlock);
+		HeapBlock *block = AddrToBlock(item);
+		if (block == NULL || block->size == 0)
+			return (size_t)-1;
+		return block->size;
+	}
+
 	GCHeap::HeapBlock* GCHeap::AllocBlock(size_t size, bool& zero)
 	{
 		uint32_t startList = GetFreeListIndex(size);
@@ -1214,7 +1316,7 @@ namespace MMgc
 		// Check the hard limit, trigger cleanup if hit
 		CheckForHardLimitExceeded();
 		
-		if (!ExpandHeapInternal(askSize))
+		if (!ExpandHeapInternal(askSize) && !canFail)
 			Abort();
 		
 		// The guard on instance being non-NULL is a hack, to be fixed later (now=2009-07-20).
@@ -1316,7 +1418,11 @@ namespace MMgc
 					{
 						// Succeeded!
 						baseAddr = region->commitTop;
-						contiguous = true;
+
+						// check for continuity, we can only be contiguous with the end since
+						// we don't have a "block insert" facility
+						HeapBlock *last = &blocks[blocksLen-1] - blocks[blocksLen-1].sizePrevious;
+						contiguous = last->baseAddr + last->size * kBlockSize == baseAddr;
 						
 						// Update the commit top.
 						region->commitTop += size*kBlockSize;
@@ -1384,7 +1490,11 @@ namespace MMgc
 					// and committed the memory we need.  Finish up.
 					baseAddr = region->commitTop;
 					region->commitTop = lastRegion->reserveTop;
-					contiguous = true;
+
+					// check for continuity, we can only be contiguous with the end since
+					// we don't have a "block insert" facility
+					HeapBlock *last = &blocks[blocksLen-1] - blocks[blocksLen-1].sizePrevious;
+					contiguous = last->baseAddr + last->size * kBlockSize == baseAddr;
 					
 					goto gotMemory;
 				}
@@ -1393,13 +1503,6 @@ namespace MMgc
 			// We were unable to allocate a contiguous region, or there
 			// was no existing region to be contiguous to because this
 			// is the first-ever expansion.  Allocate a non-contiguous region.
-			
-			// don't waste this uncommitted space, go ahead and commit it
-			// FIXME: the new HeapBlock approach doesn't work with this, need to
-			// instead do a region scan above instead of just using lastRegion
-//			if(commitAvail != 0) {
-//				ExpandHeapInternal(commitAvail);
-//			}
 			
 			// Don't use any of the available space in the current region.
 			commitAvail = 0;
@@ -1591,23 +1694,29 @@ namespace MMgc
 
 		// If we created a new region, save the base address so we can free later.		
 		if (newRegionAddr) {
-			if(contiguous && config.mergeContiguousRegions) {
+			/*	The mergeContiguousRegions bit is broken, since we
+				loop over all regions we may be contiguous with an
+				existing older HeapBlock and we don't support inserting a
+				new address range arbritrarily into the HeapBlock
+				array (contiguous regions must be contiguous heap
+				blocks vis-a-vie the region block id) 
+			if(contiguous &&
+				config.mergeContiguousRegions) {
 				lastRegion->reserveTop += newRegionSize*kBlockSize;
-				lastRegion->commitTop += (size-commitAvail)*kBlockSize;
-			} else {
-				Region *newRegion = NewRegion();
-				newRegion->baseAddr   = newRegionAddr;
-				newRegion->reserveTop = newRegionAddr+newRegionSize*kBlockSize;
-				newRegion->commitTop  = newRegionAddr+(size-commitAvail)*kBlockSize;
-				newRegion->blockId    = newBlocksLen-(size-commitAvail)-1;
-				newRegion->prev = lastRegion;
-				lastRegion = newRegion;
+				lastRegion->commitTop +=
+				(size-commitAvail)*kBlockSize;
+				} else
+			*/ {
+				Region *newRegion = NewRegion(newRegionAddr,  // baseAddr
+											  newRegionAddr+newRegionSize*kBlockSize, // reserve top
+											  newRegionAddr+(size-commitAvail)*kBlockSize, // commit top
+											  newBlocksLen-(size-commitAvail)-1); // block id
 				
 				if(config.verbose)
 					GCLog("reserved new region, %p - %p %s\n",
-						   newRegion->baseAddr,
-						   newRegion->reserveTop,
-						   contiguous ? "contiguous" : "non-contiguous");
+						  newRegion->baseAddr,
+						  newRegion->reserveTop,
+						  contiguous ? "contiguous" : "non-contiguous");
 			}
 		}
 
@@ -2012,6 +2121,10 @@ namespace MMgc
 		Region *r = lastRegion;
 		int numRegions = 0;
 
+		GCLog("Heap representation format: \n");
+		GCLog("region base address - commitTop/reserveTop\n");
+		GCLog("[0 == free, 1 == committed, - = uncommitted]*\n");
+
 		// count and sort regions
 		while(r) {
 			numRegions++;
@@ -2021,16 +2134,23 @@ namespace MMgc
 		if (regions == NULL)
 			return;
 		r = lastRegion;
-		for(int i=numRegions-1; i >= 0; i--) {
-			regions[i] = r;
-			r = r->prev;
+		for(int i=0; i < numRegions; i++, r = r->prev) {
+			int insert = i;
+			for(int j=0; j < i; j++) {
+				if(r->baseAddr < regions[j]->baseAddr) {
+					memmove(&regions[j+1], &regions[j], sizeof(Region*) * (i - j));
+					insert = j;
+					break;
+				}
+			}
+			regions[insert] = r;
 		}
-	
+
 		HeapBlock *spanningBlock = NULL;
 		for(int i=0; i < numRegions; i++)
 		{
 			r = regions[i];
-			GCLog("0x%p -  0x%p\n", r->baseAddr, r->reserveTop);
+			GCLog("0x%p -  0x%p/0x%p\n", r->baseAddr, r->commitTop, r->reserveTop);
 			char c;
 			char *addr = r->baseAddr;
 			
@@ -2245,7 +2365,7 @@ namespace MMgc
 		callbacks.Remove(p); 
 	}
 
-	GCHeap::Region *GCHeap::NewRegion()
+	GCHeap::Region *GCHeap::NewRegion(char *baseAddr, char *rTop, char *cTop, size_t blockId)
 	{
 		Region *r = freeRegion;
 		if(r) {
@@ -2255,13 +2375,17 @@ namespace MMgc
 			if(roundUp((uintptr_t)nextRegion, kBlockSize) - (uintptr_t)nextRegion < sizeof(Region))
 				nextRegion = NULL; // fresh page allocated in ExpandHeap
 		}			
+		new (r) Region(this, baseAddr, rTop, cTop, blockId);
 		return r;
 	}
 
 	void GCHeap::FreeRegion(Region *r)
 	{
+		if(r == lastRegion)
+			lastRegion = r->prev;
 		*(Region**)r = freeRegion;
 		freeRegion = r;		
+
 	}
 	
 	/*static*/ 
@@ -2279,5 +2403,15 @@ namespace MMgc
 	{  
 		GCAssert(instanceEnterLockInitialized);
 		VMPI_lockDestroy(&instanceEnterLock);
+	}
+
+	GCHeap::Region::Region(GCHeap *heap, char *baseAddr, char *rTop, char *cTop, size_t blockId)
+		: prev(heap->lastRegion), 
+		  baseAddr(baseAddr), 
+		  reserveTop(rTop), 
+		  commitTop(cTop), 
+		  blockId(blockId)
+	{
+		heap->lastRegion = this;
 	}
 }

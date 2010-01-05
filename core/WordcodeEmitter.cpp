@@ -37,7 +37,7 @@
 
 #include "avmplus.h"
 
-#ifdef AVMPLUS_WORD_CODE
+#ifdef VMCFG_WORDCODE
 
 // FIXME the following is required because FrameState has dependencies on the jitters
 #include "FrameState.h"
@@ -58,7 +58,7 @@ namespace avmplus
 		, buffers(NULL)
 		, buffer_offset(0)
 		, spare_buffer(NULL)
-#ifdef AVMPLUS_DIRECT_THREADED
+#ifdef VMCFG_DIRECT_THREADED
 		, opcode_labels(interpGetOpcodeLabels())
 #endif
 		, pool(NULL)
@@ -70,13 +70,13 @@ namespace avmplus
 		AvmAssert(info != NULL);
 
 		const byte* pos = info->abc_body_pos();
-		AvmCore::skipU30(pos, 5);  // max_stack, local_count, init_scope_depth, max_scope_depth, code_length
+		AvmCore::skipU32(pos, 5);  // max_stack, local_count, init_scope_depth, max_scope_depth, code_length
 		code_start = pos;
 		pool = info->pool();		
 		boot();
 	}
 
-#ifdef AVMPLUS_SELFTEST
+#ifdef VMCFG_SELFTEST
 	WordcodeEmitter::WordcodeEmitter(AvmCore* core, uint8_t* code_start)
 		: WordcodeTranslator()
 		, info(NULL)
@@ -87,7 +87,7 @@ namespace avmplus
 		, buffers(NULL)
 		, buffer_offset(0)
 		, spare_buffer(NULL)
-#ifdef AVMPLUS_DIRECT_THREADED
+#ifdef VMCFG_DIRECT_THREADED
 		, opcode_labels(interpGetOpcodeLabels())
 #endif
 		, pool(NULL)
@@ -99,12 +99,12 @@ namespace avmplus
 		boot();
 	}
 	
-#endif // AVMPLUS_SELFTEST
+#endif // VMCFG_SELFTEST
 	
 	void WordcodeEmitter::boot() {
 		computeExceptionFixups();
 		refill();
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		peepInit();
 #endif
 	}
@@ -300,7 +300,7 @@ namespace avmplus
 
 	void WordcodeEmitter::fixExceptionsAndLabels(const uint8_t *pc) 
 	{
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		// Do not optimize across control flow targets, so flush the peephole window here
 		if (((exception_fixes != NULL) && (exception_fixes->pc == pc)) || ((backpatches != NULL) && (backpatches->target_pc == pc)))
 			peepFlush();
@@ -336,7 +336,7 @@ namespace avmplus
 		(void)pc;
 		CHECK(1);
 		*dest++ = NEW_OPCODE(opcode);
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		peep(opcode, dest-1);
 #endif
 	}
@@ -637,6 +637,8 @@ namespace avmplus
 		case OP_convert_s:
 		case OP_esc_xelem: 
 		case OP_esc_xattr:
+		case OP_lix8:
+		case OP_lix16:
   		    emitOp0(pc, wordCode(opcode));
 			break;
 		case OP_throw:
@@ -686,7 +688,7 @@ namespace avmplus
 		case OP_getlocal1:
 		case OP_getlocal2:
 		case OP_getlocal3:
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 			emitOp1(WOP_getlocal, opcode-OP_getlocal0);
 #else
 			emitOp0(pc, wordCode(opcode));
@@ -696,7 +698,7 @@ namespace avmplus
 		case OP_setlocal1:
 		case OP_setlocal2:
 		case OP_setlocal3:
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 			emitOp1(WOP_setlocal, opcode-OP_setlocal0);
 #else
 			emitOp0(pc, wordCode(opcode));
@@ -772,8 +774,8 @@ namespace avmplus
 		CHECK(2);
 		pc++;
 		*dest++ = NEW_OPCODE(opcode);
-		*dest++ = (intptr_t)(int32_t)AvmCore::readU30(pc);
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+		*dest++ = (intptr_t)(int32_t)AvmCore::readU32(pc);
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		peep(opcode, dest-2);
 #endif
 	}
@@ -787,7 +789,7 @@ namespace avmplus
 		CHECK(2);
 		*dest++ = NEW_OPCODE(opcode);
 		*dest++ = (intptr_t)(int32_t)operand;
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		peep(opcode, dest-2);
 #endif
 	}
@@ -801,9 +803,9 @@ namespace avmplus
 		CHECK(3);
 		pc++;
 		*dest++ = NEW_OPCODE(opcode);
-		*dest++ = (intptr_t)(int32_t)AvmCore::readU30(pc);
-		*dest++ = (intptr_t)(int32_t)AvmCore::readU30(pc);
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+		*dest++ = (intptr_t)(int32_t)AvmCore::readU32(pc);
+		*dest++ = (intptr_t)(int32_t)AvmCore::readU32(pc);
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		peep(opcode, dest-3);
 #endif
 	}
@@ -817,7 +819,7 @@ namespace avmplus
 		*dest++ = NEW_OPCODE(opcode);
 		*dest++ = (intptr_t)(int32_t)op1;
 		*dest++ = (intptr_t)(int32_t)op2;
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		peep(opcode, dest-3);
 #endif
 	}
@@ -839,7 +841,7 @@ namespace avmplus
 		*dest++ = NEW_OPCODE(opcode);
 		uintptr_t base_offset = uintptr_t(buffer_offset + (dest - buffers->data) + 1);
 		emitRelativeOffset(base_offset, pc, offset);
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		peep(opcode, dest-2);
 		AvmAssert(state == 0);		// Never allow a jump instruction to be in the middle of a match
 #endif
@@ -847,7 +849,7 @@ namespace avmplus
 	
 	void WordcodeEmitter::emitLabel(const uint8_t *pc) 
 	{
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		// Do not optimize across control control flow targets, so flush the peephole window here.
 		peepFlush();
 #endif
@@ -864,9 +866,9 @@ namespace avmplus
 		CHECK(5);
 		pc++;
 		uint8_t debug_type = *pc++;
-		uint32_t index = AvmCore::readU30(pc);
+		uint32_t index = AvmCore::readU32(pc);
 		uint8_t reg = *pc++;
-		uint32_t extra = AvmCore::readU30(pc);
+		uint32_t extra = AvmCore::readU32(pc);
 		// 4 separate operands to match the value in the operand count table,
 		// though obviously we could pack debug_type and reg into one word and
 		// we could also omit extra.
@@ -884,7 +886,7 @@ namespace avmplus
 		pc++;
 		*dest++ = NEW_OPCODE(WOP_pushbits);
 		*dest++ = (intptr_t)(((int8_t)*pc++) << 3) | kIntptrType;
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		peep(WOP_pushbits, dest-2);
 #endif
 	}
@@ -894,8 +896,8 @@ namespace avmplus
 		CHECK(2);
 		pc++;
 		*dest++ = NEW_OPCODE(WOP_pushbits);
-		*dest++ = (intptr_t)((int16_t)AvmCore::readU30(pc) << 3) | kIntptrType;
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+		*dest++ = (intptr_t)((int16_t)AvmCore::readU32(pc) << 3) | kIntptrType;
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		peep(WOP_pushbits, dest-2);
 #endif
 	}
@@ -906,7 +908,7 @@ namespace avmplus
 		pc++;
 		*dest++ = NEW_OPCODE(OP_getscopeobject);
 		*dest++ = *pc++;
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		peep(OP_getscopeobject, dest-2);
 #endif
 	}
@@ -915,12 +917,12 @@ namespace avmplus
 	{
 		// FIXME: wrong for 64-bit, we want 32 bits of payload
 		pc++;
-		int32_t value = pool->cpool_int[AvmCore::readU30(pc)];
+		int32_t value = pool->cpool_int[AvmCore::readU32(pc)];
 		if (atomIsValidIntptrValue(value)) {
 			CHECK(2);
 			*dest++ = NEW_OPCODE(WOP_pushbits);
 			*dest++ = (intptr_t(value) << 3) | kIntptrType;
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 			peep(WOP_pushbits, dest-2);
 #endif
 		}
@@ -934,7 +936,7 @@ namespace avmplus
 			*dest++ = NEW_OPCODE(WOP_push_doublebits);
 			*dest++ = v.bits[0];
 			*dest++ = v.bits[1];
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 			peep(WOP_push_doublebits, dest-3);
 #endif
 		}
@@ -944,12 +946,12 @@ namespace avmplus
 	{
 		// FIXME: wrong for 64-bit, we want 32 bits of payload
 		pc++;
-		uint32_t value = pool->cpool_uint[AvmCore::readU30(pc)];
+		uint32_t value = pool->cpool_uint[AvmCore::readU32(pc)];
 		if (atomIsValidIntptrValue_u(value)) {
 			CHECK(2);
 			*dest++ = NEW_OPCODE(WOP_pushbits);
 			*dest++ = (intptr_t(value) << 3) | kIntptrType;
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 			peep(WOP_pushbits, dest-2);
 #endif
 		}
@@ -963,7 +965,7 @@ namespace avmplus
 			*dest++ = NEW_OPCODE(WOP_push_doublebits);
 			*dest++ = v.bits[0];
 			*dest++ = v.bits[1];
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 			peep(WOP_push_doublebits, dest-3);
 #endif
 		}
@@ -971,7 +973,7 @@ namespace avmplus
 	
 	void WordcodeEmitter::emitLookupswitch(const uint8_t *pc)
 	{
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		// Avoid a lot of hair by flushing before LOOKUPSWITCH and not peepholing after.
 		peepFlush();
 #endif
@@ -980,7 +982,7 @@ namespace avmplus
 		uint32_t base_offset = uint32_t(buffer_offset + (dest - buffers->data));
 		intptr_t default_offset = AvmCore::readS24(pc);
 		pc += 3;
-		uint32_t case_count = AvmCore::readU30(pc);
+		uint32_t case_count = AvmCore::readU32(pc);
 		CHECK(3);
 		*dest++ = NEW_OPCODE(OP_lookupswitch);
 		emitRelativeOffset(base_offset, base_pc, default_offset);
@@ -992,7 +994,7 @@ namespace avmplus
 			CHECK(1);
 			emitRelativeOffset(base_offset, base_pc, offset);
 		}
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		// need a forward declaration for toplevel.
 //		AvmAssert(toplevel[OP_lookupswitch] == 0);
 #endif
@@ -1032,7 +1034,7 @@ namespace avmplus
 		if (info != NULL)
 			info->set_lookup_cache_size(cache_builder.next_cache);
 
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 		peepFlush();
 #endif
 
@@ -1076,7 +1078,7 @@ namespace avmplus
 		return total_size;
 	}
 
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 	
 	// Peephole optimization.
 	//
@@ -1503,7 +1505,7 @@ namespace avmplus
 		peep(0, NULL);		// commits, but may start another match
 		state = 0;			// ignore any partial match
 	}
-#endif  // AVMPLUS_PEEPHOLE_OPTIMIZER
+#endif  // VMCFG_WORDCODE_PEEPHOLE
 
 }
-#endif // AVMPLUS_WORD_CODE
+#endif // VMCFG_WORDCODE

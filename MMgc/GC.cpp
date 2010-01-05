@@ -756,11 +756,6 @@ namespace MMgc
 	}
 #endif
 
-	REALLY_INLINE void GCPolicyManager::signalFreeWork(size_t nbytes)
-	{
-		remainingMinorAllocationBudget += int32_t(nbytes);
-	}
-	
 	void GCPolicyManager::signalBlockAllocation(size_t blocks) {
 		blocksOwned += blocks;
 		if (blocksOwned > maxBlocksOwned)
@@ -853,7 +848,6 @@ namespace MMgc
 		39, 39, 39, 39, 39, 39, 39, 39, 39, 39,
 		39, 39, 39, 39, 39, 39	
 	};
-	const size_t kLargestAlloc = 1968;
 
 #ifdef _MSC_VER
 #  pragma warning(push)
@@ -884,17 +878,18 @@ namespace MMgc
 
 		m_gcThread(NULL),
 		destroying(false),
+		marking(false),
+		collecting(false),
 		stackCleaned(true),
 		rememberedStackTop(0),
 		stackEnter(0),
 		emptyWeakRefRoot(0),
-		marking(false),
 		m_markStackOverflow(false),
 		mark_item_recursion_control(20),	// About 3KB as measured with GCC 4.1 on MacOS X (144 bytes / frame), May 2009
+ 		sizeClassIndex(kSizeClassIndex),	// see comment in GC.h
 		memStart(MAX_UINTPTR),
 		memEnd(0),
 		heap(gcheap),
-		collecting(false),
 		finalizedValue(true),
 		smallEmptyPageList(NULL),
 		largeEmptyPageList(NULL),
@@ -940,6 +935,12 @@ namespace MMgc
 		}
 		
 		largeAlloc = mmfx_new(GCLargeAlloc(this));
+
+		// See comment in GC.h
+		allocsTable[kRCObject] = containsPointersRCAllocs;
+		allocsTable[kContainsPointers] = containsPointersAllocs;
+		allocsTable[kRCObject|kContainsPointers] = containsPointersRCAllocs;
+		allocsTable[0] = noPointersAllocs;
 
 		pageMap = (unsigned char*) heapAlloc(1);
 
@@ -1195,148 +1196,178 @@ namespace MMgc
 	// Note, the interaction with the policy manager in Alloc() should
 	// be the same as in AllocDouble(), which is defined in GC.h.
 
+	// In Alloc we have separate cases for large and small objects.  We want
+	// small-object allocation to be as fast as possible.  Hence the relative
+	// mess of #ifdefs below, and the following explanation.
+	//
+	// Normally we round up size to 8 bytes and add DebugSize and that sum is
+	// the size that determines whether we use the small-object allocator or
+	// the large-object one:
+	//
+	//   requestSize = ((size + 7) & ~7) + DebugSize()
+	//
+	// Then we shift that three places and subtract 1 to obtain the allocator
+	// index:
+	//
+	//   index = (requestSize >> 3) - 1
+	//         = ((((size + 7) & ~7) + DebugSize()) >> 3) - 1
+	//
+	// We want to optimize this.  Consider the case of a Release build where
+	// DebugSize() == 0:
+	//
+	//         = (((size + 7) & ~7) >> 3) - 1
+	//
+	// Observe that the & ~7 is redundant because those bits will be lost,
+	// and that 1 = (8 >> 3)
+	//
+	//         = ((size + 7) >> 3) - (8 >> 3)
+	//         = (size + 7 - 8) >> 3
+	//   index = (size - 1) >> 3
+	//
+	// In Release builds, the guard for small object allocation is
+	//
+	//   guard = requestSize <= kLargestAlloc
+	//         = ((size + 7) & ~7) <= kLargestAlloc
+	//
+	// Yet the /effective/ guard, given that not all the bits of size are used
+	// subsequently, is simply
+	//
+	//   guard = size <= kLargestAlloc
+	//
+	// To see this, consider that if size < kLargestAlloc then requestSize <= kLargestAlloc
+	// and if size > kLargestAlloc then requestSize > kLargestAlloc, because requestSize
+	// is rounded up to an 8-byte boundary and kLargestAlloc is already rounded to an 8-byte
+	// boundary.
+	//
+	// So in the small-object case in Release builds we use the simpler guard, and defer
+	// the rounding and allocation overflow checking to the large-object case.
+
+#ifdef MMGC_MEMORY_INFO
+	#ifndef _DEBUG
+		#error "Really need MMGC_MEMORY_INFO to imply _DEBUG"
+	#endif
+#endif
+#ifdef MMGC_MEMORY_PROFILER
+	#ifndef MMGC_HOOKS
+		#error "Really need MMGC_MEMORY_PROFILER to imply MMGC_HOOKS"
+	#endif
+#endif
+	
 	void *GC::Alloc(size_t size, int flags/*0*/)
 	{
-		GCAssertMsg(onThread(), "GC called from different thread!");
-
-		if (policy.queryCollectionWork())
-			CollectionWork();
-
-#ifdef AVMPLUS_SAMPLER
-		avmplus::AvmCore *core = (avmplus::AvmCore*)GetGCContextVariable(GCV_AVMCORE);
-		if(core)
-			core->sampleCheck();
-#endif
-		GCAssertMsg(size > 0, "cannot allocate a 0 sized block\n");
-
-		GCHeap::CheckForAllocSizeOverflow(size, 7+DebugSize());
-
 #ifdef _DEBUG
+		GCAssertMsg(size > 0, "cannot allocate a 0 sized block\n");
+		GCAssertMsg(onThread(), "GC called from different thread!");
+		
 		if(!nogc && stackEnter == NULL) {
 			GCAssertMsg(false, "A MMGC_GCENTER macro must exist on the stack");
 			GCHeap::SignalInconsistentHeapState("MMGC_GCENTER missing");
 			/*NOTREACHED*/
 			return NULL;
 		}
-
+		
 		// always be marking in pedantic mode
 		if(incrementalValidationPedantic) {
 			if(!marking)
 				StartIncrementalMark();
 		}
 #endif
+#ifdef AVMPLUS_SAMPLER
+		avmplus::AvmCore *core = (avmplus::AvmCore*)GetGCContextVariable(GCV_AVMCORE);
+		if(core)
+			core->sampleCheck();
+#endif
 
-		size_t askSize = size;
+#if defined _DEBUG || defined MMGC_MEMORY_PROFILER
+		const size_t askSize = size;	// preserve this for statistics gathering and profiling
+#endif
+#if defined _DEBUG
+		GCHeap::CheckForAllocSizeOverflow(size, 7+DebugSize());
+		size = (size+7)&~7;				// round up to multiple of 8
+		size += DebugSize();			// add in some (possibly zero) multiple of 8 bytes for debug information
+#endif
 
-		size = (size+7)&~7; // round up to multiple of 8
+		void *item;						// the allocated object (a user pointer!), or NULL
+		
+		// In Release builds the calls to the underlying Allocs should end up being compiled
+		// as tail calls with reasonable compilers.  Try to keep it that way.
 
-		size += DebugSize();
+		if (size <= kLargestAlloc)
+		{
+			// This is the fast lookup table implementation to find the right allocator.
+			// The table has been lifted into an instance variable because the Player is
+			// compiled with PIC and GCC generates somewhat gnarly code for that.
+#ifdef _DEBUG
+			const unsigned index = sizeClassIndex[(size>>3)-1];
+#else
+			const unsigned index = sizeClassIndex[(size-1)>>3];
+#endif
 
-		GCAlloc **allocs = noPointersAllocs;
-
-		if(flags & kRCObject) {
-			allocs = containsPointersRCAllocs;
-		} else if(flags & kContainsPointers) {
-			allocs = containsPointersAllocs;
-		}
-
-		void *item;
-		if (size <= kLargestAlloc) {				
-			// This is the fast lookup table implementation to
-			// find the right allocator.
-			unsigned index = kSizeClassIndex[(size>>3)-1];
+			// The table avoids a thre-way decision tree.
+			GCAlloc **allocs = allocsTable[flags & (kRCObject|kContainsPointers)];
 
 			// assert that I fit 
 			GCAssert(size <= allocs[index]->GetItemSize());
-
+			
 			// assert that I don't fit (makes sure we don't waste space)
 			GCAssert( (index==0) || (size > allocs[index-1]->GetItemSize()));
-
+			
+#if defined _DEBUG || defined MMGC_MEMORY_PROFILER
 			item = allocs[index]->Alloc(askSize, flags);
-		} else {
-			item = largeAlloc->Alloc(askSize, size, flags);
-		}
-
-		if(item != NULL) {
-			size_t real_size = Size(item);
-			policy.signalAllocWork(real_size);
-			item = GetUserPointer(item);
-#ifdef MMGC_HOOKS
-			if(heap->HooksEnabled()) {
-				heap->AllocHook(item, askSize, real_size);
-			}
+#else
+			item = allocs[index]->Alloc(flags);
 #endif
 		}
+		else
+		{
+#ifndef _DEBUG
+			GCHeap::CheckForAllocSizeOverflow(size, 7+DebugSize());
+			size = (size+7)&~7; // round up to multiple of 8
+			size += DebugSize();
+#endif
+#if defined _DEBUG || defined MMGC_MEMORY_PROFILER
+			item = largeAlloc->Alloc(askSize, size, flags);
+#else
+			item = largeAlloc->Alloc(size, flags);
+#endif
+		}
+
+		// Hooks are run by the lower-level allocators, which also signal
+		// allocation work and trigger GC.
 
 		GCAssert(item != NULL || (flags & kCanFail) != 0);
 
 #ifdef _DEBUG
-		bool shouldZero = (flags & kZero) || incrementalValidationPedantic;
-        
-		// in debug mode memory is poisoned so we have to clear it here
-		// in release builds memory is zero'd to start and on free/sweep
-		// in pedantic mode uninitialized data can trip the write barrier 
-		// detector, only do it for pedantic because otherwise we want the
-		// mutator to get the poisoned data so it crashes if it relies on 
-		// uninitialized values
-		if((item) && (shouldZero)) {
-			VMPI_memset(item, 0, Size(item));
+		// Note GetUserPointer(item) only required for DEBUG builds and for non-NULL pointers.
+		
+		if(item != NULL) {
+			item = GetUserPointer(item);
+			bool shouldZero = (flags & kZero) || incrementalValidationPedantic;
+			
+			// in debug mode memory is poisoned so we have to clear it here
+			// in release builds memory is zero'd to start and on free/sweep
+			// in pedantic mode uninitialized data can trip the write barrier 
+			// detector, only do it for pedantic because otherwise we want the
+			// mutator to get the poisoned data so it crashes if it relies on 
+			// uninitialized values
+			if(shouldZero) {
+				VMPI_memset(item, 0, Size(item));
+			}
 		}
 #endif
 
 		return item;
 	}
 
-	void GC::Free(const void *item)
+	// Mmmm.... gcc -O3 inlines Alloc into this in Release builds :-)
+
+	void *GC::OutOfLineAllocExtra(size_t size, size_t extra, int flags)
 	{
-		GCAssertMsg(onThread(), "GC called from a different thread or not associated with a thread, missing MMGC_GCENTER macro perhaps.");
+		return AllocExtra(size, extra, flags);
+	}
 
-		if(item == NULL) {
-			return;
-		}
-
-		// we can't allow free'ing something during Sweeping, otherwise alloc counters
-		// get decremented twice and destructors will be called twice.
-		if(collecting) {
-			goto bail;
-		}
-
-		if (marking) {
-			// if its on the work queue don't delete it, if this item is
-			// really garbage we're just leaving it for the next sweep
-			if(IsQueued(item)) 
-				goto bail;
-		}
-
-#ifdef _DEBUG
-		// RCObject have contract that they must clean themselves, since they 
-		// have to scan themselves to decrement other RCObjects they might as well
-		// clean themselves too, better than suffering a memset later
-		if(IsRCObject(item))
-		{
-			 RCObjectZeroCheck((RCObject*)item);
-		}
-#endif
-		{
-			size_t real_size = Size(item);
-			policy.signalFreeWork(real_size);
-			
-#ifdef MMGC_HOOKS
-			if(heap->HooksEnabled()) {
-				heap->FreeHook(item, real_size, 0xca);
-			}
-#endif
-
-			if (GCLargeAlloc::IsLargeBlock(GetRealPointer(item))) {
-				largeAlloc->Free(GetRealPointer(item));
-			} else {
-				GCAlloc::Free(GetRealPointer(item));
-			}
-			return;
-		}
-
-bail:
-
+	void GC::AbortFree(const void* item)
+	{
 		// this presumes we got here via delete, maybe we should have
 		// delete call something other than the public Free to distinguish
 		if(IsFinalized(item))
@@ -1399,7 +1430,10 @@ bail:
 		
 		ClearMarks();
 
+		// System invariant: collecting == false || marking == true
+		marking = true;
 		Sweep();
+		marking = false;
 	}
 
 	void GC::Sweep()
@@ -1471,10 +1505,11 @@ bail:
 		GCAlloc::GCBlock *b = smallEmptyPageList;
 		while(b) {
 			GCAlloc::GCBlock *next = GCAlloc::Next(b);
+			GCAlloc* alloc = (GCAlloc*)b->alloc;
 #ifdef _DEBUG
-			b->alloc->SweepGuts(b);
+			alloc->SweepGuts(b);
 #endif
-			b->alloc->FreeChunk(b);
+			alloc->FreeChunk(b);
 
 			sweepResults++;
 			b = next;
@@ -2211,13 +2246,14 @@ bail:
 				} else if(bits == kGCAllocPage) {
 					// go through all marked objects
 					GCAlloc::GCBlock *b = (GCAlloc::GCBlock *) m;
-                    for (int i=0; i < b->alloc->m_itemsPerBlock; i++) {
+					GCAlloc* alloc = (GCAlloc*)b->alloc;
+                    for (int i=0; i < alloc->m_itemsPerBlock; i++) {
                         // If the mark is 0, delete it.
                         int marked = GCAlloc::GetBit(b, i, GCAlloc::kMark);
                         if (!marked) {
-                            void* item = (char*)b->items + b->alloc->m_itemSize*i;
+                            void* item = (char*)b->items + alloc->m_itemSize*i;
                             if(GCAlloc::ContainsPointers(item)) {
-								UnmarkedScan(GetUserPointer(item), b->alloc->m_itemSize - DebugSize());
+								UnmarkedScan(GetUserPointer(item), alloc->m_itemSize - DebugSize());
 							}
 						}
 					}
@@ -2349,15 +2385,16 @@ bail:
 			{
 				// go through all marked objects
 				GCAlloc::GCBlock *b = (GCAlloc::GCBlock *) m;
-                for (int i=0; i < b->alloc->m_itemsPerBlock; i++) 
+				GCAlloc* alloc = (GCAlloc*)b->alloc;
+                for (int i=0; i < alloc->m_itemsPerBlock; i++) 
 				{
                     int marked = GCAlloc::GetBit(b, i, GCAlloc::kMark);
                     if (marked) 
 					{
-                        void* item = (char*)b->items + b->alloc->m_itemSize*i;
+                        void* item = (char*)b->items + alloc->m_itemSize*i;
                         if(GCAlloc::ContainsPointers(item)) 
 						{
-							ProbeForMatch(GetUserPointer(item), b->alloc->m_itemSize - DebugSize(), val, recurseDepth, currentDepth);
+							ProbeForMatch(GetUserPointer(item), alloc->m_itemSize - DebugSize(), val, recurseDepth, currentDepth);
 						}
 					}
 				}				
@@ -2777,7 +2814,7 @@ bail:
 				if((bits2 & ((GCAlloc::kMark|GCAlloc::kQueued)<<shift)) == 0)
 				{
 					uint32_t itemSize = block->size - (uint32_t)DebugSize();
-					if(block->alloc->ContainsPointers())
+					if(((GCAlloc*)block->alloc)->ContainsPointers())
 					{
 						const void *realItem = GetUserPointer(item);
 						GCWorkItem newItem(realItem, itemSize, true);
@@ -3351,14 +3388,15 @@ bail:
 				{
 					// go through all marked objects in this page
 					GCAlloc::GCBlock *b = (GCAlloc::GCBlock *) m;
-                    for (int i=0; i< b->alloc->m_itemsPerBlock; i++) {
+					GCAlloc* alloc = (GCAlloc*)b->alloc;
+                    for (int i=0; i< alloc->m_itemsPerBlock; i++) {
                         // find all marked objects and search them
                         if(!GCAlloc::GetBit(b, i, GCAlloc::kMark))
                             continue;
 
-						if(b->alloc->ContainsPointers()) {
-	                        void* item = (char*)b->items + b->alloc->m_itemSize*i;
-							WhitePointerScan(GetUserPointer(item), b->alloc->m_itemSize - DebugSize());
+						if(alloc->ContainsPointers()) {
+	                        void* item = (char*)b->items + alloc->m_itemSize*i;
+							WhitePointerScan(GetUserPointer(item), alloc->m_itemSize - DebugSize());
 						}
 					}
 					m += GCHeap::kBlockSize;
@@ -3545,7 +3583,7 @@ bail:
 	{
 		bool edge = false;
 		bool releaseThread = false;
- 		if(enter == NULL && stackEnter != NULL) {
+ 		if(enter == NULL) {
 			// don't clear this yet: we want to retain the value
 			// until after Collect() is called, in case a presweep()
 			// hook needs to make an allocation.

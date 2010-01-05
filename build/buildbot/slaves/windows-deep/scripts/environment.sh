@@ -48,14 +48,21 @@ export shell_extension=.exe
 . ../all/environment.sh
 
 export platform=windows
-export basedir=c:/buildbot/$branch/${platform}-deep/$branch
-export buildsdir=c:/buildbot/$branch/${platform}-deep/builds
+workdir=`pwd`
+export basedir=`cygpath -m ${workdir}/../../../..`
+export buildsdir=`cygpath -m ${basedir}/../builds`
 
 export shell_release_cov=avmshell_cov.exe
 export shell_release_debugger_cov=avmshell_s_cov.exe
 export shell_debug_cov=avmshell_d_cov.exe
 export shell_debug_debugger_cov=avmshell_sd_cov.exe
 export shell_selftest_cov=avmshell_test_cov.exe
+
+export build_shell_release_cov=avmshell_cov
+export build_shell_release_debugger_cov=avmshell_s_cov
+export build_shell_debug_cov=avmshell_d_cov
+export build_shell_debug_debugger_cov=avmshell_sd_cov
+export build_shell_selftest_cov=avmshell_test_cov
 
 bullseyedir="/c/Progra~1/BullseyeCoverage/bin"
 

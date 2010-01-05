@@ -41,7 +41,7 @@
 namespace avmplus
 {
 
-#ifdef AVMPLUS_WORD_CODE
+#ifdef VMCFG_WORDCODE
 
 #if defined _DEBUG || defined DEBUGGER || defined AVMPLUS_VERBOSE
 #  define N(x)  , x
@@ -400,10 +400,12 @@ namespace avmplus
 		{    3,    0,    0,   1,    0,   1,   0,   0,    0,    0         N("findpropglobalstrict") },
 		{    1,    0,    0,   0,    0,   0,   0,   0,    0,    0         N("debugenter") },
 		{    1,    0,    0,   0,    0,   0,   0,   0,    0,    0         N("debugexit") },
+		{    1,    0,    0,   1,    0,   1,   1,   0,    0,    0         N("lix8") }, 
+		{    1,    0,    0,   1,    0,   1,   1,   0,    0,    0         N("lix16") }, 
 		// DO NOT ALTER OR MOVE THE NEXT LINE.
 		// END
 	};
 
-#endif // AVMPLUS_WORD_CODE
+#endif // VMCFG_WORDCODE
 
 }

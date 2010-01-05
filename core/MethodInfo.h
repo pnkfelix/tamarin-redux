@@ -45,6 +45,20 @@
 
 namespace avmplus
 {
+     class ScopeOrTraits
+     {
+     private:
+ 		static const uintptr_t IS_SCOPE = 0x01;
+     private:
+ 		uintptr_t _scopeOrTraits;	// if LSB clr, Traits*   if LSB set, ScopeTypeChain*
+     public:
+         explicit ScopeOrTraits(Traits* t);
+         Traits* getTraits() const;
+         const ScopeTypeChain* getScope() const;
+         void setTraits(MMgc::GC* gc, void* container, Traits* t);
+         void setScope(MMgc::GC* gc, void* container, const ScopeTypeChain* s);
+     };
+
 	// signature for method invocation when caller coerces args and boxes results
 	typedef uintptr_t (*GprMethodProc)(MethodEnv*, int32_t, uint32_t *);
 	typedef double (*FprMethodProc)(MethodEnv*, int32_t, uint32_t *);
@@ -80,6 +94,7 @@ namespace avmplus
 	class MethodInfoProcHolder : public MMgc::GCObject
 	{
 		friend class ImtThunkEnv;
+		friend class InvokerCompiler;
 	protected:
 		union 
 		{
@@ -157,7 +172,7 @@ namespace avmplus
 
 		static const int32_t VERIFIED				= 0x00010000;
 
-#ifdef AVMPLUS_VERIFYALL
+#ifdef VMCFG_VERIFYALL
 		static const int32_t VERIFY_PENDING			= 0x00020000;
 #endif
 
@@ -308,7 +323,7 @@ namespace avmplus
 		void makeNonInterruptible();
 		void setKind(TraitKind kind);
 
-#ifdef AVMPLUS_VERIFYALL
+#ifdef VMCFG_VERIFYALL
 		int32_t isVerified() const;
 		int32_t isVerifyPending() const;
 		void setVerified();
@@ -351,7 +366,7 @@ namespace avmplus
 		ExceptionHandlerTable* abc_exceptions() const;
 		void set_abc_exceptions(MMgc::GC* gc, ExceptionHandlerTable* e);
 
-	#ifdef AVMPLUS_WORD_CODE
+	#ifdef VMCFG_WORDCODE
 		ExceptionHandlerTable* word_code_exceptions() const;
 		void set_word_code_exceptions(MMgc::GC* gc, ExceptionHandlerTable* e);
 		const uintptr_t* word_code_start() const;
@@ -370,12 +385,7 @@ namespace avmplus
 		Traits* activationTraits() const;
 		const ScopeTypeChain* activationScope() const;
 
-        bool hasNoScopeAndNotClassInitializer() const;
-    
-		// note, these are called "init" (rather than "set") because they 
-		// should be called exactly once per MethodInfo.
 		void init_activationTraits(Traits* t);
-		void init_declaringScope(const ScopeTypeChain* s);
 		
 		MethodSignaturep getMethodSignature();
 		void update_max_stack(int32_t max_stack);
@@ -383,8 +393,6 @@ namespace avmplus
 	private:
 		MethodSignature* FASTCALL _getMethodSignature();
 		MethodSignature* FASTCALL _buildMethodSignature(const Toplevel* toplevel);
-
-		void init_activationScope(const ScopeTypeChain* s);
 
 	private:
 		struct NativeInfo
@@ -402,7 +410,7 @@ namespace avmplus
 	#ifdef VMCFG_LOOKUP_CACHE
 			int						lookup_cache_size;     // Number of items in lookup cache
 	#endif
-	#ifdef AVMPLUS_WORD_CODE
+	#ifdef VMCFG_WORDCODE
 			struct 
 			{
 				TranslatedCode*			translated_code;	// The object that contains the code pointed to by body_pos, written with explicit WB
@@ -413,14 +421,11 @@ namespace avmplus
 	#endif
 		};
 
-	private:
-		static const uintptr_t IS_TRAITS = 0x01;
-	
 	// ------------------------ DATA SECTION BEGIN
 	private:
 		DWB(MMgc::GCWeakRef*)	_msref;						// our MethodSignature 
-		uintptr_t				_declaringScopeOrTraits;	// if LSB set, Traits*   if LSB clr, ScopeTypeChain*
-		uintptr_t				_activationScopeOrTraits;	// if LSB set, Traits*   if LSB clr, ScopeTypeChain*
+		ScopeOrTraits			_declarer;	
+		ScopeOrTraits			_activation;	
 		PoolObject* const		_pool;
 		const uint8_t* const	_abc_info_pos;		// pointer to abc MethodInfo record 
 		int						_flags;				// see bitmask defs above 
@@ -457,7 +462,7 @@ namespace avmplus
 		int32_t max_scope() const;
 		int32_t frame_size() const;
 
-	#ifdef AVMPLUS_WORD_CODE
+	#ifdef VMCFG_WORDCODE
 	#else
 		const uint8_t* abc_code_start() const;
 	#endif
@@ -474,7 +479,7 @@ namespace avmplus
 	// ------------------------ DATA SECTION BEGIN
 	private:
 		Traits*		_returnTraits;		// written with explicit WB
-	#ifdef AVMPLUS_WORD_CODE
+	#ifdef VMCFG_WORDCODE
 	#else
 		const uint8_t*	_abc_code_start; // start of ABC body
 	#endif

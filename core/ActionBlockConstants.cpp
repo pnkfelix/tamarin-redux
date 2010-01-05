@@ -127,7 +127,7 @@ namespace avmplus
 #else
 #  define N(x)
 #endif
-#if defined AVMPLUS_WORD_CODE
+#if defined VMCFG_WORDCODE
 #  define W(x)  , x
 #else
 #  define W(x)
@@ -191,8 +191,8 @@ namespace avmplus
 		{    0,  0,  -1    W(WOP_pushscope)       N("pushscope") },
 		{    1,  0,   1    W(WOP_pushnamespace)   N("pushnamespace") },
 		{    2,  1,   1    W(WOP_hasnext2)        N("hasnext2") },
-		{   -1,  0,   0    W(0)                   N("OP_0x33") },
-		{   -1,  0,   0    W(0)                   N("OP_0x34") },
+		{   0,   1,   0    W(WOP_lix8)            N("lix8") }, // NEW internal only
+		{   0,   1,   0    W(WOP_lix16)           N("lix16") }, // NEW internal only
 		{   0,   1,   0    W(WOP_li8)             N("li8") },
 		{   0,   1,   0    W(WOP_li16)            N("li16") },
 		{   0,   1,   0    W(WOP_li32)            N("li32") },
@@ -231,8 +231,8 @@ namespace avmplus
 		{    1,  1,   0    W(WOP_newclass)        N("newclass") },
 		{    1,  1,   0    W(WOP_getdescendants)  N("getdescendants") },
 		{    1,  1,   1    W(WOP_newcatch)        N("newcatch") },
-		{    1,  1,   0    W(WOP_findpropglobalstrict) N("findpropglobalstrict") },
-		{    1,  1,   0    W(WOP_findpropglobal)  N("findpropglobal") },
+		{    1,  1,   0    W(WOP_findpropglobalstrict) N("findpropglobalstrict") }, // NEW internal only
+		{    1,  1,   0    W(WOP_findpropglobal)  N("findpropglobal") }, // NEW internal only
 		{    1,  1,   1    W(WOP_findpropstrict)  N("findpropstrict") },
 		{    1,  1,   1    W(WOP_findproperty)    N("findproperty") },
 		{    1,  1,   1    W(WOP_finddef)         N("finddef") },
@@ -379,7 +379,7 @@ namespace avmplus
 		{   -1,  0,   0    W(0)                   N("OP_0xEC") },
 		{   -1,  0,   0    W(0)                   N("OP_0xED") },
 		{    2,  0,   0    W(0)                   N("abs_jump") },
-#  if defined DEBUGGER || !defined AVMPLUS_WORD_CODE
+#  if defined DEBUGGER || !defined VMCFG_WORDCODE
 		{    4,  1,   0    W(WOP_debug)           N("debug") },
 		{    1,  1,   0    W(WOP_debugline)       N("debugline") },
 		{    1,  1,   0    W(WOP_debugfile)       N("debugfile") },

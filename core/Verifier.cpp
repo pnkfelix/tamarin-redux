@@ -40,7 +40,7 @@
 
 namespace avmplus
 {
-#ifdef AVMPLUS_VERIFYALL
+#ifdef VMCFG_VERIFYALL
 	class VerifyallWriter : public NullWriter {
 		MethodInfo *info;
 		AvmCore *core;
@@ -72,9 +72,9 @@ namespace avmplus
 			coder->writeOp1(state, pc, opcode, opd1, type);
 		}
 	};
-#endif // AVMPLUS_VERIFYALL
+#endif // VMCFG_VERIFYALL
 
-#ifdef AVMPLUS_WORD_CODE
+#ifdef VMCFG_WORDCODE
     inline WordOpcode wordCode(AbcOpcode opcode) {
         return (WordOpcode)opcodeInfo[opcode].wordCode;
     }
@@ -121,8 +121,8 @@ namespace avmplus
 
 		// note: reading of max_stack, etc (and validating the values)
 		// is now handled by MethodInfo::resolveSignature.
-		AvmCore::skipU30(pos, 4);
-        code_length = AvmCore::readU30(pos);
+		AvmCore::skipU32(pos, 4);
+        code_length = AvmCore::readU32(pos);
 
         code_pos = pos;
 
@@ -196,7 +196,7 @@ namespace avmplus
 			toplevel->throwVerifyError(kCorruptABCError);
 		}
 
-#ifdef AVMPLUS_VERIFYALL
+#ifdef VMCFG_VERIFYALL
 		// push the verifyall filter onto the front of the coder pipeline
 		VerifyallWriter verifyallWriter(info, coder);
 		if (core->config.verifyall)
@@ -250,7 +250,7 @@ namespace avmplus
         // initial scope chain types 
         int outer_depth = 0;
 
-        if (info->hasNoScopeAndNotClassInitializer())
+        if (info->declaringTraits()->init != info && info->declaringScope() == NULL)
         {
             // this can occur when an activation scope inside a class instance method
             // contains a nested getter, setter, or method.  In that case the scope 
@@ -785,8 +785,10 @@ namespace avmplus
 				ctraits->resolveSignatures(toplevel);
 				itraits->resolveSignatures(toplevel);
 
-				ctraits->init_declaringScopes(cscope);
-				itraits->init_declaringScopes(iscope);
+                // we must always set the scopes here, whether or not they have been set yet and
+                // whether or not the traits were resolved already.
+                ctraits->setDeclaringScopes(cscope);
+                itraits->setDeclaringScopes(iscope);
 
 				emitCoerce(CLASS_TYPE, state->sp()); 
 				coder->writeOp1(state, pc, opcode, imm30, ctraits);
@@ -1789,6 +1791,20 @@ namespace avmplus
 			// loads
 			case OP_li8:
 			case OP_li16:
+                if (pc+1 < code_end && 
+                    ((opcode == OP_li8 && pc[1] == OP_sxi8) || (opcode == OP_li16 && pc[1] == OP_sxi16)))
+                {
+                    checkStack(1,1);
+                    emitCoerce(INT_TYPE, sp);
+                    coder->write(state, pc, (opcode == OP_li8) ? OP_lix8 : OP_lix16);
+                    state->pop_push(1, INT_TYPE);
+                    // ++pc; // do not skip the sign-extend; if it's the target
+                    // of an implicit label, skipping it would cause verification failure.
+                    // instead, just emit it, and rely on LIR to ignore sxi instructions
+                    // in these situations.
+                    break;
+                }
+                // else fall thru
 			case OP_li32:
 			case OP_lf32:
 			case OP_lf64:
@@ -1824,7 +1840,7 @@ namespace avmplus
 
 				#ifdef AVMPLUS_64BIT
 				const byte* new_pc = (const byte *) (uintptr(imm30) | (((uintptr) imm30b) << 32));
-				const byte* new_code_end = new_pc + AvmCore::readU30 (nextpc);
+				const byte* new_code_end = new_pc + AvmCore::readU32 (nextpc);
 				#else
 				const byte* new_pc = (const byte*) imm30;
 				const byte* new_code_end = new_pc + imm30b;

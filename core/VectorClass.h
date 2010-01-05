@@ -312,7 +312,7 @@ namespace avmplus
 		// Helper method to init the vector with another object
 		void initWithObj(Atom obj) 
 		{
-			ScriptObject* so_args = (obj&7)==kObjectType ?  AvmCore::atomToScriptObject(obj) : 0;
+			ScriptObject* so_args = atomKind(obj)==kObjectType ?  AvmCore::atomToScriptObject(obj) : 0;
 			if( so_args )
 			{
 				uint32 len = ArrayClass::getLengthHelper(toplevel(), so_args);
@@ -330,19 +330,19 @@ namespace avmplus
 
 		enum { kGrowthIncr = 4096 };
 
-		void atomToValue(Atom atom, sint16& value)
+		void atomToValue(Atom atom, int16_t& value)
 		{
-			value = (sint16) AvmCore::integer(atom);						
+			value = (int16_t) AvmCore::integer(atom);						
 		}
-		void atomToValue(Atom atom, uint16& value)
+		void atomToValue(Atom atom, uint16_t& value)
 		{
-			value = (uint16) AvmCore::integer_u(atom);			
+			value = (uint16_t) AvmCore::integer_u(atom);			
 		}
-		void atomToValue(Atom atom, sint32& value)
+		void atomToValue(Atom atom, int32_t& value)
 		{
 			value = AvmCore::integer(atom);						
 		}
-		void atomToValue(Atom atom, sint64& value)
+		void atomToValue(Atom atom, int64_t& value)
 		{
 			value = AvmCore::integer(int(atom));						
 		}
@@ -363,15 +363,15 @@ namespace avmplus
 			value = AvmCore::atomToScriptObject(atom);
 		}
 
-		Atom valueToAtom(sint16 value) const
+		Atom valueToAtom(int16_t value) const
 		{
 			return core()->intToAtom(value);
 		}
-		Atom valueToAtom(uint16 value) const
+		Atom valueToAtom(uint16_t value) const
 		{
 			return core()->uintToAtom(value);
 		}
-		Atom valueToAtom(sint32 value) const
+		Atom valueToAtom(int32_t value) const
 		{
 			return core()->intToAtom(value);
 		}
@@ -379,7 +379,7 @@ namespace avmplus
 		{
 			return core()->uintToAtom(value);
 		}
-		Atom valueToAtom(sint64 value) const
+		Atom valueToAtom(int64_t value) const
 		{
 			return core()->intToAtom(int(value));
 		}
@@ -427,10 +427,10 @@ namespace avmplus
 		}
 	};
 
-	class IntVectorObject : public TypedVectorObject<sint32> {
+	class IntVectorObject : public TypedVectorObject<int32_t> {
 	public:
 		IntVectorObject(VTable *ivtable, ScriptObject *delegate)
-			: TypedVectorObject<sint32>(ivtable, delegate)
+			: TypedVectorObject<int32_t>(ivtable, delegate)
 		{
 		}
 

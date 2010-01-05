@@ -56,20 +56,22 @@ namespace avmplus
 			// create a temp object vtable to use, since the real one isn't created yet
 			// later, in OP_newclass, we'll replace with the real Object vtable, so methods
 			// of Object and Class have the right scope.
-		object_ivtable = core->newVTable(core->traits.object_itraits, NULL, NULL);
+		object_ivtable = core->newVTable(core->traits.object_itraits, NULL, this);
 		Namespacep publicNS = core->getPublicNamespace(core->getDefaultAPI());
 		ScopeChain* object_iscope = ScopeChain::create(gc, object_ivtable, abcEnv, core->traits.object_istc, NULL, publicNS);
 		object_ivtable->resolveSignatures(object_iscope);
 
 		// global objects are subclasses of Object
-		bool wasResolved = mainTraits->isResolved();
 		VTable* mainVTable = core->newVTable(mainTraits, object_ivtable, this);
-		AvmAssert(mainTraits->isResolved());
-		if (!wasResolved)
-			mainTraits->init_declaringScopes(ScopeTypeChain::createEmpty(core->GetGC(), mainTraits));
-		ScriptEnv* main = new (gc) ScriptEnv(mainTraits->init, mainVTable, abcEnv);
+        const ScopeTypeChain* toplevel_STC = mainTraits->declaringScope();
+        if (!toplevel_STC)
+        {
+            toplevel_STC = ScopeTypeChain::createEmpty(core->GetGC(), mainTraits);
+	        mainTraits->setDeclaringScopes(toplevel_STC);
+        }
+        toplevel_scope = ScriptEnv::createScriptScope(toplevel_STC, mainVTable, abcEnv);
+		ScriptEnv* main = new (gc) ScriptEnv(mainTraits->init, toplevel_scope);
 		mainVTable->init = main;
-		toplevel_scope = ScopeChain::create(gc, mainVTable, abcEnv, mainTraits->init->declaringScope(), NULL, publicNS);
 		mainVTable->resolveSignatures(toplevel_scope);
 
 		_global = new (gc, mainVTable->getExtraSize()) ScriptObject(mainVTable, NULL);
@@ -116,7 +118,7 @@ namespace avmplus
 	{
 		if (!AvmCore::isNullOrUndefined(atom))
 		{
-			switch (atom&7)
+			switch (atomKind(atom))
 			{
 			default:
 			
@@ -153,7 +155,7 @@ namespace avmplus
 	{
 		if (!AvmCore::isNullOrUndefined(atom))
 		{
-			switch (atom&7)
+			switch (atomKind(atom))
 			{
 			case kObjectType:
 				return AvmCore::atomToScriptObject(atom)->traits();
@@ -189,7 +191,7 @@ namespace avmplus
 		if (!AvmCore::isNullOrUndefined(attributeName))
 		{
 			AvmCore* core = this->core();
-			switch (attributeName&7)
+			switch (atomKind(attributeName))
 			{
 			case kNamespaceType:
 				attributeName = AvmCore::atomToNamespace(attributeName)->getURI()->atom();
@@ -247,7 +249,7 @@ namespace avmplus
 
 		if (!AvmCore::isNullOrUndefined(p))
 		{
-			switch (p & 7)
+			switch (atomKind(p))
 			{
 			case kNamespaceType:
 				s = AvmCore::atomToNamespace(p)->getURI();
@@ -447,7 +449,7 @@ namespace avmplus
 	Atom Toplevel::instanceof(Atom atom, Atom ctor)
 	{
 		AvmCore* core = this->core();
-		if ((ctor&7) != kObjectType ||
+		if (atomKind(ctor) != kObjectType ||
 			(!AvmCore::istype(ctor, core->traits.function_itraits) &&
 			!AvmCore::istype(ctor, core->traits.class_itraits)))
 		{
@@ -509,7 +511,7 @@ namespace avmplus
 			nameatom = name->atom();
 		}
 
-		ScriptObject* o = (obj&7)==kObjectType ? 
+		ScriptObject* o = atomKind(obj)==kObjectType ? 
 				AvmCore::atomToScriptObject(obj) : 
 				this->toPrototype(obj);
 		do
@@ -643,7 +645,7 @@ namespace avmplus
 		}
 
 		case BKIND_NONE:
-			if ((obj&7) == kObjectType)
+			if (atomKind(obj) == kObjectType)
 			{
 				// try dynamic lookup on instance.  even if the traits are sealed,
 				// we might need to search the prototype chain
@@ -782,9 +784,6 @@ namespace avmplus
 		Binding b = BIND_NONE;
 		if (traits && ref.isBinding())
 		{
-			if (!traits->isResolved())
-				traits->resolveSignatures(this);
-				
 			b = traits->getTraitsBindings()->findBindingAndDeclarer(ref, declarer);
 			if (b == BIND_AMBIGUOUS)
 			{
@@ -982,7 +981,7 @@ namespace avmplus
 			{
 				int32_t curPos = pos;
 				int len = 2;
-				if (pos < (in->length() - 5) && str[pos] == 'u')
+				if (pos <= (in->length() - 5) && str[pos] == 'u')
 				{
 					len = 4;
 					pos++;
@@ -1208,7 +1207,7 @@ namespace avmplus
 
 	unsigned int Toplevel::readU30(const byte *&p) const
 	{
-		unsigned int result = AvmCore::readU30(p);
+		unsigned int result = AvmCore::readU32(p);
 		if (result & 0xc0000000)
 			throwVerifyError(kCorruptABCError);
 		return result;

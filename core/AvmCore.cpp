@@ -95,6 +95,53 @@ namespace avmplus
 	#else
 		const uint32_t AvmCore::DEFAULT_VERBOSE_ON = ((uint32_t)~0);
 	#endif
+
+    static bool substrMatches(const char* pattern, const char* p, const char* e)
+    {
+        ptrdiff_t const patlen = VMPI_strlen(pattern);
+        return (e-p) >= patlen && !VMPI_strncmp(p, pattern, patlen);
+    }
+
+    /*static*/ uint32_t AvmCore::parseVerboseFlags(const char* p)
+    {
+        uint32_t r = 0;
+
+        for (;;) 
+        {
+            const char* e = p;
+            // stop on null or end-of-line... use >=32 to catch those plus other unlikely/uninteresting cases
+            while (*e >= 32 && *e != ',') 
+                e++;
+
+            if (substrMatches("parse", p, e))
+                r |= VB_parse;
+            else if (substrMatches("verify", p, e))
+                r |= VB_verify;
+            else if (substrMatches("interp", p, e))
+                r |= VB_interp;
+            else if (substrMatches("traits", p, e))
+                r |= VB_traits;
+            else if (substrMatches("builtins", p, e))
+                r |= VB_builtins;
+            else if (substrMatches("memstats", p, e)) 
+                MMgc::GCHeap::GetGCHeap()->Config().gcstats = true;
+            else if (substrMatches("sweep", p, e)) 
+                MMgc::GCHeap::GetGCHeap()->Config().autoGCStats = true;
+            else if (substrMatches("occupancy", p, e)) 
+                MMgc::GCHeap::GetGCHeap()->Config().verbose = true;
+#if defined FEATURE_NANOJIT
+            else if (substrMatches("jit", p, e))
+                r |= VB_jit | ((nanojit::LC_Activation | nanojit::LC_Liveness | nanojit::LC_ReadLIR 
+                                                | nanojit::LC_AfterSF    | nanojit::LC_RegAlloc | nanojit::LC_Assembly
+                                                ) << 16); // stuff LC_Bits into the upper 16bits
+#endif /* FEATURE_NANOJIT */
+            if (*e < 32)
+                break;
+            p = e+1;
+        }
+
+        return r;
+    }
 #endif
 
 	// a single string with characters 0x00...0x7f (inclusive)
@@ -122,8 +169,9 @@ namespace avmplus
 		, langID(-1)
 		, passAllExceptionsToDebugger(false)
 #endif
-#ifdef AVMPLUS_VERIFYALL
-		, verifyQueue(g, 0)
+#ifdef VMCFG_VERIFYALL
+		, verifyFunctionQueue(g, 0)
+		, verifyTraitsQueue(g, 0)
 #endif
 		, livePools(NULL)
 		, m_tbCache(new (g) QCache(CacheSizes::DEFAULT_BINDINGS, g))
@@ -139,21 +187,21 @@ namespace avmplus
 		, gcInterface(g)
     {
 		// sanity check for all our types
-		MMGC_STATIC_ASSERT(sizeof(int8) == 1);
+		MMGC_STATIC_ASSERT(sizeof(int8_t) == 1);
 		MMGC_STATIC_ASSERT(sizeof(uint8) == 1);		
-		MMGC_STATIC_ASSERT(sizeof(int16) == 2);
-		MMGC_STATIC_ASSERT(sizeof(uint16) == 2);
+		MMGC_STATIC_ASSERT(sizeof(int16_t) == 2);
+		MMGC_STATIC_ASSERT(sizeof(uint16_t) == 2);
 		MMGC_STATIC_ASSERT(sizeof(int32) == 4);
 		MMGC_STATIC_ASSERT(sizeof(uint32) == 4);
-		MMGC_STATIC_ASSERT(sizeof(int64) == 8);
-		MMGC_STATIC_ASSERT(sizeof(uint64) == 8);
-		MMGC_STATIC_ASSERT(sizeof(sintptr) == sizeof(void *));
+		MMGC_STATIC_ASSERT(sizeof(int64_t) == 8);
+		MMGC_STATIC_ASSERT(sizeof(uint64_t) == 8);
+		MMGC_STATIC_ASSERT(sizeof(intptr_t) == sizeof(void *));
 		MMGC_STATIC_ASSERT(sizeof(uintptr) == sizeof(void *));
 #ifdef AVMPLUS_64BIT
-		MMGC_STATIC_ASSERT(sizeof(sintptr) == 8);
+		MMGC_STATIC_ASSERT(sizeof(intptr_t) == 8);
 		MMGC_STATIC_ASSERT(sizeof(uintptr) == 8);		
 #else
-		MMGC_STATIC_ASSERT(sizeof(sintptr) == 4);
+		MMGC_STATIC_ASSERT(sizeof(intptr_t) == 4);
 		MMGC_STATIC_ASSERT(sizeof(uintptr) == 4);		
 #endif	
 			
@@ -280,6 +328,10 @@ namespace avmplus
 	AvmCore::~AvmCore()
 	{		
 #ifdef DEBUGGER
+		if (gc)
+		{
+			gc->SetAttachedSampler(NULL);
+		}
 		delete _sampler;
 		_sampler = NULL;
 #endif
@@ -414,7 +466,7 @@ namespace avmplus
 			}
 			else
 			{
-				imm32 = AvmCore::readU30(pc);
+				imm32 = AvmCore::readU32(pc);
 			}
 
 			if( opcode == OP_debug )
@@ -424,7 +476,7 @@ namespace avmplus
 			}
 			if( op_count > 1 )
 			{
-				imm32b = AvmCore::readU30(pc);
+				imm32b = AvmCore::readU32(pc);
 			}
 		}
 	}
@@ -464,15 +516,15 @@ namespace avmplus
 	
 	static ScriptEnv* initScript(AvmCore* core, Toplevel* toplevel, AbcEnv* abcEnv, Traits* scriptTraits)
 	{
-		// [ed] 3/24/06 why do we really care if a script is dynamic or not?
-		//AvmAssert(scriptTraits->needsHashtable);
-
-		bool wasResolved = scriptTraits->isResolved();
 		VTable* scriptVTable = core->newVTable(scriptTraits, toplevel->object_ivtable, toplevel);
-		AvmAssert(scriptTraits->isResolved());
-		if (!wasResolved)
-			scriptTraits->init_declaringScopes(ScopeTypeChain::createEmpty(core->GetGC(), scriptTraits));
-		ScriptEnv* scriptEnv = new (core->GetGC()) ScriptEnv(scriptTraits->init, scriptVTable, abcEnv);
+        const ScopeTypeChain* scriptSTC = scriptTraits->declaringScope();
+        if (!scriptSTC)
+        {
+            scriptSTC = ScopeTypeChain::createEmpty(core->GetGC(), scriptTraits);
+	        scriptTraits->setDeclaringScopes(scriptSTC);
+        }
+        ScopeChain* scriptScope = ScriptEnv::createScriptScope(scriptSTC, scriptVTable, abcEnv);
+		ScriptEnv* scriptEnv = new (core->GetGC()) ScriptEnv(scriptTraits->init, scriptScope);
 		scriptVTable->init = scriptEnv;
 		core->exportDefs(scriptTraits, scriptEnv);
 		initScriptActivationTraits(core, toplevel, scriptTraits->init);
@@ -525,7 +577,7 @@ namespace avmplus
 			initScript(this, toplevel, abcEnv, pool->getScriptTraits(i));
 		}
 
-#ifdef AVMPLUS_VERIFYALL
+#ifdef VMCFG_VERIFYALL
 		if (config.verifyall) {
 			for (int i=0, n=pool->scriptCount(); i < n; i++)
 				enqTraits(pool->getScriptTraits(i));
@@ -725,8 +777,8 @@ return the result of the comparison ToPrimitive(x) == y.
 		if (isNull(lhs)) lhs = 0;
 		if (isNull(rhs)) rhs = 0;
 
-		int ltype = (int)(lhs & 7);
-        int rtype = (int)(rhs & 7);
+		int ltype = (int)atomKind(lhs);
+        int rtype = (int)atomKind(rhs);
 
 		// See E4X 11.5.1, pg 53.  
 		if ((ltype == kObjectType) && (isXMLList(lhs)))
@@ -767,7 +819,7 @@ return the result of the comparison ToPrimitive(x) == y.
 					}	
 					else
 					{
-						return x->getNode()->_equals(x->toplevel(), this, y->getNode());
+						return x->getNode()->_equals(x->toplevel(), this, y->getNode()) ? trueAtom : falseAtom;
 					}
 				}
 				else if (isQName(lhs) && isQName(rhs))
@@ -874,8 +926,8 @@ return the result of the comparison ToPrimitive(x) == y.
 		if (isNull(lhs)) return isNull(rhs) ? trueAtom : falseAtom;
 		if (isNull(rhs)) return falseAtom; // We already know that lhs is not null
 
-        int ltype = lhs & 7;
-        int rtype = rhs & 7;
+        int ltype = atomKind(lhs);
+        int rtype = atomKind(rhs);
         if (ltype == rtype)
         {
             // same type
@@ -1322,7 +1374,7 @@ return the result of the comparison ToPrimitive(x) == y.
     {
 		if (!AvmCore::isNullOrUndefined(atom))
 		{
-			switch (atom&7)
+			switch (atomKind(atom))
 			{
 			case kIntptrType:
 				{
@@ -1353,7 +1405,7 @@ return the result of the comparison ToPrimitive(x) == y.
     {
 		if (!AvmCore::isNullOrUndefined(atom))
 		{
-			switch (atom&7)
+			switch (atomKind(atom))
 			{
 			case kIntptrType:
                 return atomGetIntptr(atom) != 0;
@@ -1396,7 +1448,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		if (!isNull(atom))
 		{
 			double value;
-			switch (atom&7)
+			switch (atomKind(atom))
 			{
 			case kSpecialType:
 				return kNaN;
@@ -1469,7 +1521,7 @@ return the result of the comparison ToPrimitive(x) == y.
     {
 		if (!isNull(atom))
 		{
-			switch (atom&7)
+			switch (atomKind(atom))
 			{
 			case kBooleanType:
 				return booleanStrings[atom>>3];
@@ -1541,7 +1593,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			case OP_pushstring:
 			{
 				buffer << opcodeInfo[opcode].name;
-				uint32 index = readU30(pc);
+				uint32 index = readU32(pc);
 				if (index < pool->constantStringCount)
 				{
 					String *s = format(pool->getString(index)->atom());
@@ -1550,12 +1602,12 @@ return the result of the comparison ToPrimitive(x) == y.
 				break;
 			}
 			case OP_pushbyte:
-				buffer << opcodeInfo[opcode].name << " " << int(int8(*pc));
+				buffer << opcodeInfo[opcode].name << " " << int(int8_t(*pc));
 				break;
 			case OP_pushint:
 			{
 				buffer << opcodeInfo[opcode].name;
-				uint32 index = readU30(pc);
+				uint32 index = readU32(pc);
 				if (index < pool->cpool_int.size())
 					buffer << " " << pool->cpool_int[index];
 				break;
@@ -1563,7 +1615,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			case OP_pushuint:
 			{
 				buffer << opcodeInfo[opcode].name;
-				uint32 index = readU30(pc);
+				uint32 index = readU32(pc);
 				if (index < pool->cpool_uint.size())
 					buffer << " " << (double)pool->cpool_uint[index];
 				break;
@@ -1571,7 +1623,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			case OP_pushdouble:
 			{
 				buffer << opcodeInfo[opcode].name;
-				uint32 index = readU30(pc);
+				uint32 index = readU32(pc);
 				if (index > 0 && index < pool->cpool_double.size())
 				{
 					buffer << " " << *pool->cpool_double[index];
@@ -1585,7 +1637,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			case OP_pushnamespace:
 			{
 				buffer << opcodeInfo[opcode].name;
-				uint32 index = readU30(pc);
+				uint32 index = readU32(pc);
 				if (index < pool->cpool_ns.size())
                 {
 					buffer << " " << pool->cpool_ns[index]->getURI();
@@ -1606,7 +1658,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			case OP_astype: 
 			{
 				buffer << opcodeInfo[opcode].name << " ";
-				formatMultiname(buffer, readU30(pc), pool);
+				formatMultiname(buffer, readU32(pc), pool);
 				break;
 			}
 			case OP_callproperty:
@@ -1615,8 +1667,8 @@ return the result of the comparison ToPrimitive(x) == y.
 			case OP_callsuper:
 			case OP_callsupervoid:
 			{
-				uint32 index = readU30(pc);
-				int argc = readU30(pc);
+				uint32 index = readU32(pc);
+				int argc = readU32(pc);
 				buffer << opcodeInfo[opcode].name << " ";
 				formatMultiname(buffer, index, pool);
 				buffer << " " << argc;
@@ -1625,12 +1677,12 @@ return the result of the comparison ToPrimitive(x) == y.
 			case OP_callstatic:
 			case OP_newfunction:
 			{
-				int method_id = readU30(pc);
+				int method_id = readU32(pc);
 				MethodInfo* f = pool->getMethodInfo(method_id);
 				buffer << opcodeInfo[opcode].name << " method_id=" << method_id;
 				if (opcode == OP_callstatic)
 				{
-					buffer << " argc=" << (int)readU30(pc); // argc
+					buffer << " argc=" << (int)readU32(pc); // argc
 				}
 				Stringp fname = f->getMethodName();
 				if (fname)
@@ -1642,7 +1694,7 @@ return the result of the comparison ToPrimitive(x) == y.
 				
 			case OP_newclass: 
 			{
-                uint32_t id = readU30(pc);
+                uint32_t id = readU32(pc);
 				Traits* c = pool->getClassTraits(id);
 				buffer << opcodeInfo[opcode].name << " " << c;
 				break;
@@ -1651,7 +1703,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			{
 				ptrdiff_t target = off + readS24(pc);
 				pc += 3;
-				int maxindex = readU30(pc);
+				int maxindex = readU32(pc);
 				buffer << opcodeInfo[opcode].name << " default:" << (int)target << " maxcase:"<<maxindex;
 				for (int i=0; i <= maxindex; i++)
 				{
@@ -1697,13 +1749,13 @@ return the result of the comparison ToPrimitive(x) == y.
 				{
 					buffer << opcodeInfo[opcode].name
 					<< ' '
-					<< (int)readU30(pc);
+					<< (int)readU32(pc);
 				}
 					break;
 				case 2:
 				{
-					int first = readU30(pc);
-					int second = readU30(pc);
+					int first = readU32(pc);
+					int second = readU32(pc);
 					buffer << opcodeInfo[opcode].name
 					<< ' '
 					<< first
@@ -1715,7 +1767,7 @@ return the result of the comparison ToPrimitive(x) == y.
 		}
     }
 	
-#ifdef AVMPLUS_WORD_CODE
+#ifdef VMCFG_WORDCODE
 	void AvmCore::formatBits(PrintWriter& buffer, uint32 bits)
 	{
 		Atom a = (Atom)(intptr_t)(int32)bits;
@@ -1875,7 +1927,7 @@ return the result of the comparison ToPrimitive(x) == y.
 				break;
 			}
 
-#ifdef AVMPLUS_PEEPHOLE_OPTIMIZER
+#ifdef VMCFG_WORDCODE_PEEPHOLE
 			case WOP_subtract_lb:
 			case WOP_multiply_lb:
 			case WOP_divide_lb:
@@ -1928,7 +1980,7 @@ return the result of the comparison ToPrimitive(x) == y.
 				buffer << " " << (uint32)(off + 4 + offset);
 				break;
 			}
-#endif // AVMPLUS_PEEPHOLE_OPTIMIZER
+#endif // VMCFG_WORDCODE_PEEPHOLE
 
 			default:
 				switch (wopAttrs[opcode].width) {
@@ -1960,11 +2012,11 @@ return the result of the comparison ToPrimitive(x) == y.
 			}
 		}
     }
-#endif // AVMPLUS_WORD_CODE
+#endif // VMCFG_WORDCODE
 #endif // AVMPLUS_VERBOSE
 
 	ExceptionHandler* AvmCore::beginCatch(ExceptionFrame *ef,
-		MethodInfo *info, sintptr pc, Exception *exception)
+		MethodInfo *info, intptr_t pc, Exception *exception)
 	{
 		ef->beginCatch();
 		ExceptionHandler* handler = findExceptionHandler(info,pc,exception);
@@ -1973,7 +2025,7 @@ return the result of the comparison ToPrimitive(x) == y.
 	}
 
 	ExceptionHandler* AvmCore::findExceptionHandler(MethodInfo *info,
-												    sintptr pc,
+												    intptr_t pc,
 												    Exception *exception)
 	{
 		ExceptionHandler* handler = findExceptionHandlerNoRethrow(info, pc, exception);
@@ -1986,7 +2038,7 @@ return the result of the comparison ToPrimitive(x) == y.
 	}
 
 	ExceptionHandler* AvmCore::findExceptionHandlerNoRethrow(MethodInfo *info,
-															 sintptr pc,
+															 intptr_t pc,
 															 Exception *exception)
 	{
 		// If this exception is an EXIT_EXCEPTION, it cannot
@@ -2004,7 +2056,7 @@ return the result of the comparison ToPrimitive(x) == y.
 
 		//[ed] we only call this from methods with catch blocks, when exceptions != NULL
 		AvmAssert(info->abc_exceptions() != NULL);
-#ifdef AVMPLUS_WORD_CODE
+#ifdef VMCFG_WORDCODE
 		// This is hacky and will go away.  If the target method was not jitted, use
         // word_code.exceptions, otherwise use info->exceptions.  methods may or may
         // not be JITted based on memory, configuration, or heuristics.
@@ -2059,16 +2111,16 @@ return the result of the comparison ToPrimitive(x) == y.
 
 	void AvmCore::increment_i(Atom *ap, int delta)
 	{
-		switch (*ap & 7)
+		switch (atomKind(*ap))
 		{
 		case kBooleanType:
-			*ap = intToAtom(delta+(sint32((sintptr)*ap>>3)));
+			*ap = intToAtom(delta+(int32_t((intptr_t)*ap>>3)));
             return;
 		case kIntptrType:
 			*ap = intToAtom(delta + int32_t(atomGetIntptr(*ap)));
 			return;
 		case kDoubleType:
-			*ap = intToAtom((int)((sint32)atomToDouble(*ap)+delta));
+			*ap = intToAtom((int)((int32_t)atomToDouble(*ap)+delta));
 			return;
         default:
 			*ap = intToAtom(integer(*ap)+delta);
@@ -2626,7 +2678,7 @@ return the result of the comparison ToPrimitive(x) == y.
 	{
 		if (!isNull(a))
 		{
-			switch (a&7)
+			switch (atomKind(a))
 			{
 			case kStringType:
 				return EscapeElementValue (string(a), true);
@@ -2782,7 +2834,7 @@ return the result of the comparison ToPrimitive(x) == y.
 	{
 		if (!isNull(arg))
 		{
-			switch (arg&7)
+			switch (atomKind(arg))
 			{
 			default:
 			case kObjectType:
@@ -3395,7 +3447,6 @@ return the result of the comparison ToPrimitive(x) == y.
 	
 	VTable* AvmCore::newVTable(Traits* traits, VTable* base, Toplevel* toplevel)
 	{
-		traits->resolveSignatures(toplevel);
 		const uint32_t count = traits->getTraitsBindings()->methodCount;
 		size_t extraSize = sizeof(MethodEnv*)*(count > 0 ? count-1 : 0);
 		return new (GetGC(), extraSize) VTable(traits, base, toplevel);
@@ -3684,7 +3735,7 @@ return the result of the comparison ToPrimitive(x) == y.
     {
 		if (!isNull(atom))
 		{
-			switch (atom&7)
+			switch (atomKind(atom))
 			{
 			default:
 			case kNamespaceType:
@@ -3975,7 +4026,7 @@ return the result of the comparison ToPrimitive(x) == y.
     
     typedef union {  
 	    double d;
-		uint64 i;
+		uint64_t i;
 #if defined(AVMPLUS_IA32) || defined(AVMPLUS_AMD64)		
 		struct { 
 			uint32 il, ih;
@@ -3992,8 +4043,8 @@ return the result of the comparison ToPrimitive(x) == y.
 	int AvmCore::doubleToInt32(double d)
 	{
     	double_int du, duh, two32;
-    	uint64 sign_d;
-    	int64 MASK;
+    	uint64_t sign_d;
+    	int64_t MASK;
     	uint32 DI_H, u_tmp, expon, shift_amount;
     
 		//  Algorithm Outline 
@@ -4027,7 +4078,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			duh.i = du.i;
 			MASK = 0x8000000000000000ll;
 			MASK = MASK >> shift_amount;
-			duh.i &= (uint64)MASK;
+			duh.i &= (uint64_t)MASK;
 			du.d -= duh.d;
 		}
 	    
@@ -4041,7 +4092,7 @@ return the result of the comparison ToPrimitive(x) == y.
 			shift_amount = expon - (0x3ff - 11);
 			MASK = 0x8000000000000000ll;
 			MASK = MASK >> shift_amount;
-			du.i &= (uint64)MASK;
+			du.i &= (uint64_t)MASK;
 			sign_d = du.i & 0x8000000000000000ull;
 			two32.i = 0x41f0000000000000ull ^ sign_d;
 			du.d -= two32.d;
@@ -4283,21 +4334,19 @@ return the result of the comparison ToPrimitive(x) == y.
 	}
 #endif		
 
-#ifdef AVMPLUS_VERIFYALL
+#ifdef VMCFG_VERIFYALL
 	void AvmCore::enqFunction(MethodInfo* f) {
 		if (config.verifyall &&
                 f && !f->isVerified() && !f->isVerifyPending()) {
 			f->setVerifyPending();
-			verifyQueue.add(f);
+			verifyFunctionQueue.add(f);
 		}
 	}
 
 	void AvmCore::enqTraits(Traits* t) {
         if (config.verifyall && !t->isInterface()) {
-			TraitsBindingsp td = t->getTraitsBindings();
-            enqFunction(t->init);
-		    for (int i=0, n=td->methodCount; i < n; i++)
-                enqFunction(td->getMethod(i));
+            if (verifyTraitsQueue.indexOf(t) < 0)
+                verifyTraitsQueue.add(t);
         }
 	}
 
@@ -4306,10 +4355,18 @@ return the result of the comparison ToPrimitive(x) == y.
 		int verified = 0;
 		do {
 			verified = 0;
-			while (!verifyQueue.isEmpty()) {
-				MethodInfo* f = verifyQueue.removeLast();
+            while (!verifyTraitsQueue.isEmpty()) {
+                Traits* t = verifyTraitsQueue.removeFirst();
+                t->resolveSignatures(toplevel);
+                TraitsBindingsp td = t->getTraitsBindings();
+                enqFunction(t->init);
+                for (int i=0, n=td->methodCount; i < n; i++)
+                    enqFunction(td->getMethod(i));
+            }
+			while (!verifyFunctionQueue.isEmpty()) {
+				MethodInfo* f = verifyFunctionQueue.removeLast();
 				if (!f->isVerified()) {
-					if (f->hasNoScopeAndNotClassInitializer()) {
+					if (f->declaringTraits()->init != f && f->declaringScope() == NULL) {
 						verifyQueue2.add(f);
 						continue;
 					}
@@ -4320,7 +4377,7 @@ return the result of the comparison ToPrimitive(x) == y.
 				}
 			}
 			while (!verifyQueue2.isEmpty())
-				verifyQueue.add(verifyQueue2.removeLast());
+				verifyFunctionQueue.add(verifyQueue2.removeLast());
 		} while (verified > 0);
 	}
 #endif

@@ -211,7 +211,7 @@ namespace avmplus
 
 	int32_t MathUtils::isInfinite(double x)
 	{
-		union { double d; uint64 v; }; d = x;
+		union { double d; uint64_t v; }; d = x;
 		if ((v & 0x7fffffffffffffffLL) != 0x7FF0000000000000LL)
 			return 0;
 		if (v & 0x8000000000000000LL)
@@ -224,16 +224,16 @@ namespace avmplus
 	{
 		union {
 			  double dvalue;
-			  uint64 lvalue;
+			  uint64_t lvalue;
 		};
 		dvalue = value;
-		return ( ( int64(lvalue) & ~0x8000000000000000ULL ) > 0x7ff0000000000000ULL ); 
+		return ( ( int64_t(lvalue) & ~0x8000000000000000ULL ) > 0x7ff0000000000000ULL ); 
 		//return x != x;
 	}
 
 	bool MathUtils::isNegZero(double x)
 	{
-		union { double d; uint64 v; }; d = x;
+		union { double d; uint64_t v; }; d = x;
 		return (v == 0x8000000000000000LL);
 	}
 
@@ -995,8 +995,8 @@ namespace avmplus
 		#if 0 // ifdef WIN32
 		// On Windows, set the FPU control word to round
 		// down for the rest of this operation.
-		volatile uint16 oldcw;
-		volatile uint16 newcw;
+		volatile uint16_t oldcw;
+		volatile uint16_t newcw;
 		_asm fnstcw [oldcw];
 		_asm mov ax,[oldcw];
 		_asm or ax,0xc3f;
@@ -1455,11 +1455,11 @@ namespace avmplus
 		double x = f->doubleValueOf();
 		double y = quickPowTen(exp10);
 		double estimate = x*y;
-		uint64 mantissaEstimate = frexp(estimate,&e);
-		int64 lowBits = (int64)(mantissaEstimate % 2048); // two^p-n = 2^(64-53) = 2^11 = 2048
+		uint64_t mantissaEstimate = frexp(estimate,&e);
+		int64_t lowBits = (int64_t)(mantissaEstimate % 2048); // two^p-n = 2^(64-53) = 2^11 = 2048
 
 		// check if slop is large enough to make a difference when rounding to 53 bits
-		int64 diff = lowBits - 1024;
+		int64_t diff = lowBits - 1024;
 		if ( (diff >= 0 && diff <= slop) ||
 			 (diff < 0 && -diff <= slop) )
 		{
@@ -1472,7 +1472,7 @@ namespace avmplus
 	MathUtils::findClosestFloat(BigInteger* f, int32_t e, double estimate)
 	{
 		int32_t k;
-		uint64 m = frexp(estimate,&k);
+		uint64_t m = frexp(estimate,&k);
 		BigInteger *m = BigInteger::newFromUint64(m);
 		BigInteger* compX;
 		BigInteger* compY;
@@ -1558,7 +1558,7 @@ namespace avmplus
 	  /--------------------------------------------*/
 	void MathUtils::RandomFastInit(pTRandomFast pRandomFast)
 	{
-		sint32 n = 31; // Changed from 32 to 31 per Prince
+		int32_t n = 31; // Changed from 32 to 31 per Prince
 
 		/* The sequence always starts with 1. */
 		//    pRandomFast->uValue = 1L;
@@ -1634,9 +1634,9 @@ namespace avmplus
 	  / Exit
 	  /   Returns the next pseudorandom value in the sequence.
 	  /--------------------------------------------*/
-	sint32 MathUtils::RandomPureHasher(sint32 iSeed)
+	int32_t MathUtils::RandomPureHasher(int32_t iSeed)
 	{
-		sint32   iResult;
+		int32_t   iResult;
 
 		/* Adapted from "A Recursive Implementation of the Perlin Noise Function,"
 		   /  by Greg Ward, Graphics Gems II, p. 396. */
@@ -1662,7 +1662,7 @@ namespace avmplus
 		return iResult;
 	}
 	/* ------------------------------------------------------------------------------ */
-	sint32 MathUtils::GenerateRandomNumber(pTRandomFast pRandomFast)
+	int32_t MathUtils::GenerateRandomNumber(pTRandomFast pRandomFast)
 	{
 		/* Fill out gRandomFast if it is uninitialized.
 		   /  This means seed hasn't been set.  Sequence of numbers will be
@@ -1680,7 +1680,7 @@ namespace avmplus
 		return aNum & kRandomPureMax;
 	}
 
-	sint32 MathUtils::Random(sint32 range, pTRandomFast pRandomFast)
+	int32_t MathUtils::Random(int32_t range, pTRandomFast pRandomFast)
 	{
 		if (range > 0) {
 			return GenerateRandomNumber(pRandomFast) % range;
@@ -1737,7 +1737,7 @@ namespace avmplus
 	// Use left shifts to compute powers of 2 < 63
 	static inline double quickPowTwo(int32_t exp)
 	{
-		static uint64 one = 1; // max we can shift is 64bits
+		static uint64_t one = 1; // max we can shift is 64bits
 		if (exp < 64 && exp > 0)
 			return (double)(one << exp);
 		else

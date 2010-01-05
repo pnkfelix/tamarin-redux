@@ -41,15 +41,9 @@ namespace avmplus
 {
 
 #ifdef VMCFG_PRECOMP_NAMES
-REALLY_INLINE void* PrecomputedMultinames::operator new(size_t size, size_t extra)
-{
-    //  GCRoot requires this allocation to come from FixedMalloc
-    return MMgc::FixedMalloc::GetFixedMalloc()->Alloc(size+extra, MMgc::kZero);
-}
-
 REALLY_INLINE const Multiname* PoolObject::precomputedMultiname(int32_t index)
 {
-    return &precompNames->multinames[index];
+    return precompNames->multinames[index];
 }
 #endif
 
@@ -65,12 +59,12 @@ REALLY_INLINE const byte* PoolObject::getMetadataInfoPos(uint32_t index)
 
 REALLY_INLINE Traits* PoolObject::resolveTypeName(const byte*& pc, const Toplevel* toplevel, bool allowVoid) const
 {
-    return resolveTypeName(AvmCore::readU30(pc), toplevel, allowVoid);
+    return resolveTypeName(AvmCore::readU32(pc), toplevel, allowVoid);
 }
 
 REALLY_INLINE void PoolObject::resolveQName(const byte* &p, Multiname &m, const Toplevel* toplevel) const
 {
-    resolveQName(AvmCore::readU30(p), m, toplevel);
+    resolveQName(AvmCore::readU32(p), m, toplevel);
 }
 
 REALLY_INLINE void PoolObject::parseMultiname(Multiname& m, uint32_t index) const

@@ -41,6 +41,11 @@
 
 namespace MMgc
 {
+	/*virtual*/
+	GCAllocBase::~GCAllocBase()
+	{
+	}
+
 	GCAlloc::GCAlloc(GC* _gc, int _itemSize, bool _containsPointers, bool _isRC, int _sizeClassIndex) : 
 		m_sizeClassIndex(_sizeClassIndex),
 		containsPointers(_containsPointers), 
@@ -122,8 +127,8 @@ namespace MMgc
 
 		// Allocate a new block
 
-		int numBlocks = kBlockSize/GCHeap::kBlockSize;
-		GCBlock* b = (GCBlock*) m_gc->AllocBlock(numBlocks, GC::kGCAllocPage, /*zero*/true,  (flags&GC::kCanFail) != 0);
+		GCAssert(uint32_t(kBlockSize) == GCHeap::kBlockSize);
+		GCBlock* b = (GCBlock*) m_gc->AllocBlock(1, GC::kGCAllocPage, /*zero*/true,  (flags&GC::kCanFail) != 0);
 
 		if (b) 
 		{
@@ -223,11 +228,23 @@ namespace MMgc
 		m_gc->FreeBlock(b, 1);
 	}
 
+#if defined DEBUG || defined MMGC_MEMORY_PROFILER
 	void* GCAlloc::Alloc(size_t size, int flags)
+#else
+	void* GCAlloc::Alloc(int flags)
+#endif
 	{
-		(void)size;
 		GCAssertMsg(((size_t)m_itemSize >= size), "allocator itemsize too small");
 
+		// Allocation must be signalled before we allocate because no GC work must be allowed to
+		// come between an allocation and an initialization - if it does, we may crash, as 
+		// GCFinalizedObject subclasses may not have a valid vtable, but the GC depends on them
+		// having it.  In principle we could signal allocation late but only set the object
+		// flags after signaling, but we might still cause trouble for the profiler, which also
+		// depends on non-interruptibility.
+
+		m_gc->SignalAllocWork(m_itemSize);
+		
 		GCBlock* b = m_firstFree;
 	start:
 		if (b == NULL) {
@@ -314,30 +331,59 @@ namespace MMgc
 		GCAssert((uintptr_t(item) & ~0xfff) == (uintptr_t) b);
 		GCAssert((uintptr_t(item) & 7) == 0);
 
+#ifdef MMGC_HOOKS
+		GCHeap* heap = GCHeap::GetGCHeap();
+		if(heap->HooksEnabled())
+		{
+			size_t userSize = m_itemSize - DebugSize();
 #ifdef MMGC_MEMORY_PROFILER
-		if(GCHeap::GetGCHeap()->HooksEnabled())
 			m_totalAskSize += size;
+			heap->AllocHook(GetUserPointer(item), size, userSize);
+#else
+			heap->AllocHook(GetUserPointer(item), 0, userSize);
+#endif
+		}
 #endif
 
 		return item;
 	}
 
-	/* static */
+	/*virtual*/
 	void GCAlloc::Free(const void *item)
 	{
+#ifdef _DEBUG
+		// RCObject have contract that they must clean themselves, since they 
+		// have to scan themselves to decrement other RCObjects they might as well
+		// clean themselves too, better than suffering a memset later
+		if(IsRCObject(GetUserPointer(item)))
+			m_gc->RCObjectZeroCheck((RCObject*)GetUserPointer(item));
+#endif
+
 		GCBlock *b = GetBlock(item);
-		GCAlloc *a = b->alloc;
+		int index = GetIndex(b, item);
+		
+		// We can't allow free'ing something during Sweeping, otherwise alloc counters
+		// get decremented twice and destructors will be called twice.
+		GCAssert(m_gc->collecting == false || m_gc->marking == true);
+		if (m_gc->marking && (m_gc->collecting || IsQueued(b,index))) {
+			m_gc->AbortFree(GetUserPointer(item));
+			return;
+		}
+	
+		m_gc->policy.signalFreeWork(m_itemSize);
 	
 #ifdef MMGC_HOOKS
-		if(GCHeap::GetGCHeap()->HooksEnabled())
+		GCHeap* heap = GCHeap::GetGCHeap();
+		if(heap->HooksEnabled())
 		{
 			const void* p = GetUserPointer(item);
-			GCHeap* heap = GCHeap::GetGCHeap();
+			size_t userSize = GC::Size(p);
 #ifdef MMGC_MEMORY_PROFILER
 			if(heap->GetProfiler())
-				a->m_totalAskSize -= heap->GetProfiler()->GetAskSize(p);
+				m_totalAskSize -= heap->GetProfiler()->GetAskSize(p);
 #endif
-			heap->FinalizeHook(p, GC::Size(p));
+			heap->FinalizeHook(p, userSize);
+			heap->FreeHook(p, userSize, 0xca);
 		}
 #endif
 
@@ -350,7 +396,6 @@ namespace MMgc
 		}
 #endif
 
-		int index = GetIndex(b, item);
 		if(GetBit(b, index, kHasWeakRef)) {
 			b->gc->ClearWeakRef(GetUserPointer(item));
 		}
@@ -361,20 +406,20 @@ namespace MMgc
 #ifdef _DEBUG
 			bool gone =
 #endif
-				a->Sweep(b);
+				Sweep(b);
 			GCAssertMsg(!gone, "How can a page I'm about to free an item on be empty?");
 			wasFull = false;
 		}
 
 		if(wasFull) {
-			a->AddToFreeList(b);
+			AddToFreeList(b);
 		}
 
 		b->FreeItem(item, index);
 
 		if(b->numItems == 0) {
-			a->UnlinkChunk(b);
-			a->FreeChunk(b);
+			UnlinkChunk(b);
+			FreeChunk(b);
 		}
 	}
 
@@ -454,7 +499,7 @@ namespace MMgc
 						obj->~GCFinalizedObject();
 
 #if defined(_DEBUG)
-						if(b->alloc->ContainsRCObjects()) {
+						if(((GCAlloc*)b->alloc)->ContainsRCObjects()) {
 							m_gc->RCObjectZeroCheck((RCObject*)obj);
 						}
 #endif
@@ -646,7 +691,7 @@ namespace MMgc
 		int itemNum = GetIndex(block, item);
 
 		// skip pointers into dead space at end of block
-		if (itemNum > block->alloc->m_itemsPerBlock - 1)
+		if (itemNum > ((GCAlloc*)block->alloc)->m_itemsPerBlock - 1)
 			return bogusPointerReturnValue;
 
 		// skip pointers into objects
@@ -692,7 +737,7 @@ namespace MMgc
 	REALLY_INLINE void GCAlloc::GCBlock::FreeItem(const void *item, int index)
 	{
 #ifdef MMGC_MEMORY_INFO
-		GCAssert(alloc->m_numAlloc != 0);
+		GCAssert(((GCAlloc*)alloc)->m_numAlloc != 0);
 #endif
 
 #ifdef _DEBUG		
@@ -707,7 +752,7 @@ namespace MMgc
 		void *oldFree = firstFree;
 		firstFree = (void*)item;
 #ifdef MMGC_MEMORY_INFO
-		alloc->m_numAlloc--;
+		((GCAlloc*)alloc)->m_numAlloc--;
 #endif
 		numItems--;
 
@@ -727,7 +772,7 @@ namespace MMgc
 		// page is subsequently emptied out and returned to the block manager.
 		// Massively boxing programs have alloc/free patterns that are biased
 		// toward non-RC objects carved off the ends of blocks.)
-		if(!alloc->ContainsRCObjects())
+		if(!((GCAlloc*)alloc)->ContainsRCObjects())
 			VMPI_memset((char*)item, 0, size);
 #endif
 		// Add this item to the free list

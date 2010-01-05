@@ -150,6 +150,8 @@ namespace avmplus
 			OP_pushscope = 0x30,
 			OP_pushnamespace = 0x31,
 			OP_hasnext2 = 0x32,
+			OP_lix8 = 0x33, // NEW internal only
+			OP_lix16 = 0x34, // NEW internal only
 			OP_li8 = 0x35,
 			OP_li16 = 0x36,
 			OP_li32 = 0x37,
@@ -281,7 +283,7 @@ namespace avmplus
 			int8_t operandCount;    // uses -1 for "invalid", we can avoid that if necessary
 			int8_t canThrow;		// always 0 or 1
 			int8_t stack;           // stack movement not taking into account run-time names or function arguments
-#if defined AVMPLUS_WORD_CODE
+#if defined VMCFG_WORDCODE
 			uint16_t wordCode;		// a map used during translation
 #endif
 #if defined AVMPLUS_VERBOSE || defined DEBUGGER

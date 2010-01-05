@@ -160,7 +160,7 @@ const int kBufferPadding = 16;
 		// default set of flags to enable for "verbose" with no specific qualifiers
 		static const uint32_t DEFAULT_VERBOSE_ON;
 #endif
-		
+
 	public:
 		/**
 		 * The console object.  Text to be displayed to the developer
@@ -213,9 +213,11 @@ const int kBufferPadding = 16;
 			bool				passAllExceptionsToDebugger;
 		#endif
 		
-#ifdef AVMPLUS_VERIFYALL
+#ifdef VMCFG_VERIFYALL
+    private:
+        List<MethodInfo*, LIST_GCObjects> verifyFunctionQueue;
+        List<Traits*, LIST_GCObjects> verifyTraitsQueue;
 	public:
-        List<MethodInfo*, LIST_GCObjects> verifyQueue;
 		void enqFunction(MethodInfo* f);
 		void enqTraits(Traits* t);
 		void verifyEarly(Toplevel* toplevel, AbcEnv* abc_env);
@@ -300,6 +302,7 @@ const int kBufferPadding = 16;
 		#ifdef AVMPLUS_VERBOSE
 		bool isVerbose(uint32_t b) const;
         static bool isBitSet(uint32_t v, uint32_t bit);
+        static uint32_t parseVerboseFlags(const char* arg);
 		#endif
 
 	    void SetJITEnabled(bool isEnabled);
@@ -642,7 +645,7 @@ const int kBufferPadding = 16;
 #ifdef AVMPLUS_VERBOSE
 		/** Disassembles an opcode and places the text in str. */
 		void formatOpcode(PrintWriter& out, const byte *pc, AbcOpcode opcode, ptrdiff_t off, PoolObject* pool);
-# ifdef AVMPLUS_WORD_CODE
+# ifdef VMCFG_WORDCODE
 		void formatOpcode(PrintWriter& out, const uintptr_t *pc, WordOpcode opcode, ptrdiff_t off, PoolObject* pool);
 		void formatBits(PrintWriter& buffer, uint32 bits);
 # endif
@@ -904,12 +907,9 @@ const int kBufferPadding = 16;
 		/** 
          * Helper function; reads an unsigned 32-bit integer from pc 
          * See AbcParser::readS32 for more explanation of the variable length
-         * encoding scheme.  
-         * 
-         * 2nd argument is set to the actual size, in bytes, of the number read in,
-         * and third argument is the version of the ABC 
+         * encoding scheme.
          */
-		static uint32 readU30(const byte *&p)
+		static uint32_t readU32(const byte *&p)
 		{
 			// @todo -- needs to be moved into AvmCore-inlines.h, 
 			// but first we must determine whether it should be inline, REALLY_INLINE, etc...
@@ -943,9 +943,9 @@ const int kBufferPadding = 16;
 			return result;
 		}
 
-		// when you need to skip over a u30 and don't care about the result,
+		// when you need to skip over a U32 and don't care about the result,
 		// this is slightly faster.
-		static void skipU30(const uint8_t*& p, int count = 1)
+		static void skipU32(const uint8_t*& p, int count = 1)
 		{
 			// @todo -- needs to be moved into AvmCore-inlines.h, 
 			// but first we must determine whether it should be inline, REALLY_INLINE, etc...
@@ -1181,11 +1181,11 @@ const int kBufferPadding = 16;
 		 *         exception if no handler is found.
 		 */
 		ExceptionHandler* findExceptionHandler(MethodInfo *info,
-											   sintptr pc,
+											   intptr_t pc,
 											   Exception *exception);
 		
 		ExceptionHandler* beginCatch(ExceptionFrame *ef,
-				MethodInfo *info, sintptr pc, Exception *exception);
+				MethodInfo *info, intptr_t pc, Exception *exception);
 
 		/**
 		 * Just like findExceptionHandler(), except that this function
@@ -1194,7 +1194,7 @@ const int kBufferPadding = 16;
 		 * it can't find a handler.
 		 */
 		ExceptionHandler* findExceptionHandlerNoRethrow(MethodInfo *info,
-														sintptr pc,
+														intptr_t pc,
 														Exception *exception);
 
 		/**

@@ -686,7 +686,7 @@ namespace avmplus
 			return getpropertylate_i(obj, (int32_t)atomGetIntptr(index));
 		}
 
-		if ((index&7) == kDoubleType)
+		if (atomKind(index) == kDoubleType)
 		{
 			int32_t i = AvmCore::integer_i(index);
 			if ((double)i == AvmCore::atomToDouble(index))
@@ -728,7 +728,7 @@ namespace avmplus
 			return;
 		}
 
-		if ((index&7) == kDoubleType)
+		if (atomKind(index) == kDoubleType)
 		{
 			int32_t i = AvmCore::integer(index);
 			uint32_t u = uint32_t(i);
@@ -775,7 +775,7 @@ namespace avmplus
 			return;
 		}
 
-		if ((index&7) == kDoubleType)
+		if (atomKind(index) == kDoubleType)
 		{
 			int32_t i = AvmCore::integer(index);
 			uint32_t u = uint32_t(i);
@@ -932,7 +932,7 @@ namespace avmplus
 	{
 		// here we put the case for bind-none, since we know there are no bindings
 		// with numeric names.
-		if ((obj&7) == kObjectType)
+		if (atomKind(obj) == kObjectType)
 		{
 			if (index >= 0)
 			{
@@ -961,7 +961,7 @@ namespace avmplus
 	{
 		// here we put the case for bind-none, since we know there are no bindings
 		// with numeric names.
-		if ((obj&7) == kObjectType)
+		if (atomKind(obj) == kObjectType)
 		{
 			// try dynamic lookup on instance.  even if the traits are sealed,
 			// we might need to search the prototype chain
@@ -1052,10 +1052,22 @@ namespace avmplus
 
 	Atom MethodEnv::nextname(Atom objAtom, int index) const
 	{
-		if (index <= 0)
+        //  Handle special case inputs;
+        //  bad index returns null,
+        //  null object throws error.
+        if (index <= 0)
+        {
 			return nullStringAtom;
+        }
 
-		switch (objAtom&7)
+        if (AvmCore::isNullOrUndefined(objAtom))
+        {
+            toplevel()->throwTypeError(
+                           (objAtom == undefinedAtom) ? kConvertUndefinedToObjectError :
+                           kConvertNullToObjectError);
+        }
+
+		switch (atomKind(objAtom))
 		{
 		case kObjectType:
 			return AvmCore::atomToScriptObject(objAtom)->nextName(index);
@@ -1069,10 +1081,22 @@ namespace avmplus
 
 	Atom MethodEnv::nextvalue(Atom objAtom, int index) const
 	{
-		if (index <= 0)
+        //  Handle special case inputs;
+        //  bad index returns undefined,
+        //  null object throws error.
+        if (index <= 0)
+        {
 			return undefinedAtom;
+        }
 
-		switch (objAtom&7)
+        if (AvmCore::isNullOrUndefined(objAtom))
+        {
+            toplevel()->throwTypeError(
+                           (objAtom == undefinedAtom) ? kConvertUndefinedToObjectError :
+                           kConvertNullToObjectError);
+        }
+
+		switch (atomKind(objAtom))
 		{
 		case kObjectType:
 			return AvmCore::atomToScriptObject(objAtom)->nextValue(index);
@@ -1091,7 +1115,7 @@ namespace avmplus
 
 		if (!AvmCore::isNullOrUndefined(objAtom))
 		{
-			switch (objAtom&7)
+			switch (atomKind(objAtom))
 			{
 			case kObjectType:
 				return AvmCore::atomToScriptObject(objAtom)->nextNameIndex(index);
@@ -1118,7 +1142,7 @@ namespace avmplus
 		
 		if (!AvmCore::isNullOrUndefined(objAtom))
 		{
-			switch (objAtom&7)
+			switch (atomKind(objAtom))
 			{
 			case kObjectType:
 				{
@@ -1240,9 +1264,6 @@ namespace avmplus
 			else
 				toplevel->throwTypeError(kCorruptABCError);
 		}
-
-		ctraits->resolveSignatures(toplevel);
-		itraits->resolveSignatures(toplevel);
 
 		VTable* ivtable = core->newVTable(itraits, base ? base->ivtable() : NULL, toplevel);
 		
@@ -1576,7 +1597,7 @@ namespace avmplus
 	Atom MethodEnv::findWithProperty(Atom atom, const Multiname* multiname)
 	{
 		Toplevel* toplevel = this->toplevel();
-		if ((atom&7)==kObjectType)
+		if (atomKind(atom)==kObjectType)
 		{
 			// usually scope objects are ScriptObject's
 
@@ -1785,7 +1806,7 @@ namespace avmplus
 
 	Namespace* MethodEnv::internRtns(Atom nsAtom)
 	{
-		if (((nsAtom&7) != kNamespaceType) || AvmCore::isNull(nsAtom))
+		if ((atomKind(nsAtom) != kNamespaceType) || AvmCore::isNull(nsAtom))
 			toplevel()->throwTypeError(kIllegalNamespaceError);
 		return core()->internNamespace(AvmCore::atomToNamespace(nsAtom));
 	}
@@ -1831,37 +1852,6 @@ namespace avmplus
 			toplevel->throwTypeError(kFilterError, core()->toErrorString(toplevel->toTraits(obj)));
 		}
 	}
-		
-	/**
-	 * implements ECMA implicit coersion.  returns the coerced value,
-	 * or throws a TypeError if coersion is not possible.
-	 */
-    ScriptObject* MethodEnv::coerceAtom2SO(Atom atom, Traits* expected) const
-    {
-		AvmAssert(expected != NULL);
-		AvmAssert(!expected->isMachineType());
-		AvmAssert(expected != core()->traits.string_itraits);
-		AvmAssert(expected != core()->traits.namespace_itraits);
-
-		if (AvmCore::isNullOrUndefined(atom))
-			return NULL;
-
-		if ((atom&7) == kObjectType)
-		{
-			ScriptObject* so = AvmCore::atomToScriptObject(atom);
-			if (so->traits()->subtypeof(expected))
-			{
-				return so;
-			}
-		}
-
-		// failed
-#ifdef AVMPLUS_VERBOSE
-		//core->console << "checktype failed " << expected << " <- " << atom << "\n";
-#endif
-		toplevel()->throwTypeError(kCheckTypeFailedError, core()->atomToErrorString(atom), core()->toErrorString(expected));
-		return NULL;
-    }
 
 	VTable* MethodEnv::buildActivationVTable()
 	{

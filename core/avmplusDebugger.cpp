@@ -264,7 +264,7 @@ namespace avmplus
 			if (fnc)
 			{
 				// WARNING: don't change the format of output since outside utils depend on it
-				uint64 delta = VMPI_getTime() - astraceStartTime;
+				uint64_t delta = VMPI_getTime() - astraceStartTime;
 				core->console << (uint32)(delta) << " AVMINF: MTHD ";
 				Stringp fname = fnc->getMethodName();
 				if (fname && (fname->length() > 0) )
@@ -305,7 +305,7 @@ namespace avmplus
 			Stringp file = core->callStack->filename();
 
 			// WARNING: don't change the format of output since outside utils depend on it
-			uint64 delta = VMPI_getTime() - astraceStartTime;
+			uint64_t delta = VMPI_getTime() - astraceStartTime;
 			core->console << (uint32)(delta) << " AVMINF: LINE ";
 			if (file)
 				core->console << "   " << line << "\t\t " << file << "\n";
@@ -435,8 +435,8 @@ namespace avmplus
 
 		m->setFile(file);
 
-		AvmCore::skipU30(pos, 4); // max_stack; local_count; init_stack_depth; max_stack_depth;
-		int code_len = AvmCore::readU30(pos);
+		AvmCore::skipU32(pos, 4); // max_stack; local_count; init_stack_depth; max_stack_depth;
+		int code_len = AvmCore::readU32(pos);
 
 		const byte *start = pos;
 		const byte *end = pos + code_len;
@@ -461,7 +461,7 @@ namespace avmplus
 				{
 					// variable length instruction
 					const byte *pc2 = pc+4;
-					int case_count = 1 + readU30(pc2);
+					int case_count = 1 + readU32(pc2);
                     size += case_count*3;
 					break;
 				}
@@ -479,7 +479,7 @@ namespace avmplus
 							// in this case last word contains
 							// register and line number 
 							const byte* pc2 = pc+2;
-							int index = readU30(pc2);
+							int index = readU32(pc2);
 							int slot = (uint8)*(pc2);
 							//int line = readS24(pc+5);
 
@@ -497,7 +497,7 @@ namespace avmplus
 				{
 					// this means that we have a new source line for the given offset
 					const byte* pc2 = pc+1;
-					int line = readU30(pc2);
+					int line = readU32(pc2);
 					if (active == NULL)
 						AvmAssert(0 == 1); // means OP_debugline appeared before OP_debugfile which is WRONG!  Fix compiler
 					else
@@ -509,7 +509,7 @@ namespace avmplus
 				{
 					// new or existing source file
 					const byte* pc2 = pc+1;
-					Stringp name = pool->getString(readU30(pc2));
+					Stringp name = pool->getString(readU32(pc2));
 					active = file->sourceNamed(name);
 					if (active == NULL)
 					{
@@ -817,7 +817,7 @@ namespace avmplus
 				// it is stored as an atom.)
 				if (info->needRestOrArguments())
 				{
-					int atomType = ar[0] & 7;
+					int atomType = atomKind(ar[0]);
 					if (atomType == 0) // 0 is not a legal atom type, so ar[0] is not an atom
 					{
 						ScriptObject* obj = (ScriptObject*)ar[0];

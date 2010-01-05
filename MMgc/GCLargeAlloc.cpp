@@ -49,13 +49,25 @@ namespace MMgc
 #endif
 	}
 
+#if defined DEBUG || defined MMGC_MEMORY_PROFILER
 	void* GCLargeAlloc::Alloc(size_t originalSize, size_t requestSize, int flags)
+#else
+	void* GCLargeAlloc::Alloc(size_t requestSize, int flags)
+#endif
 	{
-		(void)originalSize;
-
 		GCHeap::CheckForAllocSizeOverflow(requestSize, sizeof(LargeBlock)+GCHeap::kBlockSize);
 
 		int blocks = (int)((requestSize+sizeof(LargeBlock)+GCHeap::kBlockSize-1) / GCHeap::kBlockSize);
+		uint32_t computedSize = blocks*GCHeap::kBlockSize - sizeof(LargeBlock);
+		
+		// Allocation must be signalled before we allocate because no GC work must be allowed to
+		// come between an allocation and an initialization - if it does, we may crash, as 
+		// GCFinalizedObject subclasses may not have a valid vtable, but the GC depends on them
+		// having it.  In principle we could signal allocation late but only set the object
+		// flags after signaling, but we might still cause trouble for the profiler, which also
+		// depends on non-interruptibility.
+
+		m_gc->SignalAllocWork(computedSize);
 		
 		LargeBlock *block = (LargeBlock*) m_gc->AllocBlock(blocks, GC::kGCLargeAllocPageFirst, 
 														   (flags&GC::kZero) != 0, (flags&GC::kCanFail) != 0);
@@ -67,8 +79,9 @@ namespace MMgc
 			block->flags |= ((flags&GC::kContainsPointers) != 0) ? kContainsPointers : 0;
 			block->flags |= ((flags&GC::kRCObject) != 0) ? kRCObject : 0;
 			block->gc = this->m_gc;
+			block->alloc= this;
 			block->next = m_blocks;
-			block->size = blocks*GCHeap::kBlockSize - sizeof(LargeBlock);
+			block->size = computedSize;
 			m_blocks = block;
 			
 			item = (void*)(block+1);
@@ -77,6 +90,7 @@ namespace MMgc
 				block->flags |= kMarkFlag;
 
 #ifdef _DEBUG
+			(void)originalSize;
 			if (flags & GC::kZero)
 			{
 				// AllocBlock should take care of this
@@ -87,9 +101,17 @@ namespace MMgc
 			}
 #endif
 
+#ifdef MMGC_HOOKS
+			GCHeap* heap = GCHeap::GetGCHeap();
+			if(heap->HooksEnabled()) {
+				size_t userSize = block->size - DebugSize();
 #ifdef MMGC_MEMORY_PROFILER
-			if(GCHeap::GetGCHeap()->HooksEnabled())
 				m_totalAskSize += originalSize;
+				heap->AllocHook(GetUserPointer(item), originalSize, userSize);
+#else
+				heap->AllocHook(GetUserPointer(item), 0, userSize);
+#endif
+			}
 #endif
 		}
 		return item;
@@ -99,24 +121,43 @@ namespace MMgc
 	void GCLargeAlloc::Free(const void *item)
 	{
 		GCAssertMsg(!m_startedFinalize, "GCLargeAlloc::Free is not allowed during finalization; caller must guard against this.");
+#ifdef _DEBUG
+		// RCObject have contract that they must clean themselves, since they 
+		// have to scan themselves to decrement other RCObjects they might as well
+		// clean themselves too, better than suffering a memset later
+		if(IsRCObject(GetUserPointer(item)))
+			m_gc->RCObjectZeroCheck((RCObject*)GetUserPointer(item));
+#endif
 
 		LargeBlock *b = GetLargeBlock(item);
 
+		// We can't allow free'ing something during Sweeping, otherwise alloc counters
+		// get decremented twice and destructors will be called twice.
+		GCAssert(m_gc->collecting == false || m_gc->marking == true);
+		if (m_gc->marking && (m_gc->collecting || GCLargeAlloc::IsQueued(b))) {
+			m_gc->AbortFree(GetUserPointer(item));
+			return;
+		}
+		
+		m_gc->policy.signalFreeWork(b->size);
+		
 #ifdef MMGC_HOOKS
 		GCHeap* heap = GCHeap::GetGCHeap();
 		if(heap->HooksEnabled())
 		{
 			const void* p = GetUserPointer(item);
+			size_t userSize = GC::Size(p);
 #ifdef MMGC_MEMORY_PROFILER
 			if(heap->GetProfiler())
 				m_totalAskSize -= heap->GetProfiler()->GetAskSize(p);
 #endif
-			heap->FinalizeHook(p, GC::Size(p));
+			heap->FinalizeHook(p, userSize);
+			heap->FreeHook(p, userSize, 0xca);
 		}
 #endif
 
 		if(b->flags & kHasWeakRef)
-			b->gc->ClearWeakRef(GetUserPointer(item));
+			m_gc->ClearWeakRef(GetUserPointer(item));
 
 		LargeBlock **prev = &m_blocks;
 		while(*prev)

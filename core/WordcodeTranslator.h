@@ -39,9 +39,9 @@
 
 namespace avmplus
 {
-#ifdef AVMPLUS_WORD_CODE
+#ifdef VMCFG_WORDCODE
 
-#  ifdef AVMPLUS_DIRECT_THREADED
+#  ifdef VMCFG_DIRECT_THREADED
 #    define NEW_OPCODE(n)         ((uintptr_t)opcode_labels[n])
 #  else
 #    ifdef _DEBUG

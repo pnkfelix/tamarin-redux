@@ -578,7 +578,7 @@ namespace avmplus
 		{
 			case kDynamic:
 				// never necessary to WB() when we store NULL
-				_gc(this)->Free(m_buffer.pv);
+				_gc(this)->FreeNotNull(m_buffer.pv);
 				break;
 			case kDependent:
 				// WBRC() is however desirable when we store NULL
@@ -2250,7 +2250,7 @@ namespace avmplus
 	}
 
 #ifdef DEBUGGER
-	uint64 String::size() const
+	uint64_t String::size() const
 	{
 		return GC::Size(this) - sizeof(AvmPlusScriptableObject);
 	}

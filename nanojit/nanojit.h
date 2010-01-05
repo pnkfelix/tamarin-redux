@@ -152,10 +152,10 @@ namespace nanojit
 
 #ifdef AVMPLUS_VERBOSE
 #ifndef NJ_VERBOSE_DISABLED
-	#define NJ_VERBOSE 1
+    #define NJ_VERBOSE 1
 #endif
 #ifndef NJ_PROFILE_DISABLED
-	#define NJ_PROFILE 1
+    #define NJ_PROFILE 1
 #endif
 #endif
 
@@ -249,14 +249,13 @@ namespace nanojit {
            and below, so that callers can use bits 16 and above for
            themselves. */
         // TODO: add entries for the writer pipeline
-        LC_FragProfile = 1<<7, // collect per-frag usage counts
-        LC_Activation  = 1<<6, // enable printActivationState
-        LC_Liveness    = 1<<5, // (show LIR liveness analysis)
-        LC_ReadLIR     = 1<<4, // As read from LirBuffer
-        LC_AfterSF     = 1<<3, // After StackFilter
-        LC_RegAlloc    = 1<<2, // stuff to do with reg alloc
-        LC_Assembly    = 1<<1, // final assembly
-        LC_NoCodeAddrs = 1<<0  // (don't show code addresses on asm output)
+        LC_FragProfile = 1<<6, // collect per-frag usage counts
+        LC_Activation  = 1<<5, // enable printActivationState
+        LC_Liveness    = 1<<4, // (show LIR liveness analysis)
+        LC_ReadLIR     = 1<<3, // As read from LirBuffer
+        LC_AfterSF     = 1<<2, // After StackFilter
+        LC_RegAlloc    = 1<<1, // stuff to do with reg alloc
+        LC_Assembly    = 1<<0  // final assembly
     };
 
     class LogControl

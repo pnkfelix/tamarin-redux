@@ -92,8 +92,7 @@ Binding getBinding(E env, Traits* traits, const Multiname* ref)
     Binding b = BIND_NONE;
     if (traits && ref->isBinding())
     {
-        if (!traits->isResolved())
-            traits->resolveSignatures(env->toplevel());
+        // note, you no longer must resolve the traits in order to find the binding!
 
         TraitsBindingsp tb = traits->getTraitsBindings();
         if (!ref->isNsset())
@@ -124,7 +123,7 @@ VTable* toVTable(E env, Atom atom)
             return AvmCore::atomToScriptObject(atom)->vtable;
 
         Toplevel* toplevel = env->toplevel();
-        switch (atom&7)
+        switch (atomKind(atom))
         {
         case kNamespaceType:
             return toplevel->namespaceClass->ivtable();
@@ -251,7 +250,7 @@ Atom constructprop(Toplevel* toplevel, const Multiname* multiname, int argc, Ato
         toplevel->throwReferenceError(kWriteOnlyError, multiname, vtable->traits);
     }
     default:
-        if ((obj&7)==kObjectType)
+        if (atomKind(obj)==kObjectType)
         {
             return AvmCore::atomToScriptObject(obj)->constructProperty(multiname, argc, atomv);
         }
@@ -345,17 +344,33 @@ Atom coerceImpl(const Toplevel* toplevel, Atom atom, Traits* expected)
     return atom;
 }
 
-template <class E>
-void coerceobj(E caller_env, ScriptObject* obj, Traits* type) {
-	#ifdef DOPROF // Adding this ifdef because this does not compile with Symbian emulator WINSCW compiler (it expects >=3 parameters for _nvprof).
-    _nvprof("coerceobj",1);
-	#endif // DOPROF
-    if (obj && !obj->traits()->subtypeof(type)) {
-        AvmCore* core = caller_env->core();
-        caller_env->toplevel()->throwTypeError(kCheckTypeFailedError, core->atomToErrorString(obj->atom()), core->toErrorString(type));
-    }
+#define AssertObjTraits(env,t) \
+    AvmAssert(t && !t->isMachineType());\
+    AvmAssert(t != env->core()->traits.string_itraits);\
+    AvmAssert(t != env->core()->traits.namespace_itraits);
+
+static void throwCheckTypeError(MethodEnv* env, Atom atom, Traits* t)
+{
+    AvmCore *core = env->core();
+        env->toplevel()->throwTypeError(kCheckTypeFailedError,
+            core->atomToErrorString(atom),
+            core->toErrorString(t));
 }
-template void coerceobj(MethodEnv*, ScriptObject*, Traits*);
+
+void coerceobj_obj(MethodEnv* caller_env, ScriptObject* obj, Traits* t)
+{
+    AssertObjTraits(caller_env, t);
+    if (obj && !obj->traits()->subtypeof(t))
+        throwCheckTypeError(caller_env, obj->atom(), t);
+}
+
+void coerceobj_atom(MethodEnv *env, Atom atom, Traits* t)
+{
+    AssertObjTraits(env, t);
+    if (!AvmCore::isNullOrUndefined(atom) &&
+            (atomKind(atom) != kObjectType || !atomObj(atom)->traits()->subtypeof(t)))
+        throwCheckTypeError(env, atom, t);
+}
 
 Atom op_add(AvmCore* core, Atom lhs, Atom rhs)
 {
@@ -364,14 +379,14 @@ Atom op_add(AvmCore* core, Atom lhs, Atom rhs)
 
 #ifdef AVMPLUS_64BIT
 // since 64-bit int atoms expect exactly 53 bits of precision, we want to shift bit 53+3 up into the sign bit and back down
-#  define SIGN_EXTEND(v)       ((intptr_t(v) << 8) >> 8)	
+#  define SIGN_EXTEND(v)       ((intptr_t(v) << 8) >> 8)
 #else
 #  define SIGN_EXTEND(v)       (intptr_t(v))
 #endif
 
     // integer optimization based on the one from Interpreter.cpp, modified
     // to reduce the # of alu instructions
-    if (atomIsBothIntptr(lhs,rhs)) 
+    if (atomIsBothIntptr(lhs,rhs))
     {
         intptr_t const sum = SIGN_EXTEND(lhs + rhs - kIntptrType);
         if ((lhs ^ rhs) < 0 || (lhs ^ sum) >= 0) {
@@ -390,7 +405,7 @@ Atom op_add(AvmCore* core, Atom lhs, Atom rhs)
         // which is assumed to be taken care of by IEEE 748 double add.
         goto add_numbers;
     }
-    
+
     if (AvmCore::isString(lhs) || AvmCore::isString(rhs) || AvmCore::isDate(lhs) || AvmCore::isDate(rhs))
     {
         goto concat_strings;
@@ -451,20 +466,37 @@ void FASTCALL mop_rangeCheckFailed(MethodEnv* env)
 // note: all of the mop_xxx load/store functions assume
 // that the caller has done range checking, and the address
 // is safe for its intended use...
-int32_t FASTCALL mop_li8(const void* addr)
+int32_t FASTCALL mop_lix8(const void* addr)
+{
+    // loads a signed byte, sign-extends
+    return *(const int8_t*)(addr);
+}
+
+int32_t FASTCALL mop_liz8(const void* addr)
 {
     // loads an unsigned byte, zero-extends
     return *(const uint8_t*)(addr);
 }
 
-int32_t FASTCALL mop_li16(const void* addr)
+int32_t FASTCALL mop_lix16(const void* addr)
+{
+    // loads an signed short, sign-extends
+#if defined(AVMPLUS_UNALIGNED_ACCESS) && defined(AVMPLUS_LITTLE_ENDIAN)
+    return *(const int16_t*)(addr);
+#else
+    const uint8_t* u = (const uint8_t*)addr;
+    return int16_t((uint16_t(u[1]) << 8) | uint16_t(u[0]));
+#endif
+}
+
+int32_t FASTCALL mop_liz16(const void* addr)
 {
     // loads an unsigned short, zero-extends
 #if defined(AVMPLUS_UNALIGNED_ACCESS) && defined(AVMPLUS_LITTLE_ENDIAN)
     return *(const uint16_t*)(addr);
 #else
     const uint8_t* u = (const uint8_t*)addr;
-    return (uint16_t(u[1]) << 8) | 
+    return (uint16_t(u[1]) << 8) |
             uint16_t(u[0]);
 #endif
 }

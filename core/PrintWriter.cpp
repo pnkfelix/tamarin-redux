@@ -165,7 +165,7 @@ namespace avmplus
 #if defined AVMPLUS_MAC && defined AVMPLUS_64BIT
 	PrintWriter& PrintWriter::operator<< (ptrdiff_t value)
 	{
-		// use the sintptr version - it is 64, not 32 bits
+		// use the intptr_t version - it is 64, not 32 bits
 		Stringp s = MathUtils::convertIntegerToStringRadix(m_core, (intptr_t) value, 10, MathUtils::kTreatAsSigned);
 		return *this << s;
 	}
@@ -298,7 +298,7 @@ namespace avmplus
 		writeHexNibble(value&0x0f);
 	}
 
-	void PrintWriter::writeHexWord(uint16 value)
+	void PrintWriter::writeHexWord(uint16_t value)
 	{
 		writeHexByte((uint8)(value>>8));
 		writeHexByte((uint8)(value&0xff));
@@ -449,7 +449,7 @@ namespace avmplus
 					*this << va_arg(ap, int);
 					break;
 				case 'D':
-					*this << va_arg(ap, int64);
+					*this << va_arg(ap, int64_t);
 					break;
 				}
 			} else {

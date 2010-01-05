@@ -988,7 +988,7 @@ namespace avmplus
 
 	ScriptObject* ArraySort::toFieldObject(Atom atom) const
 	{
-		if ((atom&7) != kObjectType)
+		if (atomKind(atom) != kObjectType)
 		{
 			#if 0
 			/* cn: ifdefed out, not sure what the intent was here, but calling code in FieldCompare
@@ -1478,17 +1478,20 @@ namespace avmplus
 		AvmCore* core = toplevel->core();
 		for (uint32 i = 0; i < len; i++)
 		{
+			//  The Array and/or the args may be modified by the caller,
+			//  so get a local reference to the element.
+			Atom element = d->getUintProperty(i);
 			// If thisObject is null, the call function will substitute the global object 
 			// args are modified in place by callee
 			Atom args[4] = {
 				thisObject,
-				d->getUintProperty(i), // element
+				element,
 				core->uintToAtom(i), // index
 				thisAtom
 			};
 			Atom result = callback->call(3, args);
 			if (result == trueAtom)
-				r->push(args + 1, 1);
+				r->push(&element, 1);
 		}
 
 		return r;

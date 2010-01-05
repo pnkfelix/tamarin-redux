@@ -167,7 +167,7 @@ namespace avmshell
 		if (!shell->setup(settings))
 			Platform::GetInstance()->exit(1);
 		
-#ifdef AVMPLUS_SELFTEST
+#ifdef VMCFG_SELFTEST
 		if (settings.do_selftest) {
 			shell->executeSelftest(settings);
 			return;
@@ -660,11 +660,11 @@ namespace avmshell
                         settings.fixed_esp = true;
                     }
 #endif /* AVMPLUS_IA32 */
-#ifdef AVMPLUS_VERIFYALL
+#ifdef VMCFG_VERIFYALL
 					else if (!VMPI_strcmp(arg+2, "verifyall")) {
 						settings.verifyall = true;
 					}
-#endif /* AVMPLUS_VERIFYALL */
+#endif /* VMCFG_VERIFYALL */
 					else if (!VMPI_strcmp(arg+2, "greedy")) {
 						settings.greedy = true;
 					}
@@ -675,7 +675,7 @@ namespace avmshell
 						settings.incremental = false;
 					}
 #ifdef DEBUGGER
-					else if (!VMPI_strcmp(arg+2, "astrace")) {
+					else if (!VMPI_strcmp(arg+2, "astrace") && i+1 < argc ) {
 						settings.astrace_console = VMPI_strtol(argv[++i], 0, 10);
 					}
 					else if (!VMPI_strcmp(arg+2, "language")) {
@@ -692,7 +692,7 @@ namespace avmshell
 						i++;
 					}
 #endif /* DEBUGGER */
-#ifdef AVMPLUS_SELFTEST
+#ifdef VMCFG_SELFTEST
 					else if (!VMPI_strncmp(arg+2, "selftest", 8)) {
 						settings.do_selftest = true;
 						if (arg[10] == '=') {
@@ -718,45 +718,12 @@ namespace avmshell
 								settings.st_name = NULL;
 						}
 					}
-#endif /* AVMPLUS_SELFTEST */
+#endif /* VMCFG_SELFTEST */
 #ifdef AVMPLUS_VERBOSE
 					else if (!VMPI_strncmp(arg+2, "verbose", 7)) {
 						settings.do_verbose = AvmCore::DEFAULT_VERBOSE_ON; // all 'on' by default
 						if (arg[9] == '=') {
-                            // specific options so turn-off 'all'
-                            settings.do_verbose = 0;
-                            const char* p = &arg[10];
-                            const char* e = p;
-                            while(*e) {
-                                e = p;
-                                while(*e && *e!=',') e++;
-                                if (!p) break;
-                                if (!VMPI_strncmp(p, "parse", 5))
-                                    settings.do_verbose |= VB_parse;
-                                else if (!VMPI_strncmp(p, "verify", 6))
-                                    settings.do_verbose |= VB_verify;
-                                else if (!VMPI_strncmp(p, "interp", 6))
-                                    settings.do_verbose |= VB_interp;
-                                else if (!VMPI_strncmp(p, "traits", 6))
-                                    settings.do_verbose |= VB_traits;
-                                else if (!VMPI_strncmp(p, "builtins", 8))
-                                    settings.do_verbose |= VB_builtins;
-                                else if (!VMPI_strncmp(p, "memstats",8)) 
-                                    MMgc::GCHeap::GetGCHeap()->Config().gcstats = true;
-                                else if (!VMPI_strncmp(p, "sweep",5)) 
-                                    MMgc::GCHeap::GetGCHeap()->Config().autoGCStats = true;
-                                else if (!VMPI_strncmp(p, "occupancy",9)) 
-                                    MMgc::GCHeap::GetGCHeap()->Config().verbose = true;
-#if defined FEATURE_NANOJIT
-                                else if (!VMPI_strncmp(p, "minaddr", 8))
-                                    settings.do_verbose |= (nanojit::LC_NoCodeAddrs)<<16; 
-                                else if (!VMPI_strncmp(p, "jit", 3))
-                                    settings.do_verbose |= VB_jit | ((nanojit::LC_Activation | nanojit::LC_Liveness | nanojit::LC_ReadLIR 
-                                                                    | nanojit::LC_AfterSF    | nanojit::LC_RegAlloc | nanojit::LC_Assembly
-                                                                    ) << 16); // stuff LC_Bits into the upper 16bits
-#endif /* FEATURE_NANOJIT */
-                                p = e+1;
-                            }
+                            settings.do_verbose = AvmCore::parseVerboseFlags(&arg[10]);
                         }
 					}
 #endif /* AVMPLUS_VERBOSE */
@@ -777,13 +744,13 @@ namespace avmshell
 						usage();
 					}
 				} 
-				else if (!VMPI_strcmp(arg, "-cache_bindings")) {
+				else if (!VMPI_strcmp(arg, "-cache_bindings") && i+1 < argc) {
 					settings.cacheSizes.bindings = (uint16_t)VMPI_strtol(argv[++i], 0, 10);
 				}
-				else if (!VMPI_strcmp(arg, "-cache_metadata")) {
+				else if (!VMPI_strcmp(arg, "-cache_metadata") && i+1 < argc) {
 					settings.cacheSizes.metadata = (uint16_t)VMPI_strtol(argv[++i], 0, 10);
 				}
-				else if (!VMPI_strcmp(arg, "-cache_methods")) {
+				else if (!VMPI_strcmp(arg, "-cache_methods") && i+1 < argc ) {
 					settings.cacheSizes.methods = (uint16_t)VMPI_strtol(argv[++i], 0, 10);
 				}
 #ifdef FEATURE_NANOJIT
@@ -792,7 +759,7 @@ namespace avmshell
 				} 
 #endif /* FEATURE_NANOJIT */
 #ifdef AVMPLUS_JITMAX
-				else if (!VMPI_strcmp(arg, "-jitmax")) {
+				else if (!VMPI_strcmp(arg, "-jitmax") && i+1 < argc ) {
 					extern int jitmin;
 					extern int jitmax;
 					
@@ -822,7 +789,7 @@ namespace avmshell
 					MMgc::GCHeap::GetGCHeap()->Config().autoGCStats = true;
 					MMgc::GCHeap::GetGCHeap()->Config().verbose = true;
 				}
-				else if (!VMPI_strcmp(arg, "-memlimit")) {
+				else if (!VMPI_strcmp(arg, "-memlimit") && i+1 < argc ) {
 					MMgc::GCHeap::GetGCHeap()->Config().heapLimit = VMPI_strtol(argv[++i], 0, 10);
 				}
 #ifdef MMGC_POLICY_PROFILING
@@ -833,7 +800,7 @@ namespace avmshell
 				else if (!VMPI_strcmp(arg, "-eagersweep")) {
 					MMgc::GCHeap::GetGCHeap()->Config().eagerSweeping = true;
 				}
-				else if (!VMPI_strcmp(arg, "-load")) {
+				else if (!VMPI_strcmp(arg, "-load") && i+1 < argc ) {
 					double load;
 					double limit;
 					int nchar;
@@ -852,7 +819,7 @@ namespace avmshell
 						usage();
 					}
 				}
-				else if (!VMPI_strcmp(arg, "-gcwork")) {
+				else if (!VMPI_strcmp(arg, "-gcwork") && i+1 < argc ) {
 					double work;
 					int nchar;
 					const char* val = argv[++i];
@@ -886,7 +853,7 @@ namespace avmshell
 				}
 #endif /* VMCFG_EVAL */
 #ifdef VMCFG_WORKERTHREADS
-				else if (!VMPI_strcmp(arg, "-workers")) {
+				else if (!VMPI_strcmp(arg, "-workers") && i+1 < argc ) {
 					const char *val = argv[++i];
 					int nchar;
 					if (val == NULL)
@@ -1013,7 +980,7 @@ namespace avmshell
 		}
 #endif
 		
-#ifdef AVMPLUS_SELFTEST
+#ifdef VMCFG_SELFTEST
 		if (settings.do_selftest)
 		{
 			// Presumably we'd want to use the selftest harness to test multiple workers eventually.
@@ -1084,10 +1051,10 @@ namespace avmshell
 #ifdef AVMPLUS_JITMAX
         AvmLog("          [-jitmax N-M] jit the Nth to Mth methods only; N- and -M are also valid.\n");
 #endif
-#ifdef AVMPLUS_VERIFYALL
+#ifdef VMCFG_VERIFYALL
 	    AvmLog("          [-Dverifyall] verify greedily instead of lazily\n");
 #endif
-#ifdef AVMPLUS_SELFTEST
+#ifdef VMCFG_SELFTEST
 		AvmLog("          [-Dselftest[=component,category,test]]");
 		AvmLog("                        run selftests\n");
 #endif

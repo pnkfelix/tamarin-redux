@@ -44,8 +44,9 @@ namespace avmplus
 {
 	using namespace MMgc;
 
+    // sadly, declaring this "static" produces spurious warnings in some GCC versions
 	template<class T>
-	static void inline read(uint8_t*& p, T& u)
+	/*static*/ void inline read(uint8_t*& p, T& u)
 	{
 		// weirdly, declaring a naked union here causes the ARM gcc compiler
 		// to issue bogus "unused" warnings for p8 and pT. Declaring it as
@@ -62,7 +63,7 @@ namespace avmplus
 	}
 
 	template<class T>
-	static void inline write(uint8_t*& p, T u)
+	/*static*/ void inline write(uint8_t*& p, T u)
 	{
 		// weirdly, declaring a naked union here causes the ARM gcc compiler
 		// to issue bogus "unused" warnings for p8 and pT. Declaring it as
@@ -210,7 +211,7 @@ namespace avmplus
 		uint32 sampleSize = sizeof(Sample);
 		uint32 callStackDepth = core->callStack ? core->callStack->depth() : 0;
 		sampleSize += callStackDepth * sizeof(StackTrace::Element);
-		sampleSize += sizeof(uint64) * 2;
+		sampleSize += sizeof(uint64_t) * 2;
 		if( callback && callback_ok && !runningCallback && currentSample+sampleSize+samples_size/3 > (samples + samples_size)
 			&& !core->GetGC()->Collecting() 
 			&& !core->GetGC()->Reaping()
@@ -345,7 +346,7 @@ namespace avmplus
 		}
 	}
 
-	uint64 Sampler::recordAllocationSample(const void* item, uint64 size, bool callback_ok, bool forceWrite)
+	uint64_t Sampler::recordAllocationSample(const void* item, uint64_t size, bool callback_ok, bool forceWrite)
 	{
 		AvmAssertMsg(sampling(), "How did we get here if sampling is disabled?");
 		if(!samplingNow)
@@ -361,7 +362,7 @@ namespace avmplus
 
 		lastAllocSample = currentSample;
 		writeRawSample(NEW_AUX_SAMPLE);
-		uint64 uid = allocId++;
+		uint64_t uid = allocId++;
 		uids.add(item, (void*)uid);
 		write(currentSample, uid);
 		write(currentSample, item);
@@ -374,7 +375,7 @@ namespace avmplus
 		return uid; 
 	}
 
-	uint64 Sampler::recordAllocationInfo(AvmPlusScriptableObject *obj, SamplerObjectType sot)
+	uint64_t Sampler::recordAllocationInfo(AvmPlusScriptableObject *obj, SamplerObjectType sot)
 	{
 		AvmAssertMsg(sampling(), "How did we get here if sampling is disabled?");
 		if(!samplingNow)
@@ -384,7 +385,7 @@ namespace avmplus
 		{
 			// Turn on momentarily to record the alloc for this object.
 			samplingAllAllocs = true;
-			uint64 uid = recordAllocationSample(obj, 0);
+			uint64_t uid = recordAllocationSample(obj, 0);
 			samplingAllAllocs = false;
 			if( !uid )
 			{
@@ -426,19 +427,19 @@ namespace avmplus
 		return s.id;
 	}
 
-	void Sampler::recordDeallocationSample(const void* item, uint64 size)
+	void Sampler::recordDeallocationSample(const void* item, uint64_t size)
 	{
 		AvmAssertMsg(sampling(), "How did we get here if sampling is disabled?");
 		AvmAssert(item != 0);
 		// recordDeallocationSample doesn't honor the samplingNow flag
 		// this is to avoid dropping deleted object samples when sampling is paused.
-		uint64 uid = (uint64)uids.get(item);
+		uint64_t uid = (uint64_t)uids.get(item);
 		// If we didn't find a UID then this wasn't memory that the sampler knew was allocated
 		if(uid && sampleSpaceCheck(false)) {
 
 			
 //			if( !uid )
-//				uid = (uint64)-1;
+//				uid = (uint64_t)-1;
 
 			writeRawSample(DELETED_OBJECT_SAMPLE);
 			write(currentSample, uid);

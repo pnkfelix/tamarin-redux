@@ -86,10 +86,6 @@ namespace avmplus
 
 	PoolObject::~PoolObject()
 	{
-		#ifdef VMCFG_PRECOMP_NAMES
-		delete precompNames;
-		#endif
-
 		#ifdef VMCFG_NANOJIT
 		mmfx_delete( codeMgr );
 		#endif
@@ -212,7 +208,7 @@ namespace avmplus
 		if (dataP->abcPtr >= _abcStringStart && dataP->abcPtr < _abcStringEnd)
 		{
 			// String not created yet; grab the pointer to the (verified) ABC data
-			uint32_t len = AvmCore::readU30(dataP->abcPtr);
+			uint32_t len = AvmCore::readU32(dataP->abcPtr);
 			Stringp s = core->internStringUTF8((const char*) dataP->abcPtr, len, true);
 			// must be made sticky for now...
 			s->Stick();
@@ -471,13 +467,13 @@ range_error:
             // U16 name_index
 			// parse a multiname with one namespace (aka qname)
 
-			index = AvmCore::readU30(pos);
+			index = AvmCore::readU32(pos);
 			if (!index)
 				m.setAnyNamespace();
 			else
 				m.setNamespace(getNamespace(index));
 
-			index = AvmCore::readU30(pos);
+			index = AvmCore::readU32(pos);
 			if (!index)
 				m.setAnyName();
 			else
@@ -494,7 +490,7 @@ range_error:
 			// U16 name_index
 			// parse a multiname with just a name; ns fetched at runtime
 
-			index = AvmCore::readU30(pos);
+			index = AvmCore::readU32(pos);
 			if (!index)
 				m.setAnyName();
 			else
@@ -519,13 +515,13 @@ range_error:
 		case CONSTANT_Multiname:
 		case CONSTANT_MultinameA:
 		{
-			index = AvmCore::readU30(pos);
+			index = AvmCore::readU32(pos);
 			if (!index)
 				m.setAnyName();
 			else
 				m.setName(getString(index));
 
-			index = AvmCore::readU30(pos);
+			index = AvmCore::readU32(pos);
 			AvmAssert(index != 0);
 			m.setNsset(getNamespaceSet(index));
 			m.setAttr(kind==CONSTANT_MultinameA);
@@ -537,7 +533,7 @@ range_error:
 		{
 			m.setRtname();
 
-			index = AvmCore::readU30(pos);
+			index = AvmCore::readU32(pos);
 			AvmAssert(index != 0);
 			m.setNsset(getNamespaceSet(index));
 
@@ -547,11 +543,11 @@ range_error:
 
 		case CONSTANT_TypeName:
 		{
-			index = AvmCore::readU30(pos);
+			index = AvmCore::readU32(pos);
 			parseMultiname(_abcStart + cpool_mn_offsets[index], m);
-			index = AvmCore::readU30(pos);
+			index = AvmCore::readU32(pos);
 			AvmAssert(index==1);
-			m.setTypeParameter(AvmCore::readU30(pos));
+			m.setTypeParameter(AvmCore::readU32(pos));
 			break;
 		}
 		
@@ -679,32 +675,63 @@ range_error:
 		return f;
 	}
 	
+	// search metadata record at meta_pos for name, return true if present
+	bool PoolObject::hasMetadataName(const uint8_t* meta_pos, const String* name)
+	{
+		AvmAssert(meta_pos && name->isInterned());
+		uint32_t metadata_count = AvmCore::readU32(meta_pos);
+		for (uint32_t i=0; i < metadata_count; i++) {
+			uint32_t metadata_index = AvmCore::readU32(meta_pos);
+			const uint8_t* metadata_pos = getMetadataInfoPos(metadata_index);
+			if (metadata_pos) {
+				uint32_t name_index = AvmCore::readU32(metadata_pos);
+				AvmCore::skipU32(metadata_pos, 1); // skip val_count
+				if (name_index > 0 && name_index < constantStringCount &&
+						getString(name_index) == name)
+					return true;
+			}
+		}
+		return false;
+	}
+
 #ifdef VMCFG_PRECOMP_NAMES
 	void PoolObject::initPrecomputedMultinames()
 	{
 		if (this->precompNames == NULL)
         {
-            size_t const s = sizeof(PrecomputedMultinames) - sizeof(Multiname) + this->cpool_mn_offsets.size() * sizeof(Multiname);
-			this->precompNames = new (s) PrecomputedMultinames(core->GetGC(), this);
+			size_t nNames = this->cpool_mn_offsets.size();
+			if (nNames == 0)
+				nNames = 1;
+			this->precompNames = new (core->GetGC(), (nNames-1)*sizeof(HeapMultiname)) PrecomputedMultinames(this);
         }
     }
 
-	PrecomputedMultinames::PrecomputedMultinames(MMgc::GC* gc, PoolObject* pool)
-		: MMgc::GCRoot(gc)
-		, nNames (0)
+	PrecomputedMultinames::PrecomputedMultinames(PoolObject* pool)
+		: nNames (0)
 	{
+		// The HeapMultinames will all have been initialized to zero on allocation, which is the
+		// state the HeapMultiname constructor would have left them in, had it been run (though
+		// it hasn't).  So below it is correct to assign the Multiname mn to the HeapMultiname
+		// multinames[i], the assignment operator will operate on sane values and will handle
+		// write barriers correctly.
 		nNames = pool->cpool_mn_offsets.size();
+		MMgc::GC* gc = MMgc::GC::GetGC(this);
+		const void* container = gc->FindBeginningFast(this);
 		for (uint32_t i=1; i < nNames; i++) {
 			Multiname mn;
 			pool->parseMultiname(mn, i);
-			mn.IncrementRef();
-			multinames[i] = mn;
+			multinames[i].setMultiname(gc, container, mn);
 		}
 	}
 	
 	PrecomputedMultinames::~PrecomputedMultinames() {
+		// Destroy each HeapMultiname to properly decrement reference counts on
+		// RC'd parts of HeapMultiname.
+		MMgc::GC* gc = MMgc::GC::GetGC(this);
+		const void* container = gc->FindBeginningFast(this);
+		Multiname mn;
 		for (uint32_t i=1; i < nNames; i++) 
-			multinames[i].DecrementRef();
+			multinames[i].setMultiname(gc, container, mn);
 	}
 #endif
 	

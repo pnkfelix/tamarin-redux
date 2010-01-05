@@ -39,6 +39,36 @@
 
 namespace avmplus
 {
+
+REALLY_INLINE ScopeOrTraits::ScopeOrTraits(Traits* t) : _scopeOrTraits((uintptr_t)t) 
+{ 
+}
+
+REALLY_INLINE Traits* ScopeOrTraits::getTraits() const
+{
+    return (!(_scopeOrTraits & IS_SCOPE)) ?
+            ((Traits*)(_scopeOrTraits)) :
+            ((const ScopeTypeChain*)(_scopeOrTraits & ~IS_SCOPE))->traits();
+}
+
+REALLY_INLINE const ScopeTypeChain* ScopeOrTraits::getScope() const
+{
+    return (!(_scopeOrTraits & IS_SCOPE)) ?
+            ((Traits*)(_scopeOrTraits))->declaringScope() :
+            ((const ScopeTypeChain*)(_scopeOrTraits & ~IS_SCOPE));
+}
+
+REALLY_INLINE void ScopeOrTraits::setTraits(MMgc::GC* gc, void* container, Traits* t)
+{
+	WB(gc, container, &_scopeOrTraits, uintptr_t(t)); 
+}
+
+
+REALLY_INLINE void ScopeOrTraits::setScope(MMgc::GC* gc, void* container, const ScopeTypeChain* s)
+{
+	WB(gc, container, &_scopeOrTraits, uintptr_t(s) | IS_SCOPE); 
+}
+
 #ifdef DEBUGGER
 REALLY_INLINE DebuggerMethodInfo::DebuggerMethodInfo(int32_t _local_count, uint32_t _codeSize, int32_t _max_scopes) :
     firstSourceLine(0),
@@ -197,7 +227,7 @@ REALLY_INLINE void MethodInfo::setKind(TraitKind kind)
         _flags |= MethodInfo::IS_SETTER;
 }
 
-#ifdef AVMPLUS_VERIFYALL
+#ifdef VMCFG_VERIFYALL
 REALLY_INLINE int32_t MethodInfo::isVerified() const
 {
     return _flags & VERIFIED;
@@ -295,7 +325,7 @@ REALLY_INLINE void MethodInfo::set_abc_exceptions(MMgc::GC* gc, ExceptionHandler
     WB(gc, this, &_abc.exceptions, e);
 }
 
-#ifdef AVMPLUS_WORD_CODE
+#ifdef VMCFG_WORDCODE
 
 REALLY_INLINE ExceptionHandlerTable* MethodInfo::word_code_exceptions() const
 {
@@ -320,7 +350,7 @@ REALLY_INLINE void MethodInfo::set_word_code(MMgc::GC* gc, TranslatedCode* trans
     AvmAssert(!isNative());
     WB(gc, this, &_abc.word_code.translated_code, translated_code);
 }
-#endif // AVMPLUS_WORD_CODE
+#endif // VMCFG_WORDCODE
 
 #ifdef VMCFG_LOOKUP_CACHE
 REALLY_INLINE int32_t MethodInfo::lookup_cache_size() const
@@ -340,6 +370,27 @@ REALLY_INLINE int32_t MethodInfo::method_id() const
 {
     return _method_id;
 }
+
+REALLY_INLINE Traits* MethodInfo::declaringTraits() const
+{
+    return _declarer.getTraits();
+}
+
+REALLY_INLINE const ScopeTypeChain* MethodInfo::declaringScope() const
+{
+    return _declarer.getScope();
+}
+
+REALLY_INLINE Traits* MethodInfo::activationTraits() const
+{
+    return _activation.getTraits();
+}
+
+REALLY_INLINE const ScopeTypeChain* MethodInfo::activationScope() const
+{
+    return _activation.getScope();
+}
+
 
 REALLY_INLINE MethodSignaturep MethodInfo::getMethodSignature()
 {
@@ -400,7 +451,7 @@ REALLY_INLINE int32_t MethodSignature::frame_size() const
     return _frame_size;
 }
 
-#ifdef AVMPLUS_WORD_CODE
+#ifdef VMCFG_WORDCODE
 #else
 REALLY_INLINE const uint8_t* MethodSignature::abc_code_start() const
 {

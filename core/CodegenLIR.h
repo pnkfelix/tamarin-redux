@@ -304,8 +304,16 @@ namespace avmplus
 
     /** helper code to make LIR generation nice and tidy */
     class LirHelper {
-    protected: // methods
+    protected:
+        LirHelper(AvmCore*);
+        ~LirHelper();
+        void cleanup();
+
+    protected:
+        LIns* downcast_obj(LIns* atom, LIns* env, Traits* t); // atom -> typed scriptobj
         static BuiltinType bt(Traits *t);
+        LIns* nativeToAtom(LIns* value, Traits* valType);
+        LIns* atomToNative(BuiltinType, LIns* i);
         LIns* eq0(LIns* i);             // eq(i, imm(0))
         LIns* peq0(LIns* ptr);          // peq(ptr, immq(0))
         LIns* qlo(LIns* q);             // LIR_qlo(q)
@@ -328,15 +336,21 @@ namespace avmplus
         LIns* jne(LIns* a, int32_t b);
         LIns* sti(LIns* val, LIns* p, int32_t d);
         LIns* stp(LIns* val, LIns* p, int32_t d);
+        LIns* stq(LIns* val, LIns* p, int32_t d);
         LIns* ldp(LIns* p, int32_t d);
         LIns* live(LIns*);
         LIns* param(int n, const char *name);
         LIns* lshi(LIns* a, int32_t b);
         LIns* ushp(LIns* a, int32_t b);
+        void  liveAlloc(LIns* expr);        // extend lifetime of LIR_alloc, otherwise no-op
 
     protected: // data
         LirWriter *lirout;
         Fragment *frag;
+        AvmCore* core;
+        LIns *coreAddr;
+        Allocator* alloc1;    // allocator used in first pass, while writing LIR
+        Allocator* lir_alloc; // allocator with LIR buffer lifetime
     };
 
     struct GlobalMemoryInfo
@@ -344,6 +358,8 @@ namespace avmplus
         uint8_t* base;
         uint32_t size;
     };
+    
+    class MopsRangeCheckFilter;
 
     /**
      * CodegenLIR is a kitchen sink class containing all state for all passes
@@ -370,21 +386,18 @@ namespace avmplus
        #endif /* VTUNE */
 
     private:
-        Allocator* alloc1;    // allocator used in first pass, while writing LIR
-        Allocator* lir_alloc; // allocator with LIR buffer lifetime
         LogControl log;
-        AvmCore *core;
         MethodInfo *info;
         const MethodSignaturep ms;
         PoolObject *pool;
         FrameState *state;
+        MopsRangeCheckFilter* mopsRangeCheckFilter;
         LIns *vars, *varTraits;
         LIns *env_param, *argc_param, *ap_param;
         LIns *_save_eip, *_ef;
         LIns *methodFrame;
         LIns *csn;
         LIns *undefConst;
-        LIns *coreAddr;
         bool interruptable;
         CodegenLabel interrupt_label, npe_label;
         CodegenLabel mop_rangeCheckFailed_label;
@@ -405,10 +418,8 @@ namespace avmplus
         LIns *InsAlloc(int32_t);
         LIns *atomToNativeRep(int loc, LIns *i);
         LIns *atomToNativeRep(Traits *, LIns *i);
-        LIns *atomToNativeRep(BuiltinType, LIns *i);
         LIns *ptrToNativeRep(Traits*, LIns*);
         LIns *loadAtomRep(int i);
-        LIns *loadAtomRep(LIns* value, Traits* valType);
         LIns *leaIns(int32_t d, LIns *base);
         LIns *localGet(int i);
         LIns *localGetp(int i);
@@ -418,7 +429,7 @@ namespace avmplus
         LIns *branchIns(LOpcode op, LIns *cond, int target_off);
         LIns *retIns(LIns *val);
         LIns *loadToplevel();
-        LIns* mopAddrToRangeCheckedRealAddr(LIns* mopAddr, int32_t const size);
+        LIns* mopAddrToRangeCheckedRealAddrAndDisp(LIns* mopAddr, int32_t const size, int32_t* disp);
         LIns *loadEnvScope();
         LIns *loadEnvVTable();
         LIns *loadEnvAbcEnv();
@@ -433,7 +444,6 @@ namespace avmplus
         LIns *cmpLe(int lhsi, int rhsi);
         LIns *cmpOptimization(int lhsi, int rhsi, LOpcode icmp, LOpcode ucmp, LOpcode fcmp);
         debug_only( bool isPointer(int i); )
-        void label(CodegenLabel &label, LIns *bb);
         void emitPrep(FrameState*);
         void emitSampleCheck();
         bool verbose();
@@ -450,10 +460,9 @@ namespace avmplus
         // on successful jit, allocate memory for BindingCache instances, if necessary
         void initBindingCache();
 
-        LIns *loadIns(LOpcode op, size_t disp, LIns *base);
+        LIns *loadIns(LOpcode op, int32_t disp, LIns *base);
         LIns *Ins(LOpcode op);
         LIns *Ins(LOpcode op, LIns *a);
-        void storeIns(LIns *val, int32_t disp, LIns *base);
         LIns *i2dIns(LIns* v);
         LIns *u2dIns(LIns* v);
         LIns *binaryIns(LOpcode op, LIns *a, LIns *b);
@@ -503,6 +512,72 @@ namespace avmplus
         void fixExceptionsAndLabels(FrameState* state, const byte* pc);
         void formatOperand(PrintWriter& buffer, Value& v);
         void cleanup();
+    };
+
+    /**
+     * compiles MethodEnv::coerceEnter, specialized for the method being
+     * called, where the expected arg count and argument types are known.  This
+     * allows all the arg coersion to be unrolled and specialized.
+     *
+     * Native methods and JIT methods are compiled in this way.  Interpreted
+     * methods do not gain enough from compilation since the method bodies are
+     * interpreted, and since arguments only need to be coerced, not unboxed.
+     *
+     * Compilation occurs on the second invocation.
+     */
+    class InvokerCompiler: public LirHelper {
+    public:
+        // installs hook to enable lazy compilation
+        static void initCompilerHook(MethodInfo* info);
+    private:
+        // hook called on the first invocation; installs jitInvokerNow, yielding a 1-call delay
+        static Atom jitInvokerNext(MethodEnv* env, int argc, Atom* args);
+
+        // compile and invoke
+        static Atom jitInvokerNow(MethodEnv* env, int argc, Atom* args);
+
+        // main compiler driver
+        static AtomMethodProc compile(MethodInfo* info);
+
+        // sets up compiler pipeline
+        InvokerCompiler(MethodInfo*);
+
+        // compiler front end; generates LIR
+        void generate_lir();
+
+        // compiler back end; generates native code from LIR
+        void* assemble();
+
+        // generates argc check
+        void emit_argc_check(LIns* argc_param);
+
+        // downcast and unbox (and optionally copy) each arg
+        void downcast_args(LIns* env_param, LIns* argc_param, LIns* args_param);
+
+        // downcast and unbox one arg
+        void downcast_arg(int arg, int offset, LIns* env_param, LIns* args_param);
+
+        // downcast and unbox the value for the given type.
+        LIns* downcast_expr(LIns* val, Traits* t, LIns* env);
+
+        // generate code to call the underlying method directly
+        void call_method(LIns* env_param, LIns* argc_param);
+
+        // is verbose-mode enabled?
+        bool verbose();
+
+        // should unmodified args be copied?  true if we are not coercing in-place
+        bool copyArgs(); // true if un-modified args must be copied anyway
+
+        // # of bytes needed for the unboxed representation of this arg
+        int32_t argSize(int32_t i);
+
+    private:
+        MethodInfo* method;     // MethodInfo for method that we will call
+        MethodSignaturep ms;    // the signature for same
+        LIns* maxargs_br;       // branch that tests for too many args
+        LIns* minargs_br;       // branch that tests for not enough args
+        LIns* args_out;         // separate allocation for outgoing args (optional, NULL if unused)
     };
 }
 

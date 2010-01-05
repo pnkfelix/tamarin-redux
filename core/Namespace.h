@@ -107,7 +107,7 @@ namespace avmplus
 
         NamespaceType getType() const
         {
-            return (NamespaceType)(((sint32)m_uri)&7);
+            return (NamespaceType)(((int32_t)m_uri)&7);
         }
 
 		// Iterator support - for in, for each
@@ -116,7 +116,7 @@ namespace avmplus
 		int nextNameIndex(int index);
 
 #ifdef DEBUGGER
-		uint64 size() const { return sizeof(Namespace) - sizeof(AvmPlusScriptableObject); }
+		uint64_t size() const { return sizeof(Namespace) - sizeof(AvmPlusScriptableObject); }
 #endif
 
 //#ifdef AVMPLUS_VERBOSE

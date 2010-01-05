@@ -97,7 +97,7 @@ namespace nanojit
         // stwu sp, -framesize(sp)
 
         // activation frame is 4 bytes per entry even on 64bit machines
-        uint32_t stackNeeded = max_param_size + linkage_size + _activation.tos * 4;
+        uint32_t stackNeeded = max_param_size + linkage_size + _activation.stackSlotsNeeded() * 4;
         uint32_t aligned = alignUp(stackNeeded, NJ_ALIGN_STACK);
 
         UNLESS_PEDANTIC( if (isS16(aligned)) {
@@ -144,7 +144,7 @@ namespace nanojit
         LIns* base = ins->oprnd1();
         int d = ins->disp();
         Register rr = prepResultReg(ins, GpRegs);
-        Register ra = getBaseReg(ins->opcode(), base, d, GpRegs);
+        Register ra = getBaseReg(base, d, GpRegs);
 
         switch(ins->opcode()) {
             case LIR_ldzb:
@@ -204,7 +204,7 @@ namespace nanojit
         }
 
         Register rs = findRegFor(value, GpRegs);
-        Register ra = value == base ? rs : getBaseReg(LIR_sti, base, dr, GpRegs & ~rmask(rs));
+        Register ra = value == base ? rs : getBaseReg(base, dr, GpRegs & ~rmask(rs));
 
     #if !PEDANTIC
         if (isS16(dr)) {
@@ -250,7 +250,7 @@ namespace nanojit
     #endif
 
         int dr = ins->disp();
-        Register ra = getBaseReg(ins->opcode(), base, dr, GpRegs);
+        Register ra = getBaseReg(base, dr, GpRegs);
 
     #ifdef NANOJIT_64BIT
         if (rmask(rr) & GpRegs) {
@@ -325,7 +325,7 @@ namespace nanojit
                 return;
         }
 
-        Register ra = getBaseReg(LIR_stqi, base, dr, GpRegs);
+        Register ra = getBaseReg(base, dr, GpRegs);
 
     #if !PEDANTIC && !defined NANOJIT_64BIT
         if (value->isop(LIR_quad) && isS16(dr) && isS16(dr+4)) {
@@ -625,6 +625,7 @@ namespace nanojit
 
     void Assembler::asm_ret(LIns *ins) {
         genEpilogue();
+        releaseRegisters();
         assignSavedRegs();
         LIns *value = ins->oprnd1();
         Register r = ins->isop(LIR_ret) ? R3 : F1;
@@ -1059,11 +1060,11 @@ namespace nanojit
                 } w;
             };
             d = ins->imm64f();
-            LFD(r, 12, SP);
+            LFD(r, 8, SP);
             STW(R0, 12, SP);
-            asm_li(R0, w.hi);
-            STW(R0, 16, SP);
             asm_li(R0, w.lo);
+            STW(R0, 8, SP);
+            asm_li(R0, w.hi);
         }
         else {
             int64_t q = ins->imm64();

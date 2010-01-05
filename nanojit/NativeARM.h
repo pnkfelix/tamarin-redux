@@ -182,14 +182,7 @@ static const RegisterMask FpRegs = 1<<D0 | 1<<D1 | 1<<D2 | 1<<D3 | 1<<D4 | 1<<D5
 static const RegisterMask GpRegs = 0xFFFF;
 static const RegisterMask AllowableFlagRegs = 1<<R0 | 1<<R1 | 1<<R2 | 1<<R3 | 1<<R4 | 1<<R5 | 1<<R6 | 1<<R7 | 1<<R8 | 1<<R9 | 1<<R10;
 
-#define isS12(offs) ((-(1<<12)) <= (offs) && (offs) < (1<<12))
 #define isU12(offs) (((offs) & 0xfff) == (offs))
-
-static inline bool isValidDisplacement(LOpcode op, int32_t d) {
-    if (op == LIR_ldcs)
-        return (d >= 0) ? isU8(d) : isU8(-d);
-    return isS12(d);
-}
 
 #define IsFpReg(_r)     ((rmask((Register)_r) & (FpRegs)) != 0)
 #define IsGpReg(_r)     ((rmask((Register)_r) & (GpRegs)) != 0)
@@ -216,9 +209,9 @@ verbose_only( extern const char* shiftNames[]; )
     inline uint32_t     decOp2Imm(uint32_t enc);
 #else
 // define stubs, for code that defines NJ_VERBOSE without DEBUG
-# define DECLARE_PLATFORM_ASSEMBLER_DEBUG()								\
-    inline bool         isOp2Imm(uint32_t ) { return true; }			\
-    inline uint32_t     decOp2Imm(uint32_t ) { return 0; } 
+# define DECLARE_PLATFORM_ASSEMBLER_DEBUG()                             \
+    inline bool         isOp2Imm(uint32_t ) { return true; }            \
+    inline uint32_t     decOp2Imm(uint32_t ) { return 0; }
 #endif
 
 #define DECLARE_PLATFORM_ASSEMBLER()                                            \
@@ -254,7 +247,7 @@ verbose_only( extern const char* shiftNames[]; )
     int *       _nSlot;                                                         \
     int *       _nExitSlot;                                                     \
     bool        blx_lr_bug;                                                     \
-    int         max_out_args; /* bytes */                                      
+    int         max_out_args; /* bytes */
 
 #define IMM32(imm)  *(--_nIns) = (NIns)((imm));
 
@@ -664,7 +657,7 @@ enum {
 
 #define STR(_d,_n,_off) do {                                            \
         NanoAssert(IsGpReg(_d) && IsGpReg(_n));                         \
-        NanoAssert(isS12(_off));                                        \
+        NanoAssert(isU12(_off) || isU12(-_off));                        \
         underrunProtect(4);                                             \
         if ((_off)<0)   *(--_nIns) = (NIns)( COND_AL | (0x50<<20) | ((_n)<<16) | ((_d)<<12) | ((-(_off))&0xFFF) ); \
         else            *(--_nIns) = (NIns)( COND_AL | (0x58<<20) | ((_n)<<16) | ((_d)<<12) | ((_off)&0xFFF) ); \
@@ -799,22 +792,6 @@ enum {
             } else NanoAssert(0);                                        \
         }                                                               \
     } while(0)
-
-#define STMIA(_b, _mask) do {                                           \
-        underrunProtect(4);                                             \
-        NanoAssert(IsGpReg(_b));                                        \
-        NanoAssert(((_mask)&rmask(_b))==0 && isU8(_mask));              \
-        *(--_nIns) = (NIns)(COND_AL | (0x8A<<20) | ((_b)<<16) | (_mask)&0xFF); \
-        asm_output("stmia %s!,{0x%x}", gpn(_b), _mask); \
-    } while (0)
-
-#define LDMIA(_b, _mask) do {                                           \
-        underrunProtect(4);                                             \
-        NanoAssert(IsGpReg(_b));                                        \
-        NanoAssert(((_mask)&rmask(_b))==0 && isU8(_mask));              \
-        *(--_nIns) = (NIns)(COND_AL | (0x8B<<20) | ((_b)<<16) | (_mask)&0xFF); \
-        asm_output("ldmia %s!,{0x%x}", gpn(_b), (_mask)); \
-    } while (0)
 
 /*
  * VFP

@@ -38,7 +38,7 @@
 namespace avmplus 
 {
 
-#ifdef AVMPLUS_WORD_CODE
+#ifdef VMCFG_WORDCODE
 
 	// Try to keep the opcodes commented out if the table in Interpreter.cpp does
 	// not use them; it's the best way of catching errors elsewhere.
@@ -201,7 +201,7 @@ namespace avmplus
 		WOP_debugfile = 0xF1,
 		WOP_pushbits = 0x101,
 		WOP_push_doublebits = 0x102,
-		// begin AVMPLUS_PEEPHOLE_OPTIMIZER
+		// begin VMCFG_WORDCODE_PEEPHOLE
 		WOP_get2locals = 0x103,
 		WOP_get3locals = 0x104,
 		WOP_get4locals = 0x105,
@@ -248,13 +248,15 @@ namespace avmplus
 		WOP_ifstricteq_lb = 0x12E,
 		WOP_ifstrictne_lb = 0x12F,
 		WOP_swap_pop = 0x130,
-		// end AVMPLUS_PEEPHOLE_OPTIMIZER
+		// end VMCFG_WORDCODE_PEEPHOLE
 		WOP_findpropglobal = 0x131,
 		WOP_findpropglobalstrict = 0x132,
 		WOP_debugenter = 0x133,
 		WOP_debugexit = 0x134,
+		WOP_lix8 = 0x135,
+		WOP_lix16 = 0x136,
 		
-		WOP_LAST = 0x134
+		WOP_LAST = 0x136
 	};
 	
 	struct WordOpcodeAttr
@@ -279,6 +281,6 @@ namespace avmplus
 	
 	extern const WordOpcodeAttr wopAttrs[];
 	
-#endif // AVMPLUS_WORD_CODE
+#endif // VMCFG_WORDCODE
 
 }

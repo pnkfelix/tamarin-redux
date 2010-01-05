@@ -57,8 +57,8 @@ namespace avmplus
 	MethodInfo::MethodInfo(InitMethodStub, Traits* declTraits) :
 		MethodInfoProcHolder(),
 		_msref(declTraits->pool->core->GetGC()->emptyWeakRef),
-		_declaringScopeOrTraits(uintptr_t(declTraits) | IS_TRAITS),
-		_activationScopeOrTraits(uintptr_t(0) | IS_TRAITS),
+		_declarer(declTraits),
+		_activation(NULL),
 		_pool(declTraits->pool),
 		_abc_info_pos(NULL),
 		_flags(RESOLVED),
@@ -70,8 +70,8 @@ namespace avmplus
     MethodInfo::MethodInfo(InitMethodStub, Traits* declTraits, const NativeMethodInfo* native_info) :
         MethodInfoProcHolder(),
         _msref(declTraits->pool->core->GetGC()->emptyWeakRef),
-		_declaringScopeOrTraits(uintptr_t(declTraits) | IS_TRAITS),
-		_activationScopeOrTraits(uintptr_t(0) | IS_TRAITS),
+		_declarer(declTraits),
+		_activation(NULL),
         _pool(declTraits->pool),
         _abc_info_pos(NULL),
         _flags(RESOLVED),
@@ -94,14 +94,14 @@ namespace avmplus
 							const NativeMethodInfo* native_info) : 
 		MethodInfoProcHolder(),
 		_msref(pool->core->GetGC()->emptyWeakRef),
-		_declaringScopeOrTraits(uintptr_t(0) | IS_TRAITS),
-		_activationScopeOrTraits(uintptr_t(0) | IS_TRAITS),
+		_declarer(NULL),
+		_activation(NULL),
 		_pool(pool),
 		_abc_info_pos(abc_info_pos),
 		_flags(abcFlags),
 		_method_id(method_id)
 	{
-
+        AvmAssert(method_id >= 0);
 #if !defined(MEMORY_INFO)
 		MMGC_STATIC_ASSERT(offsetof(MethodInfo, _implGPR) == 0);
 #endif
@@ -116,65 +116,10 @@ namespace avmplus
 		}
 	}
 
-    // WARNING the logic 'declaringTraits()->init' appears to imply 
-    // a class initializer, but the condition could be generated for
-    // some other combination of traits and methods - short of it is 
-    // don't trust the name of this function.
-    bool MethodInfo::hasNoScopeAndNotClassInitializer() const
-    {
-        AvmAssert(_declaringScopeOrTraits != 0);
-        bool b = ((_declaringScopeOrTraits & IS_TRAITS)==1) && declaringTraits()->init != this;
-        return b;
-    }
- 
-	Traits* MethodInfo::declaringTraits() const 
-	{ 
-		if (_declaringScopeOrTraits & IS_TRAITS)
-			return (Traits*)(_declaringScopeOrTraits & ~IS_TRAITS);
-
-		return ((const ScopeTypeChain*)(_declaringScopeOrTraits))->traits(); 
-	}
-
-	const ScopeTypeChain* MethodInfo::declaringScope() const 
-	{ 
-		AvmAssert(!(_declaringScopeOrTraits & IS_TRAITS));
-		AvmAssert(_declaringScopeOrTraits != 0);
-		return ((const ScopeTypeChain*)(_declaringScopeOrTraits)); 
-	}
-
-	void MethodInfo::init_declaringScope(const ScopeTypeChain* s) 
-	{ 
-		AvmAssert(_declaringScopeOrTraits & IS_TRAITS);
-		AvmAssert(((Traits*)(_declaringScopeOrTraits & ~IS_TRAITS)) == s->traits());
-		WB(pool()->core->GetGC(), this, &_declaringScopeOrTraits, uintptr_t(s)); 
-	}
-
-	Traits* MethodInfo::activationTraits() const 
-	{ 
-		if (_activationScopeOrTraits & IS_TRAITS)
-			return (Traits*)(_activationScopeOrTraits & ~IS_TRAITS);
-
-		return ((const ScopeTypeChain*)(_activationScopeOrTraits))->traits(); 
-	}
-
-	const ScopeTypeChain* MethodInfo::activationScope() const 
-	{ 
-		AvmAssert(!(_activationScopeOrTraits & IS_TRAITS));
-		AvmAssert(_activationScopeOrTraits != 0);
-		return ((const ScopeTypeChain*)(_activationScopeOrTraits)); 
-	}
-
 	void MethodInfo::init_activationTraits(Traits* t) 
 	{ 
-		AvmAssert(_activationScopeOrTraits == (uintptr_t(0) | IS_TRAITS));
-		WB(pool()->core->GetGC(), this, &_activationScopeOrTraits, uintptr_t(t) | IS_TRAITS); 
-	}
-
-	void MethodInfo::init_activationScope(const ScopeTypeChain* s) 
-	{ 
-		AvmAssert(_activationScopeOrTraits & IS_TRAITS);
-		AvmAssert(((Traits*)(_activationScopeOrTraits & ~IS_TRAITS)) == s->traits());
-		WB(pool()->core->GetGC(), this, &_activationScopeOrTraits, uintptr_t(s)); 
+		AvmAssert(_activation.getTraits() == NULL);
+        _activation.setTraits(pool()->core->GetGC(), this, t);
 	}
 
 	static bool hasTypedArgs(MethodSignaturep ms)
@@ -231,7 +176,7 @@ namespace avmplus
 	{
 		MethodInfo* f = env->method;
 
-		#ifdef AVMPLUS_VERIFYALL
+		#ifdef VMCFG_VERIFYALL
 		// never verify late in verifyall mode
 		AvmAssert(!f->pool()->core->config.verifyall);
 		#endif
@@ -254,7 +199,7 @@ namespace avmplus
 	{
 		MethodInfo* f = env->method;
 
-		#ifdef AVMPLUS_VERIFYALL
+		#ifdef VMCFG_VERIFYALL
 		// never verify late in verifyall mode
 		AvmAssert(!f->pool()->core->config.verifyall);
 		#endif
@@ -278,7 +223,7 @@ namespace avmplus
 	{
 		MethodInfo* f = env->method;
 
-		#ifdef AVMPLUS_VERIFYALL
+		#ifdef VMCFG_VERIFYALL
 		// never verify late in verifyall mode
 		AvmAssert(!f->pool()->core->config.verifyall);
 		#endif
@@ -324,6 +269,9 @@ namespace avmplus
 				u.thunker = this->thunker();
 			}
 			this->setNativeImpl(u.implGPR);
+#ifdef FEATURE_NANOJIT
+			InvokerCompiler::initCompilerHook(this);
+#endif
 		}
 		else
 		{
@@ -359,18 +307,19 @@ namespace avmplus
 				Note: allocated using arrays of intptr_t (rather than char) to ensure alignment is acceptable.
 			*/
 		#define MAKE_BUF(name, type) \
-			intptr_t name[(sizeof(type)+sizeof(intptr_t)-1)/sizeof(intptr_t)]
+			intptr_t name##_data[(sizeof(type)+sizeof(intptr_t)-1)/sizeof(intptr_t)];\
+			type* const name = (type*) name##_data /* no semi */
 
 		#if defined FEATURE_NANOJIT
 			MAKE_BUF(jit_buf, CodegenLIR);
-			#if defined AVMPLUS_WORD_CODE
+			#if defined VMCFG_WORDCODE
 			MAKE_BUF(teeWriter_buf, TeeWriter);
 			#endif
 			#ifdef FEATURE_CFGWRITER
 			MAKE_BUF(cfg_buf, CFGWriter);
 			#endif
 		#endif
-			#if defined AVMPLUS_WORD_CODE
+			#if defined VMCFG_WORDCODE
 			MAKE_BUF(translator_buf, WordcodeEmitter);
 			#else
 			MAKE_BUF(stubWriter_buf, CodeWriter);
@@ -385,7 +334,7 @@ namespace avmplus
 					
 					// note placement-new usage!
 					CodegenLIR* jit = new(jit_buf) CodegenLIR(this);
-					#if defined AVMPLUS_WORD_CODE
+					#if defined VMCFG_WORDCODE
 					WordcodeEmitter* translator = new(translator_buf) WordcodeEmitter(this, toplevel);
 					TeeWriter* teeWriter = new(teeWriter_buf) TeeWriter(translator, jit);
 					coder = teeWriter;
@@ -420,7 +369,7 @@ namespace avmplus
 						}
 						setInterpImpl();
 					}
-	                #ifdef AVMPLUS_WORD_CODE
+	                #ifdef VMCFG_WORDCODE
 					else {
 						if (_abc.word_code.translated_code) 
 						{
@@ -436,7 +385,7 @@ namespace avmplus
 				else
 				{
 					// NOTE copied below
-					#if defined AVMPLUS_WORD_CODE
+					#if defined VMCFG_WORDCODE
 					WordcodeEmitter* translator = new(translator_buf) WordcodeEmitter(this, toplevel);
 					coder = translator;
 					#else
@@ -450,7 +399,7 @@ namespace avmplus
 #else // FEATURE_NANOJIT
 
 				// NOTE copied from above
-				#if defined AVMPLUS_WORD_CODE
+				#if defined VMCFG_WORDCODE
 				WordcodeEmitter* translator = new(translator_buf) WordcodeEmitter(this, toplevel);
 				coder = translator;
 				#else
@@ -855,10 +804,9 @@ namespace avmplus
 		AvmAssert(!(_flags & PROTOFUNC));
 // end AVMPLUS_UNCHECKED_HACK
 		
-		AvmAssert(_declaringScopeOrTraits & IS_TRAITS);
-		if (_declaringScopeOrTraits == (uintptr_t(0) | IS_TRAITS))
+		if (_declarer.getTraits() == NULL)
 		{
-			WB(pool()->core->GetGC(), this, &_declaringScopeOrTraits, uintptr_t(traits) | IS_TRAITS); 
+            _declarer.setTraits(pool()->core->GetGC(), this, traits);
 			_flags |= NEED_CLOSURE;
 			return true;
 		}
@@ -879,10 +827,10 @@ namespace avmplus
 		// to clear out data on AbstractionFunction so it can correctly be re-initialized.
 		// If our old function is ever used incorrectly, we throw an verify error in 
 		// MethodEnv::coerceEnter.
-		if (_declaringScopeOrTraits != (uintptr_t(0) | IS_TRAITS))
+		if (_declarer.getTraits() != NULL)
 		{
 			this->_flags &= ~RESOLVED;
-			this->_declaringScopeOrTraits = uintptr_t(0) | IS_TRAITS;
+            _declarer.setTraits(pool()->core->GetGC(), this, NULL);
 			this->_msref = pool()->core->GetGC()->emptyWeakRef;
 		}
 // begin AVMPLUS_UNCHECKED_HACK
@@ -896,11 +844,11 @@ namespace avmplus
 
 		// type of F is synthetic subclass of Function, with a unique
 		// [[call]] property and a unique scope
-		AvmCore* core = pool()->core;
 		Traits* ftraits = fscope->traits();
-		AvmAssert(fscope->traits() == core->traits.function_itraits);
-		WB(core->GetGC(), this, &_declaringScopeOrTraits, uintptr_t(fscope)); 
+		AvmAssert(fscope->traits() == pool()->core->traits.function_itraits);
+        _declarer.setScope(pool()->core->GetGC(), this, fscope);
 		
+        AvmAssert(declaringTraits() == ftraits);
 		return ftraits;
 	}
 	
@@ -932,7 +880,7 @@ namespace avmplus
 		GC* gc = core->GetGC();
 
 		const byte* pos = this->_abc_info_pos;
-		const uint32_t param_count = pos ? AvmCore::readU30(pos) : 0;
+		const uint32_t param_count = pos ? AvmCore::readU32(pos) : 0;
 		uint32_t optional_count = 0;
 		uint32_t rest_offset = 0;
 		Traits* returnType;
@@ -961,7 +909,7 @@ namespace avmplus
 				untyped_args += (argType == NULL);
 // end AVMPLUS_UNCHECKED_HACK
 			}
-			AvmCore::skipU30(pos); // name_index;
+			AvmCore::skipU32(pos); // name_index;
 			pos++; // abcFlags;
 // begin AVMPLUS_UNCHECKED_HACK
 			// toplevel!=NULL check is so we only check when resolveSignature calls us (not subsequently)
@@ -998,11 +946,11 @@ namespace avmplus
 // end AVMPLUS_UNCHECKED_HACK
 			if (hasOptional())
 			{
-				optional_count = AvmCore::readU30(pos);
+				optional_count = AvmCore::readU32(pos);
 				for (uint32_t j=0; j < optional_count; j++)
 				{
 					const int32_t param = param_count-optional_count+1+j;
-					const int32_t index = AvmCore::readU30(pos);
+					const int32_t index = AvmCore::readU32(pos);
 					CPoolKind kind = (CPoolKind)*pos++;
 
 					// check that the default value is legal for the param type
@@ -1017,14 +965,14 @@ namespace avmplus
 				const byte* body_pos = this->abc_body_pos();
 				if (body_pos)
 				{
-					ms->_max_stack = AvmCore::readU30(body_pos);
-					ms->_local_count = AvmCore::readU30(body_pos);
-					const int32_t init_scope_depth = AvmCore::readU30(body_pos);
-					ms->_max_scope = AvmCore::readU30(body_pos) - init_scope_depth;
-				#ifdef AVMPLUS_WORD_CODE
+					ms->_max_stack = AvmCore::readU32(body_pos);
+					ms->_local_count = AvmCore::readU32(body_pos);
+					const int32_t init_scope_depth = AvmCore::readU32(body_pos);
+					ms->_max_scope = AvmCore::readU32(body_pos) - init_scope_depth;
+				#ifdef VMCFG_WORDCODE
 				#else
 					ms->_abc_code_start = body_pos;
-					AvmCore::skipU30(ms->_abc_code_start); // code_length
+					AvmCore::skipU32(ms->_abc_code_start); // code_length
 				#endif
 				}
 			}
@@ -1044,10 +992,10 @@ namespace avmplus
 			ms->_max_stack = max_stack;
 			ms->_local_count = local_count;
 			ms->_max_scope = max_scope_depth - init_scope_depth;
-		#if defined(AVMPLUS_WORD_CODE) || defined(VMCFG_AOT)
+		#if defined(VMCFG_WORDCODE) || defined(VMCFG_AOT)
 		#else
 			ms->_abc_code_start = this->abc_body_pos();
-			AvmCore::skipU30(ms->_abc_code_start, 5);
+			AvmCore::skipU32(ms->_abc_code_start, 5);
 		#endif
 		}
 		ms->_frame_size = ms->_local_count + ms->_max_scope + ms->_max_stack;
@@ -1120,9 +1068,9 @@ namespace avmplus
 		const ScopeTypeChain* ascope = this->declaringScope()->cloneWithNewTraits(pool()->core->GetGC(), atraits);
 
 		atraits->resolveSignatures(toplevel);
-		atraits->init_declaringScopes(ascope);
+		atraits->setDeclaringScopes(ascope);
 
-		this->init_activationScope(ascope);
+        _activation.setScope(pool()->core->GetGC(), this, ascope);
 		
 		return atraits;
 	}

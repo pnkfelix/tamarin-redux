@@ -314,13 +314,13 @@ namespace avmplus
 		return x;
 	}
 
-	uint64 MathUtils::frexp(double x, int *eptr)
+	uint64_t MathUtils::frexp(double x, int *eptr)
 	{
 		double fracMantissa = ExtractFraction(x, eptr);
 		// correct mantissa and eptr to get integer values
 		//  for both
 		*eptr -= 53; // 52 mantissa bits + the hidden bit
-		return (uint64)((fracMantissa) * (double)(1LL << 53));
+		return (uint64_t)((fracMantissa) * (double)(1LL << 53));
 	}
 	
 	double MathUtils::log(double value)
@@ -461,8 +461,8 @@ extern "C" {
 #ifdef X86_MATH
 	int32 MathUtils::real2int(double value)
 	{
-		uint16 oldcw, newcw;
-		int32 intval;
+		uint16_t oldcw, newcw;
+		int32_t intval;
 		_asm fnstcw [oldcw];
 		_asm mov ax,[oldcw];
 		_asm or ax,0xc3f;
