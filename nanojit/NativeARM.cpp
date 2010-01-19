@@ -124,7 +124,7 @@ Assembler::CountLeadingZeroes(uint32_t data)
         :   "=r"    (leading_zeroes)
         :   "r"     (data)
     );
-#elif defined(WINCE)
+#elif defined(UNDER_CE)
     // WinCE can do this with an intrinsic.
     leading_zeroes = _CountLeadingZeros(data);
 #else
@@ -1219,13 +1219,7 @@ Assembler::asm_store32(LOpcode op, LIns *value, int dr, LIns *base)
     }
 
     Register ra, rb;
-    if (base->isop(LIR_alloc)) {
-        rb = FP;
-        dr += findMemFor(base);
-        ra = findRegFor(value, GpRegs);
-    } else {
-        findRegFor2(GpRegs, value, ra, base, rb);
-    }
+    getBaseReg2(GpRegs, value, ra, GpRegs, base, rb, dr);
 
     if (isU12(-dr) || isU12(dr)) {
         STR(ra, rb, dr);
@@ -1647,15 +1641,11 @@ Assembler::nativePageSetup()
     NanoAssert(!_inExit);
     if (!_nIns)
         codeAlloc(codeStart, codeEnd, _nIns verbose_only(, codeBytes));
-    if (!_nExitIns)
-        codeAlloc(exitStart, exitEnd, _nExitIns verbose_only(, exitBytes));
 
     // constpool starts at top of page and goes down,
     // code starts at bottom of page and moves up
     if (!_nSlot)
         _nSlot = codeStart;
-    if (!_nExitSlot)
-        _nExitSlot = exitStart;
 }
 
 
@@ -2045,6 +2035,16 @@ Assembler::asm_u2f(LInsp ins)
     FMSR(FpSingleScratch, sr);
 }
 
+void Assembler::asm_f2i(LInsp ins)
+{
+    // where our result goes
+    Register rr = prepResultReg(ins, GpRegs);
+    Register sr = findRegFor(ins->oprnd1(), FpRegs);
+
+    FMRS(rr, FpSingleScratch);
+    FTOSID(FpSingleScratch, sr);
+}
+
 void
 Assembler::asm_fneg(LInsp ins)
 {
@@ -2096,7 +2096,7 @@ Assembler::asm_fcmp(LInsp ins)
     NanoAssert(op >= LIR_feq && op <= LIR_fge);
 
     Register ra, rb;
-    findRegFor2(FpRegs, lhs, ra, rhs, rb);
+    findRegFor2(FpRegs, lhs, ra, FpRegs, rhs, rb);
 
     int e_bit = (op != LIR_feq);
 
@@ -2209,7 +2209,7 @@ Assembler::asm_cmp(LIns *cond)
         }
     } else {
         Register ra, rb;
-        findRegFor2(GpRegs, lhs, ra, rhs, rb);
+        findRegFor2(GpRegs, lhs, ra, GpRegs, rhs, rb);
         CMP(ra, rb);
     }
 }
@@ -2686,6 +2686,10 @@ Assembler::asm_jtbl(LIns* ins, NIns** table)
 }
 
 void Assembler::swapCodeChunks() {
+    if (!_nExitIns)
+        codeAlloc(exitStart, exitEnd, _nExitIns verbose_only(, exitBytes));
+    if (!_nExitSlot)
+        _nExitSlot = exitStart;
     SWAP(NIns*, _nIns, _nExitIns);
     SWAP(NIns*, _nSlot, _nExitSlot);        // this one is ARM-specific
     SWAP(NIns*, codeStart, exitStart);

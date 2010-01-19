@@ -139,6 +139,17 @@ namespace nanojit
         uint32_t _count_args(uint32_t mask) const;
         uint32_t get_sizes(ArgSize*) const;
 
+        inline ArgSize returnType() const {
+            return ArgSize(_argtypes & ARGSIZE_MASK_ANY);
+        }
+
+        // Note that this indexes arguments *backwards*, that is to
+        // get the Nth arg, you have to ask for index (numargs - N).
+        // See mozilla bug 525815 for fixing this.
+        inline ArgSize argType(uint32_t arg) const {
+            return ArgSize((_argtypes >> (ARGSIZE_SHIFT * (arg+1))) & ARGSIZE_MASK_ANY);
+        }
+
         inline bool isIndirect() const {
             return _address < 256;
         }
@@ -492,14 +503,9 @@ namespace nanojit
         bool isop(LOpcode o) const {
             return opcode() == o;
         }
-        bool isQuad() const {
-            LTy ty = retTypes[opcode()];
-            return ty == LTy_I64 || ty == LTy_F64;
-        }
         bool isCond() const {
             return (isop(LIR_ov)) || isCmp();
         }
-        bool isFloat() const;   // not inlined because it contains a switch
         bool isCmp() const {
             LOpcode op = opcode();
             return (op >= LIR_eq  && op <= LIR_uge) ||
@@ -550,11 +556,26 @@ namespace nanojit
             return isop(LIR_jt) || isop(LIR_jf) || isop(LIR_j) || isop(LIR_jtbl);
         }
 
-        bool isPtr() {
-#ifdef NANOJIT_64BIT
-            return retTypes[opcode()] == LTy_I64;
-#else
+        bool isVoid() const {
+            return retTypes[opcode()] == LTy_Void;
+        }
+        bool isI32() const {
             return retTypes[opcode()] == LTy_I32;
+        }
+        bool isI64() const {
+            return retTypes[opcode()] == LTy_I64;
+        }
+        bool isF64() const {
+            return retTypes[opcode()] == LTy_F64;
+        }
+        bool isQuad() const {
+            return isI64() || isF64();
+        }
+        bool isPtr() const {
+#ifdef NANOJIT_64BIT
+            return isI64();
+#else
+            return isI32();
 #endif
         }
 
@@ -571,7 +592,7 @@ namespace nanojit
             if (isCall())
                 return !isCse();
             else
-                return retTypes[opcode()] == LTy_Void;
+                return isVoid();
         }
 
         inline void* constvalp() const
@@ -1483,7 +1504,7 @@ namespace nanojit
 
     class Assembler;
 
-    void compile(Assembler *assm, Fragment *frag, Allocator& alloc verbose_only(, LabelMap*));
+    void compile(Assembler *assm, Fragment *frag, Allocator& alloc, bool optimize verbose_only(, LabelMap*));
     verbose_only(void live(LirFilter* in, Allocator& alloc, Fragment* frag, LogControl*);)
 
     class StackFilter: public LirFilter

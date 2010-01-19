@@ -327,13 +327,16 @@ namespace nanojit
             LInsp       findVictim(RegisterMask allow);
 
             Register    getBaseReg(LIns *i, int &d, RegisterMask allow);
+            void        getBaseReg2(RegisterMask allowValue, LIns* value, Register& rv,
+                                    RegisterMask allowBase, LIns* base, Register& rb, int &d);
 #if NJ_USES_QUAD_CONSTANTS
             const uint64_t*
                         findQuadConstant(uint64_t q);
 #endif
             int         findMemFor(LIns* i);
             Register    findRegFor(LIns* i, RegisterMask allow);
-            void        findRegFor2(RegisterMask allow, LIns* ia, Register &ra, LIns *ib, Register &rb);
+            void        findRegFor2(RegisterMask allowa, LIns* ia, Register &ra,
+                                    RegisterMask allowb, LIns *ib, Register &rb);
             Register    findSpecificRegFor(LIns* i, Register r);
             Register    findSpecificRegForUnallocated(LIns* i, Register r);
             Register    prepResultReg(LIns *i, RegisterMask allow);
@@ -377,6 +380,7 @@ namespace nanojit
             NIns        *exitStart, *exitEnd;   // current exit code chunk
             NIns*       _nIns;                  // current instruction in current normal code chunk
             NIns*       _nExitIns;              // current instruction in current exit code chunk
+                                                // note: _nExitIns == NULL until the first side exit is seen.
         #ifdef NJ_VERBOSE
         public:
             size_t      codeBytes;              // bytes allocated in normal code chunks
@@ -423,6 +427,7 @@ namespace nanojit
             void        asm_fop(LInsp ins);
             void        asm_i2f(LInsp ins);
             void        asm_u2f(LInsp ins);
+            void        asm_f2i(LInsp ins);
             void        asm_promote(LIns *ins);
             void        asm_nongp_copy(Register r, Register s);
             void        asm_call(LInsp);

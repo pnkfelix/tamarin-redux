@@ -423,22 +423,6 @@ namespace nanojit
                           (offsetof(LInsSti, ins) - offsetof(LInsSti, oprnd_2)) );
     }
 
-    bool LIns::isFloat() const {
-        switch (opcode()) {
-            default:
-                return false;
-            case LIR_fadd:
-            case LIR_fsub:
-            case LIR_fmul:
-            case LIR_fdiv:
-            case LIR_fneg:
-            case LIR_fcall:
-            case LIR_i2f:
-            case LIR_u2f:
-                return true;
-        }
-    }
-
     LIns* LirWriter::ins2i(LOpcode v, LIns* oprnd1, int32_t imm)
     {
         return ins2(v, oprnd1, insImm(imm));
@@ -497,6 +481,10 @@ namespace nanojit
             if (i->isconst())
                 return insImmf(i->imm32());
             break;
+        case LIR_f2i:
+            if (i->isconstq())
+                return insImm(int32_t(i->imm64f()));
+            break;
         case LIR_u2f:
             if (i->isconst())
                 return insImmf(uint32_t(i->imm32()));
@@ -507,7 +495,11 @@ namespace nanojit
 
         return out->ins1(v, i);
     }
-
+    
+    // This is an ugly workaround for an apparent compiler
+    // bug; in VC2008, compiling with optimization on
+    // will produce spurious errors if this code is inlined
+    // into ExprFilter::ins2(). See https://bugzilla.mozilla.org/show_bug.cgi?id=538504
     inline double do_join(int32_t c1, int32_t c2)
     {
         union {
@@ -740,6 +732,8 @@ namespace nanojit
                 default:
                     ;
                 }
+            } else if (c == 1 && v == LIR_mul) {
+                return oprnd1;
             }
         }
 
@@ -1532,6 +1526,7 @@ namespace nanojit
                 case LIR_u2q:
                 case LIR_i2f:
                 case LIR_u2f:
+                case LIR_f2i:
                 case LIR_mod:
                     live.add(ins->oprnd1(), ins);
                     break;
@@ -1857,6 +1852,7 @@ namespace nanojit
             case LIR_mod:
             case LIR_i2q:
             case LIR_u2q:
+            case LIR_f2i:
                 VMPI_sprintf(s, "%s = %s %s", formatRef(i), lirNames[op], formatRef(i->oprnd1()));
                 break;
 
@@ -2125,7 +2121,7 @@ namespace nanojit
         return out->insCall(ci, args);
     }
 
-    void compile(Assembler* assm, Fragment* frag, Allocator& alloc verbose_only(, LabelMap* labels))
+    void compile(Assembler* assm, Fragment* frag, Allocator& alloc, bool optimize verbose_only(, LabelMap* labels))
     {
         verbose_only(
         LogControl *logc = assm->_logc;
@@ -2150,8 +2146,12 @@ namespace nanojit
             logc->printf("=== Results of liveness analysis:\n");
             logc->printf("===\n");
             LirReader br(frag->lastIns);
-            StackFilter sf(&br, alloc, frag->lirbuf, frag->lirbuf->sp, frag->lirbuf->rp);
-            live(&sf, alloc, frag, logc);
+            LirFilter* lir = &br;
+            if (optimize) {
+                StackFilter sf(lir, alloc, frag->lirbuf, frag->lirbuf->sp, frag->lirbuf->rp);
+                lir = &sf;
+            }
+            live(lir, alloc, frag, logc);
         })
 
         /* Set up the generic text output cache for the assembler */
@@ -2184,29 +2184,31 @@ namespace nanojit
         LirReader bufreader(frag->lastIns);
 
         // Used to construct the pipeline
-        LirFilter* prev = &bufreader;
+        LirFilter* lir = &bufreader;
 
         // The LIR passes through these filters as listed in this
         // function, viz, top to bottom.
 
         // INITIAL PRINTING
         verbose_only( if (assm->_logc->lcbits & LC_ReadLIR) {
-        pp_init = new (alloc) ReverseLister(prev, alloc, frag->lirbuf->names, assm->_logc,
+        pp_init = new (alloc) ReverseLister(lir, alloc, frag->lirbuf->names, assm->_logc,
                                     "Initial LIR");
-        prev = pp_init;
+        lir = pp_init;
         })
 
         // STACKFILTER
-        StackFilter stackfilter(prev, alloc, frag->lirbuf, frag->lirbuf->sp, frag->lirbuf->rp);
-        prev = &stackfilter;
+        if (optimize) {
+            StackFilter stackfilter(lir, alloc, frag->lirbuf, frag->lirbuf->sp, frag->lirbuf->rp);
+            lir = &stackfilter;
+        }
 
         verbose_only( if (assm->_logc->lcbits & LC_AfterSF) {
-        pp_after_sf = new (alloc) ReverseLister(prev, alloc, frag->lirbuf->names, assm->_logc,
+        pp_after_sf = new (alloc) ReverseLister(lir, alloc, frag->lirbuf->names, assm->_logc,
                                                 "After StackFilter");
-        prev = pp_after_sf;
+        lir = pp_after_sf;
         })
 
-        assm->assemble(frag, prev);
+        assm->assemble(frag, lir);
 
         // If we were accumulating debug info in the various ReverseListers,
         // call finish() to emit whatever contents they have accumulated.
@@ -2389,6 +2391,9 @@ namespace nanojit
         va_start(vargs, format);
         vfprintf(stdout, format, vargs);
         va_end(vargs);
+        // Flush every line immediately so that if crashes occur in generated
+        // code we won't lose any output.
+        fflush(stdout);
     }
 
 #endif // NJ_VERBOSE
@@ -2404,6 +2409,7 @@ namespace nanojit
             case LIR_fret:
             case LIR_qlo:
             case LIR_qhi:
+            case LIR_f2i:
               NanoAssert(s0->isQuad());
               break;
             case LIR_not:

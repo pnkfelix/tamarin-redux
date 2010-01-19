@@ -334,17 +334,13 @@ namespace nanojit
             {
                 // make sure what is in a register
                 Register ra, rb;
-                if (base->isop(LIR_alloc)) {
-                    rb = FP;
-                    dr += findMemFor(base);
-                    ra = findRegFor(value, GpRegs);
-                } else if (base->isconst()) {
+                if (base->isconst()) {
                     // absolute address
                     dr += base->imm32();
                     ra = findRegFor(value, GpRegs);
                     rb = G0;
                 } else {
-                    findRegFor2(GpRegs, value, ra, base, rb);
+                    getBaseReg2(GpRegs, value, ra, GpRegs, base, rb, dr);
                 }
                 STW32(ra, dr, rb);
             }
@@ -601,7 +597,7 @@ namespace nanojit
         else
             {
                 Register ra, rb;
-                findRegFor2(GpRegs, lhs, ra, rhs, rb);
+                findRegFor2(GpRegs, lhs, ra, GpRegs, rhs, rb);
                 SUBCC(ra, rb, G0);
             }
     }
@@ -965,6 +961,10 @@ namespace nanojit
         SETHI(0x43300000, G1);
     }
 
+    void Assembler::asm_f2i(LInsp) {
+        NanoAssertMsg(0, "NJ_F2I_SUPPORTED not yet supported for this architecture");
+    }
+
     void Assembler::asm_nongp_copy(Register r, Register s)
     {
         underrunProtect(4);
@@ -1046,8 +1046,6 @@ namespace nanojit
         NanoAssert(!_inExit);
         if (!_nIns)
             codeAlloc(codeStart, codeEnd, _nIns verbose_only(, codeBytes));
-        if (!_nExitIns)
-            codeAlloc(exitStart, exitEnd, _nExitIns verbose_only(, exitBytes));
     }
 
     // Increment the 32-bit profiling counter at pCtr, without
@@ -1089,6 +1087,8 @@ namespace nanojit
     }
 
     void Assembler::swapCodeChunks() {
+        if (!_nExitIns)
+            codeAlloc(exitStart, exitEnd, _nExitIns verbose_only(, exitBytes));
         SWAP(NIns*, _nIns, _nExitIns);
         SWAP(NIns*, codeStart, exitStart);
         SWAP(NIns*, codeEnd, exitEnd);

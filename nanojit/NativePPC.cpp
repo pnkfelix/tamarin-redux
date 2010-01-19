@@ -87,6 +87,7 @@ namespace nanojit
      * sp+12    sp+24   reserved
      */
 
+    const int min_param_area_size = 8*sizeof(void*); // r3-r10
     const int linkage_size = 6*sizeof(void*);
     const int lr_offset = 2*sizeof(void*); // linkage.lr
     const int cr_offset = 1*sizeof(void*); // linkage.cr
@@ -96,8 +97,13 @@ namespace nanojit
         // stw r0, lr_offset(sp)
         // stwu sp, -framesize(sp)
 
+        // param_area must be at least large enough for r3-r10 to be saved,
+        // regardless of whether we think the callee needs less: e.g., the callee
+        // might tail-call to a function that uses varargs, which could flush
+        // r3-r10 to the parameter area.
+        uint32_t param_area = (max_param_size > min_param_area_size) ? max_param_size : min_param_area_size;
         // activation frame is 4 bytes per entry even on 64bit machines
-        uint32_t stackNeeded = max_param_size + linkage_size + _activation.stackSlotsNeeded() * 4;
+        uint32_t stackNeeded = param_area + linkage_size + _activation.stackSlotsNeeded() * 4;
         uint32_t aligned = alignUp(stackNeeded, NJ_ALIGN_STACK);
 
         UNLESS_PEDANTIC( if (isS16(aligned)) {
@@ -966,7 +972,7 @@ namespace nanojit
         RegisterMask allow = FpRegs;
         Register rr = prepResultReg(ins, allow);
         Register ra, rb;
-        findRegFor2(allow, lhs, ra, rhs, rb);
+        findRegFor2(allow, lhs, ra, allow, rhs, rb);
         switch (op) {
             case LIR_fadd: FADD(rr, ra, rb); break;
             case LIR_fsub: FSUB(rr, ra, rb); break;
@@ -1021,6 +1027,10 @@ namespace nanojit
         STW(R0, d, SP);
         LIS(R0, 0x4330);
     #endif
+    }
+
+    void Assembler::asm_f2i(LInsp) {
+        NanoAssertMsg(0, "NJ_F2I_SUPPORTED not yet supported for this architecture");
     }
 
     void Assembler::asm_promote(LIns *ins) {
@@ -1245,9 +1255,6 @@ namespace nanojit
             codeAlloc(codeStart, codeEnd, _nIns verbose_only(, codeBytes));
             IF_PEDANTIC( pedanticTop = _nIns; )
         }
-        if (!_nExitIns) {
-            codeAlloc(exitStart, exitEnd, _nExitIns verbose_only(, exitBytes));
-        }
     }
 
     void Assembler::nativePageReset()
@@ -1391,6 +1398,9 @@ namespace nanojit
     }
 
     void Assembler::swapCodeChunks() {
+        if (!_nExitIns) {
+            codeAlloc(exitStart, exitEnd, _nExitIns verbose_only(, exitBytes));
+        }
         SWAP(NIns*, _nIns, _nExitIns);
         SWAP(NIns*, codeStart, exitStart);
         SWAP(NIns*, codeEnd, exitEnd);

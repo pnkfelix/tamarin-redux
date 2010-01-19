@@ -3533,21 +3533,36 @@ namespace MMgc
  		mmfx_delete(seg);
  	} 
 
-	GCAutoEnter::GCAutoEnter(GC *gc) : gc(NULL) 
+	GCAutoEnter::GCAutoEnter(GC *gc) : m_gc(NULL), m_prevgc(NULL)
 	{ 
 		if(gc && gc->GetStackEnter() == 0) {
-			this->gc = gc;
-			gc->heap->SetActiveGC(gc);
+			m_gc = gc;
+			m_prevgc = gc->heap->SetActiveGC(gc);
+            // In theory, nested GCAutoEnter usage should be unnecessary and avoided
+            // (thus we'd expect gc->heap->GetActiveGC() == NULL upon entry to this function). 
+            // In practice, however, nested usage is extant in Flash in a few areas that are
+            // nontrivial to refactor to avoid this, and the consequences of not handling this can result
+            // in hard-to-debug crashes in obscure situations. Thus we are allowing the not-recommended 
+            // nested usage by saving and restoring the active gc (since it's cheap to do so). 
+            // If you want to detect these situations, uncomment the assert below (but do not check
+            // in such a change unless you want to make nested GCAutoEnter usage officially deprecated,
+            // which we are not yet prepared to do.) see https://bugzilla.mozilla.org/show_bug.cgi?id=540088
+            // GCAssert(m_prevgc == NULL); 
 			gc->SetStackEnter(this);
 		}
 	}
 	
 	GCAutoEnter::~GCAutoEnter() 
 	{ 
-		if(gc) {
-			gc->SetStackEnter(NULL); 
-			gc->heap->SetActiveGC(NULL);
-			gc = NULL;
+		if(m_gc) {
+            GCAssert(m_gc->GetStackEnter() == uintptr_t(this));
+			m_gc->SetStackEnter(NULL); 
+        #ifdef DEBUG
+            GC* curgc = 
+        #endif
+                m_gc->heap->SetActiveGC(m_prevgc);
+            GCAssert(curgc == m_gc);
+			m_gc = NULL;
 		}
 	}
 
