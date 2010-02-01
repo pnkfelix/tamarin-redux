@@ -35,62 +35,29 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __avmplus_ClassClosure__
-#define __avmplus_ClassClosure__
-
+#ifndef __avmplus_ClassClosure_inlines__
+#define __avmplus_ClassClosure_inlines__
 
 namespace avmplus
 {
-	/**
-	 * a user defined class, ie class MyClass
-	 */
-	class ClassClosure : public ScriptObject
-	{
-	public:
-
-		ClassClosure(VTable *cvtable);
-
-		Atom get_prototype();
-		void set_prototype(Atom p);
-
-		ScriptObject* prototypePtr();
-		void setPrototypePtr(ScriptObject* p);
-
-		void createVanillaPrototype();
-
-		/**
-		 * called as constructor, as in new C().  for user classes this
-		 * invokes the implicit constructor followed by the user's constructor
-		 * if any.
-		 */
-		virtual Atom construct(int argc, Atom* argv);
-
-		ScriptObject* newInstance();
-
-		/**
-		 * called as function, as in C().  For user classes, this is the
-		 * the explicit coersion function.  For user functions, we
-		 * invoke m_call.
-		 */
-		virtual Atom call(int argc, Atom* argv);
-
-		VTable* ivtable() const;
-
-#ifdef DEBUGGER
-		virtual uint64_t size() const;
-#endif
-
-		virtual Stringp implToString() const;
-
-#ifdef AVMPLUS_VERBOSE
-	public:
-		Stringp format(AvmCore* core) const;
-#endif
-	// ------------------------ DATA SECTION BEGIN
-	private: DRCWB(ScriptObject*) prototype;
-	DECLARE_SLOTS_ClassClosure;
-	// ------------------------ DATA SECTION END
-	};
+	
+REALLY_INLINE ScriptObject* ClassClosure::prototypePtr()
+{
+	return prototype;
 }
 
-#endif /* __avmplus_ClassClosure__ */
+REALLY_INLINE VTable* ClassClosure::ivtable() const
+{
+	return vtable->ivtable;
+}
+
+// Called from C++ to alloc a new instance.  Generated code calls createInstance directly.
+REALLY_INLINE ScriptObject* ClassClosure::newInstance() 
+{
+	VTable* ivtable = this->ivtable();
+	return ivtable->createInstance(this, ivtable);
+}
+	
+}
+
+#endif /* __avmplus_ClassClosure_inlines__ */
