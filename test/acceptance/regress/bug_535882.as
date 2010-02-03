@@ -15,7 +15,7 @@
  *
  * The Initial Developer of the Original Code is
  * Adobe System Incorporated.
- * Portions created by the Initial Developer are Copyright (C) 2004-2006
+ * Portions created by the Initial Developer are Copyright (C) 2010
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,62 +35,18 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __avmplus_ClassClosure__
-#define __avmplus_ClassClosure__
+startTest();
+
+var myXML:XML = new XML('<Test><KeyFrame name="&kColor_TextEditTextFieldOutlineNormalEnd;" t="0.0" v="&kTextEditInnerShadow_DarkV;" /></Test>');
+var expected:String = '<Test><KeyFrame name="&amp;kColor_TextEditTextFieldOutlineNormalEnd;" t="0.0" v="&amp;kTextEditInnerShadow_DarkV;"/></Test>';
 
 
-namespace avmplus
-{
-	/**
-	 * a user defined class, ie class MyClass
-	 */
-	class ClassClosure : public ScriptObject
-	{
-	public:
+var pp:Boolean = XML.prettyPrinting;
 
-		ClassClosure(VTable *cvtable);
+XML.prettyPrinting = false;
 
-		Atom get_prototype();
-		void set_prototype(Atom p);
+AddTestCase('Bug 535882 -  XMLParser incorrectly converts attribute values containing entities', expected, myXML.toXMLString());
 
-		ScriptObject* prototypePtr();
-		void setPrototypePtr(ScriptObject* p);
+XML.prettyPrinting = pp;  // restore prettyPrinting setting
 
-		void createVanillaPrototype();
-
-		/**
-		 * called as constructor, as in new C().  for user classes this
-		 * invokes the implicit constructor followed by the user's constructor
-		 * if any.
-		 */
-		virtual Atom construct(int argc, Atom* argv);
-
-		ScriptObject* newInstance();
-
-		/**
-		 * called as function, as in C().  For user classes, this is the
-		 * the explicit coersion function.  For user functions, we
-		 * invoke m_call.
-		 */
-		virtual Atom call(int argc, Atom* argv);
-
-		VTable* ivtable() const;
-
-#ifdef DEBUGGER
-		virtual uint64_t size() const;
-#endif
-
-		virtual Stringp implToString() const;
-
-#ifdef AVMPLUS_VERBOSE
-	public:
-		Stringp format(AvmCore* core) const;
-#endif
-	// ------------------------ DATA SECTION BEGIN
-	private: DRCWB(ScriptObject*) prototype;
-	DECLARE_SLOTS_ClassClosure;
-	// ------------------------ DATA SECTION END
-	};
-}
-
-#endif /* __avmplus_ClassClosure__ */
+test();
