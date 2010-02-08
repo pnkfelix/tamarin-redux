@@ -332,6 +332,10 @@ namespace avmplus
 		_emptySupertypeList = Traits::allocSupertypeList(gc, 0);
 	}
 
+    AvmCore* AvmCore::getActiveCore() {
+        return GC::GetActiveGC()->core();
+    }
+
 	AvmCore::~AvmCore()
 	{		
 #ifdef DEBUGGER
@@ -3477,11 +3481,6 @@ return the result of the comparison ToPrimitive(x) == y.
 														 pattern, options);
 	}
 	
-	ScriptObject* AvmCore::newObject(VTable *vtable, ScriptObject *delegate)
-	{
-		return new (GetGC(), vtable->getExtraSize()) ScriptObject(vtable, delegate);
-	}
-
 	Namespacep AvmCore::newNamespace(Atom prefix, Atom uri, Namespace::NamespaceType type)
 	{
 		// E4X - this is 13.2.3, step 3 - prefix IS specified
