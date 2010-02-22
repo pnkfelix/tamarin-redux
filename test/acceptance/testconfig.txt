@@ -64,6 +64,11 @@ util/shell_ats, .*, skip, shell file for ats media creation
 # BUGS:
 # Grouped by feature or platform
 
+
+# https://bugzilla.mozilla.org/show_bug.cgi?id=541358
+mmgc/outofmemory , .* , skip, https://bugzilla.mozilla.org/show_bug.cgi?id=541358
+
+
 ####################
 # force JIT -Ojit
 ####################
@@ -162,6 +167,20 @@ ecma3/GlobalObject/e15_1_2_3_1, arm-winmobile.*-debug, expectedfail, bug https:/
 ecma3/String/e15_5_3_2_1, arm-winmobile.*-debug, expectedfail, bug https://bugzilla.mozilla.org/show_bug.cgi?id=544862
 ecma3/TypeConversion/e9_3_1_1, arm-winmobile.*-debug, expectedfail, bug https://bugzilla.mozilla.org/show_bug.cgi?id=544862
 
+
+####################
+# Android 
+####################
+regress/bug_515935 , arm-android.*, skip, https://bugzilla.mozilla.org/show_bug.cgi?id=547282
+ecma3/Unicode/u5000_CJKUnifiedIdeographs , arm-android.*, skip , test runs too slowly
+ecma3/Unicode/u7000_CJKUnifiedIdeographs , arm-android.*, skip , test runs too slowly
+ecma3/Unicode/u6000_CJKUnifiedIdeographs , arm-android.*, skip , test runs too slowly
+ecma3/Unicode/u8000_CJKUnifiedIdeographs , arm-android.*, skip , test runs too slowly
+ecma3/Unicode/u9000_CJKUnifiedIdeographs , arm-android.*, skip , test runs too slowly
+ecma3/Unicode/uE000_PrivateUseArea , arm-android.*, skip , test runs too slowly
+ecma3/Unicode/u3400_CJKUnifiedIdeographsExtensionA , arm-android.*, skip , test runs too slowly
+ecma3/Unicode/uAC00_HangulSyllables , arm-android.*, skip , test runs too slowly
+mops/mops , arm-android.* , skip , test runs too slowly
 
 ####################
 # Windows Mobile Emulator
