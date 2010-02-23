@@ -108,11 +108,6 @@ REALLY_INLINE QCache* AvmCore::msCache()
 
 #ifdef FEATURE_NANOJIT // accessors
 
-REALLY_INLINE bool AvmCore::quiet_opt() const
-{
-    return false;
-}
-
 #if defined AVMPLUS_IA32 || defined AVMPLUS_AMD64
 REALLY_INLINE bool AvmCore::use_sse2() const
 {
@@ -438,6 +433,11 @@ REALLY_INLINE /*static*/ bool AvmCore::isString(Atom atom)
 REALLY_INLINE /*static*/ bool AvmCore::isName(Atom atom)
 {
     return isString(atom) && atomToString(atom)->isInterned();
+}
+
+REALLY_INLINE ScriptObject* AvmCore::newObject(VTable *vtable, ScriptObject *delegate)
+{
+    return new (GetGC(), vtable->getExtraSize()) ScriptObject(vtable, delegate);
 }
 
 /** Helper function; reads a signed 24-bit integer from pc */
