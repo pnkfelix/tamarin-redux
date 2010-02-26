@@ -64,6 +64,11 @@ util/shell_ats, .*, skip, shell file for ats media creation
 # BUGS:
 # Grouped by feature or platform
 
+
+# https://bugzilla.mozilla.org/show_bug.cgi?id=541358
+mmgc/outofmemory , .* , skip, https://bugzilla.mozilla.org/show_bug.cgi?id=541358
+
+
 ####################
 # force JIT -Ojit
 ####################
@@ -167,6 +172,7 @@ ecma3/TypeConversion/e9_3_1_1, arm-winmobile.*-debug, expectedfail, bug https://
 # Android 
 ####################
 regress/bug_515935 , arm-android.*, skip, https://bugzilla.mozilla.org/show_bug.cgi?id=547282
+ecma3/Date/e15_9_3_8_5 , arm-android.*, skip , investigating returns bad exit code
 ecma3/Unicode/u5000_CJKUnifiedIdeographs , arm-android.*, skip , test runs too slowly
 ecma3/Unicode/u7000_CJKUnifiedIdeographs , arm-android.*, skip , test runs too slowly
 ecma3/Unicode/u6000_CJKUnifiedIdeographs , arm-android.*, skip , test runs too slowly

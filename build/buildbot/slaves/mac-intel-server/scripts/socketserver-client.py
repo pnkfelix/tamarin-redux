@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env python
+# -*- python -*-
+# ex: set syntax=python:
 #  ***** BEGIN LICENSE BLOCK *****
 #  Version: MPL 1.1/GPL 2.0/LGPL 2.1
 # 
@@ -16,7 +18,7 @@
 # 
 #  The Initial Developer of the Original Code is
 #  Adobe System Incorporated.
-#  Portions created by the Initial Developer are Copyright (C) 2009
+#  Portions created by the Initial Developer are Copyright (C) 2010
 #  the Initial Developer. All Rights Reserved.
 # 
 #  Contributor(s):
@@ -35,11 +37,49 @@
 #  the terms of any one of the MPL, the GPL or the LGPL.
 # 
 #  ***** END LICENSE BLOCK ****
-(set -o igncr) 2>/dev/null && set -o igncr; # comment is needed
 
-echo args=$* >> /var/log/hg-buildbot-trigger.log
-echo "HG_NODE=$HG_NODE" >> /var/log/hg-buildbot-trigger.log
-echo "HG_URL=$HG_URL" >> /var/log/hg-buildbot-trigger.log
-python /e/repo/tamarin-redux/build/buildbot/master/scripts/hg_buildbot_trigger.py $*
-echo done >> /var/log/hg-buildbot-trigger.log
-exit 0
+import sys,socket,os,time
+
+port=None
+host=None
+if os.environ.has_key("SHELLPORT"):
+    try:
+        port=int(os.environ.get("SHELLPORT"))
+    except:
+        print("error: parsing SHELLPORT")
+if os.environ.has_key("SHELLSERVER"):
+    host=os.environ.get("SHELLSERVER")
+
+if (host==None or port==None):
+    print("error: SHELLPORT and SHELLSERVER must be set")
+    sys.exit(1)
+
+args=""
+for item in sys.argv[1:]:
+    args+=item+" "
+
+
+s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((host,port))
+s.send("%s" % args)
+result=''
+timeout=300
+starttime=time.time()
+exitcode=0
+while True:
+    result+=s.recv(1024)
+    if result.find("setup finished")>-1 or result.find("ok:")>-1:
+        break
+    if result.find("setup failed")>-1 or result.find("error:")>-1:
+        exitcode=1
+        break
+    if time.time()-starttime>timeout:
+        print("ERROR: timed out after %d sec" % timeout)
+        exitcode=1
+        break
+print(result)
+s.close()
+sys.exit(exitcode)
+
+
+
