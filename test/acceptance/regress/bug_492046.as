@@ -15,7 +15,7 @@
  *
  * The Initial Developer of the Original Code is
  * Adobe System Incorporated.
- * Portions created by the Initial Developer are Copyright (C) 2004-2006
+ * Portions created by the Initial Developer are Copyright (C) 2005-2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,62 +35,25 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __avmplus_ClassClosure__
-#define __avmplus_ClassClosure__
-
-
-namespace avmplus
-{
-	/**
-	 * a user defined class, ie class MyClass
-	 */
-	class ClassClosure : public ScriptObject
-	{
-	public:
-
-		ClassClosure(VTable *cvtable);
-
-		Atom get_prototype();
-		void set_prototype(Atom p);
-
-		ScriptObject* prototypePtr();
-		void setPrototypePtr(ScriptObject* p);
-
-		void createVanillaPrototype();
-
-		/**
-		 * called as constructor, as in new C().  for user classes this
-		 * invokes the implicit constructor followed by the user's constructor
-		 * if any.
-		 */
-		virtual Atom construct(int argc, Atom* argv);
-
-		ScriptObject* newInstance();
-
-		/**
-		 * called as function, as in C().  For user classes, this is the
-		 * the explicit coersion function.  For user functions, we
-		 * invoke m_call.
-		 */
-		virtual Atom call(int argc, Atom* argv);
-
-		VTable* ivtable() const;
-
-#ifdef DEBUGGER
-		virtual uint64_t bytesUsed() const;
-#endif
-
-		virtual Stringp implToString() const;
-
-#ifdef AVMPLUS_VERBOSE
-	public:
-		Stringp format(AvmCore* core) const;
-#endif
-	// ------------------------ DATA SECTION BEGIN
-	private: DRCWB(ScriptObject*) prototype;
-	DECLARE_SLOTS_ClassClosure;
-	// ------------------------ DATA SECTION END
-	};
+class State {
+	var next = null;
 }
 
-#endif /* __avmplus_ClassClosure__ */
+const depths = new Vector.<State>(2,true);
+
+function expand(depth)
+{
+	var x = new State;
+	x.next = depths[depth];
+	return(x);
+}
+
+var TITLE   = "Regression Testcase for Bug 492046: null value assigned to slot raises assertion failure";
+
+startTest();
+
+AddTestCase("null value assigned to slot should not assert", "[object State]", String(expand(1)) );
+
+test();
+
+
