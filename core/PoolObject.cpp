@@ -135,10 +135,10 @@ namespace avmplus
         return (Traits*) _namedTraits->getName(name);
     }
 
-    Traits* PoolObject::getTraits(Stringp name, Namespace* ns, bool recursive/*=true*/) const
+    Traits* PoolObject::getTraits(Stringp name, Namespace* ns) const
     {
         // look for class in VM-wide type table
-        Traits* t = domain->getNamedTraits(name, ns, recursive);
+        Traits* t = domain->getNamedTraits(name, ns);
 
         // look for class in current ABC file
         if (t == NULL)
@@ -146,12 +146,12 @@ namespace avmplus
         return t;
     }
 
-    Traits* PoolObject::getTraits(Stringp name, bool recursive/*=true*/) const
+    Traits* PoolObject::getTraits(Stringp name) const
     {
-        return getTraits(name, core->getPublicNamespace((PoolObject*) this), recursive);
+        return getTraits(name, core->getPublicNamespace((PoolObject*) this));
     }
 
-    Traits* PoolObject::getTraits(const Multiname& mname, const Toplevel* toplevel, bool recursive/*=true*/) const
+    Traits* PoolObject::getTraits(const Multiname& mname, const Toplevel* toplevel) const
     {
         // do full lookup of multiname, error if more than 1 match
         // return Traits if 1 match, NULL if 0 match, throw ambiguity error if >1 match
@@ -161,7 +161,7 @@ namespace avmplus
             // multiname must not be an attr name, have wildcards, or have runtime parts.
             for (int32_t i=0, n=mname.namespaceCount(); i < n; i++)
             {
-                Traits* t = getTraits(mname.getName(), mname.getNamespace(i), recursive);
+                Traits* t = getTraits(mname.getName(), mname.getNamespace(i));
                 if (t != NULL)
                 {
                     if (match == NULL)
@@ -181,11 +181,41 @@ namespace avmplus
         return match;
     }
 
-    void PoolObject::addNamedTraits(Stringp name, Namespace* ns, Traits* traits)
+    Traits* PoolObject::addUniqueTraits(Stringp name, Namespace* ns, Traits* traits)
     {
+        // look for class in VM-wide type table
+        Traits* t = domain->getNamedTraitsNoRecurse(name, ns);
+
+        // look for class in current ABC file
+        if (t == NULL)
+            t = (Traits*) _namedTraits->get(name, ns);
+
+        if (t != NULL)
+            return t;
+
         _namedTraits->add(name, ns, (Binding)traits);
+        return NULL;
     }
 
+    Traits* PoolObject::addUniqueParameterizedITraits(AvmCore* core, const Toplevel* toplevel, Traits* base, Traits* param_traits)
+    {
+        // this - is the pool where our param_traits reside
+        AvmAssert(param_traits->pool == this);        
+        Stringp fullname = VectorClass::makeVectorClassName(core, param_traits);
+        Traits* r = getTraits(Multiname(base->ns(), fullname), toplevel); // careful, toplevel can be null!
+        if (!r)
+        {
+            // below we are exposing this trait domain-wide, and this can occur
+            // during interp, abc parsing, method resolution, etc. That is, under many
+            // conditions.  This seems ripe for potential issues as it throws a lot
+            // of non-determinism into these searches.  Not to mention that it appears
+            // this code by-passes versioning altogether. 
+            r = core->traits.vectorobj_itraits->newParameterizedITraits(fullname, base->ns());
+            r = domain->addUniqueTrait(fullname, base->ns(), r);  // getTraits() above also checks the domain.
+        }
+        return r;    
+    }
+    
     Namespace* PoolObject::getNamespace(int32_t index) const
     {
         return cpool_ns[index];
@@ -648,14 +678,7 @@ range_error:
                     break;
                 default:
                 {
-                    Stringp fullname = VectorClass::makeVectorClassName(core, param_traits);
-                    r = param_traits->pool->getTraits(Multiname(base->ns(), fullname), toplevel);
-
-                    if (!r)
-                    {
-                        r = core->traits.vectorobj_itraits->newParameterizedITraits(fullname, base->ns());
-                        param_traits->pool->domain->addNamedTrait(fullname, base->ns(), r);
-                    }
+                    r = param_traits->pool->addUniqueParameterizedITraits(core, toplevel, base, param_traits);
                     break;
                 }
             }
