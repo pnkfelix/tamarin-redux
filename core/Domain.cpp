@@ -49,30 +49,38 @@ namespace avmplus
 	{
 	}
 
-	Traits* Domain::getNamedTraits(Stringp name, Namespacep ns, bool recursive/*=true*/)
+	Traits* Domain::getNamedTraits(Stringp name, Namespacep ns)
 	{
 		Traits *traits = NULL;
-		if (recursive && m_base) {
-			traits = m_base->getNamedTraits(name, ns, true);
+		if (m_base) {
+			traits = m_base->getNamedTraits(name, ns);
 		}
 		if (!traits) {
-			traits = (Traits*) m_namedTraits->get(name, ns);
+			traits = getNamedTraitsNoRecurse(name, ns);
 		}
 		return traits;
 	}
 
-	Traits* Domain::getNamedTraits(const Multiname *multiname, bool recursive/*=true*/)
+	Traits* Domain::getNamedTraitsNoRecurse(Stringp name, Namespacep ns)
 	{
-		Traits *traits = NULL;
-		if (recursive && m_base) {
-			traits = m_base->getNamedTraits(multiname, true);
-		}
-		if (!traits) {
-			traits = (Traits*) m_namedTraits->getMulti(multiname);
-		}
-		return traits;
+		return (Traits*) m_namedTraits->get(name, ns);
 	}
-	
+
+    Traits* Domain::addUniqueTrait(Stringp name, Namespace* ns, Traits* v) 
+    { 
+        Traits* t = getNamedTraitsNoRecurse(name, ns);
+        if (t == NULL) {
+            m_namedTraits->add(name, ns, (Binding)v); 
+            t = v; // return trait that we'd get from a getNamedTrait() call.
+        }
+        return t;
+    }
+
+    void Domain::addNamedScript(Stringp name, Namespace* ns, MethodInfo* v) 
+    { 
+        m_namedScripts->add(name, ns, (Binding)v); 
+    }
+
 	MethodInfo* Domain::getNamedScript(Stringp name, Namespacep ns)
 	{
 		MethodInfo* f = NULL;

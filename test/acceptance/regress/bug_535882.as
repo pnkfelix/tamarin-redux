@@ -15,7 +15,7 @@
  *
  * The Initial Developer of the Original Code is
  * Adobe System Incorporated.
- * Portions created by the Initial Developer are Copyright (C) 2004-2006
+ * Portions created by the Initial Developer are Copyright (C) 2010
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,41 +35,18 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __avmplus_Domain__
-#define __avmplus_Domain__
+startTest();
 
-namespace avmplus
-{
-	class Domain : public MMgc::GCObject
-	{
-	public:
-		Domain(AvmCore* core, Domain* base);
-		
-		Traits* getNamedTraits(Stringp name, Namespacep ns);
-        Traits* getNamedTraitsNoRecurse(Stringp name, Namespacep ns);
-		MethodInfo* getNamedScript(Stringp name, Namespacep ns);
-		MethodInfo* getNamedScript(const Multiname* multiname);
-		
-        Traits* addUniqueTrait(Stringp name, Namespace* ns, Traits* v) ;
-		void addNamedScript(Stringp name, Namespace* ns, MethodInfo* v);
+var myXML:XML = new XML('<Test><KeyFrame name="&kColor_TextEditTextFieldOutlineNormalEnd;" t="0.0" v="&kTextEditInnerShadow_DarkV;" /></Test>');
+var expected:String = '<Test><KeyFrame name="&amp;kColor_TextEditTextFieldOutlineNormalEnd;" t="0.0" v="&amp;kTextEditInnerShadow_DarkV;"/></Test>';
 
-        // returns NULL if the type doesn't exist yet.
-		ClassClosure* getParameterizedType(ClassClosure* type);
-		void addParameterizedType(ClassClosure* type, ClassClosure* parameterizedType);
 
-		REALLY_INLINE Domain* base() const { return m_base; }
-		REALLY_INLINE AvmCore* core() const { return m_core; }
+var pp:Boolean = XML.prettyPrinting;
 
-	private:
-		Domain* const                   m_base;
-		AvmCore* const                  m_core;
-		/** The domain-wide traits table (type name => instance Traits) */
-		DWB(MultinameHashtable*)        m_namedTraits;
-		/** domain-wide type table of scripts, indexed by definition name */
-		DWB(MultinameHashtable*)        m_namedScripts;
-		DWB(HeapHashtable*)             m_parameterizedTypes;
-	};
+XML.prettyPrinting = false;
 
-}
+AddTestCase('Bug 535882 -  XMLParser incorrectly converts attribute values containing entities', expected, myXML.toXMLString());
 
-#endif /* __avmplus_Domain__ */
+XML.prettyPrinting = pp;  // restore prettyPrinting setting
+
+test();

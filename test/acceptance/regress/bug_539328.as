@@ -15,7 +15,7 @@
  *
  * The Initial Developer of the Original Code is
  * Adobe System Incorporated.
- * Portions created by the Initial Developer are Copyright (C) 2004-2006
+ * Portions created by the Initial Developer are Copyright (C) 2007-2010
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,41 +35,30 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __avmplus_Domain__
-#define __avmplus_Domain__
 
-namespace avmplus
-{
-	class Domain : public MMgc::GCObject
-	{
-	public:
-		Domain(AvmCore* core, Domain* base);
-		
-		Traits* getNamedTraits(Stringp name, Namespacep ns);
-        Traits* getNamedTraitsNoRecurse(Stringp name, Namespacep ns);
-		MethodInfo* getNamedScript(Stringp name, Namespacep ns);
-		MethodInfo* getNamedScript(const Multiname* multiname);
-		
-        Traits* addUniqueTrait(Stringp name, Namespace* ns, Traits* v) ;
-		void addNamedScript(Stringp name, Namespace* ns, MethodInfo* v);
-
-        // returns NULL if the type doesn't exist yet.
-		ClassClosure* getParameterizedType(ClassClosure* type);
-		void addParameterizedType(ClassClosure* type, ClassClosure* parameterizedType);
-
-		REALLY_INLINE Domain* base() const { return m_base; }
-		REALLY_INLINE AvmCore* core() const { return m_core; }
-
-	private:
-		Domain* const                   m_base;
-		AvmCore* const                  m_core;
-		/** The domain-wide traits table (type name => instance Traits) */
-		DWB(MultinameHashtable*)        m_namedTraits;
-		/** domain-wide type table of scripts, indexed by definition name */
-		DWB(MultinameHashtable*)        m_namedScripts;
-		DWB(HeapHashtable*)             m_parameterizedTypes;
-	};
-
+package {
+    public interface IBar
+    {
+        function i0():*;
+    }
 }
+import avmplus.*;
 
-#endif /* __avmplus_Domain__ */
+startTest();
+
+const x = 20/2;
+
+var expected:XML = <type name="IBar" base="Class" isDynamic="true" isFinal="true" isStatic="true">
+  <extendsClass type="Class"/>
+  <extendsClass type="Object"/>
+  <accessor name="prototype" access="readonly" type="*" declaredBy="Class"/>
+  <factory type="IBar">
+    <method name="i0" declaredBy="IBar" returnType="*" uri="IBar"/>
+  </factory>
+</type>
+
+
+
+AddTestCase("Bug 539328: describeType() omits interface methods", expected, describeType(IBar, FLASH10_FLAGS));
+
+test();
