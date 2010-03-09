@@ -178,7 +178,7 @@ elif config.getCompiler() == 'VS':
     DEBUG_CFLAGS += "-Zi "
     DEBUG_LDFLAGS += "-DEBUG "
 elif config.getCompiler() == 'SunStudio':
-    APP_CXXFLAGS = "-template=no%extdef "
+    APP_CXXFLAGS = "-template=no%extdef -erroff=wvarhidemem"
     OPT_CXXFLAGS = "-xO5 "
     DEBUG_CXXFLAGS += "-g "
 else:
@@ -242,8 +242,7 @@ elif the_os == "windows" or the_os == "cygwin":
         OS_LIBS.append('AdvAPI32')
 elif the_os == "linux":
     MMGC_DEFINES.update({'UNIX': None,
-                         'AVMPLUS_UNIX': None,
-                         'LINUX': None})
+                         'AVMPLUS_UNIX': None})
     OS_LIBS.append('pthread')
 #    if cpu == "x86_64":
 #        # workaround https://bugzilla.mozilla.org/show_bug.cgi?id=467776
@@ -252,7 +251,7 @@ elif the_os == "linux":
         OS_LIBS.append("dl")
 elif the_os == "sunos":
     if config.getCompiler() != 'GCC':
-        APP_CXXFLAGS = "-template=no%extdef "
+        APP_CXXFLAGS = "-template=no%extdef -erroff=wvarhidemem"
         OPT_CXXFLAGS = "-xO5 "
         DEBUG_CXXFLAGS = "-g "
     MMGC_DEFINES.update({'UNIX': None,

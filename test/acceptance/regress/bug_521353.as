@@ -15,7 +15,7 @@
  *
  * The Initial Developer of the Original Code is
  * Adobe System Incorporated.
- * Portions created by the Initial Developer are Copyright (C) 2004-2006
+ * Portions created by the Initial Developer are Copyright (C) 2010
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,41 +35,35 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __avmplus_Domain__
-#define __avmplus_Domain__
+function f() {
+    // d starts life as a kIntegerType atom
+    var d = 0xffff|0
+    var i = 16
 
-namespace avmplus
-{
-	class Domain : public MMgc::GCObject
-	{
-	public:
-		Domain(AvmCore* core, Domain* base);
-		
-		Traits* getNamedTraits(Stringp name, Namespacep ns);
-        Traits* getNamedTraitsNoRecurse(Stringp name, Namespacep ns);
-		MethodInfo* getNamedScript(Stringp name, Namespacep ns);
-		MethodInfo* getNamedScript(const Multiname* multiname);
-		
-        Traits* addUniqueTrait(Stringp name, Namespace* ns, Traits* v) ;
-		void addNamedScript(Stringp name, Namespace* ns, MethodInfo* v);
+    // double d over and over to exceed the range limits of atom and 32 bit,
+    // to try to demonstrate extra precision that shouldn't be there.  To test
+    // for precision, we explicitly convert d to double by multiplication, then
+    // mask of the low bits and compare with an unconverted (masked) d.
+    //
+    // if d has more precision than double supports, the masked result should
+    // be different.
 
-        // returns NULL if the type doesn't exist yet.
-		ClassClosure* getParameterizedType(ClassClosure* type);
-		void addParameterizedType(ClassClosure* type, ClassClosure* parameterizedType);
-
-		REALLY_INLINE Domain* base() const { return m_base; }
-		REALLY_INLINE AvmCore* core() const { return m_core; }
-
-	private:
-		Domain* const                   m_base;
-		AvmCore* const                  m_core;
-		/** The domain-wide traits table (type name => instance Traits) */
-		DWB(MultinameHashtable*)        m_namedTraits;
-		/** domain-wide type table of scripts, indexed by definition name */
-		DWB(MultinameHashtable*)        m_namedScripts;
-		DWB(HeapHashtable*)             m_parameterizedTypes;
-	};
-
+    while ((d&15) == ((d*1.0)&15) && i < 64) {
+        d = d + d + 1
+        i++
+        print(i + " " + d + " " + d*1.0)
+    }
+    if (i == 64) {
+        // d's precision stayed the same
+        return "pass"
+    } else {
+        // d's kIntegerType precision exceed that of kDoubleType
+        return "fail"
+    }
 }
 
-#endif /* __avmplus_Domain__ */
+startTest();
+
+AddTestCase('Bug 521353 - optimized fast path for OP_add in Interpreter preserves too much precision on 64bit cpu', 'pass', f());
+
+test();

@@ -15,7 +15,7 @@
  *
  * The Initial Developer of the Original Code is
  * Adobe System Incorporated.
- * Portions created by the Initial Developer are Copyright (C) 2004-2006
+ * Portions created by the Initial Developer are Copyright (C) 2005-2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,41 +35,25 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __avmplus_Domain__
-#define __avmplus_Domain__
-
-namespace avmplus
-{
-	class Domain : public MMgc::GCObject
-	{
-	public:
-		Domain(AvmCore* core, Domain* base);
-		
-		Traits* getNamedTraits(Stringp name, Namespacep ns);
-        Traits* getNamedTraitsNoRecurse(Stringp name, Namespacep ns);
-		MethodInfo* getNamedScript(Stringp name, Namespacep ns);
-		MethodInfo* getNamedScript(const Multiname* multiname);
-		
-        Traits* addUniqueTrait(Stringp name, Namespace* ns, Traits* v) ;
-		void addNamedScript(Stringp name, Namespace* ns, MethodInfo* v);
-
-        // returns NULL if the type doesn't exist yet.
-		ClassClosure* getParameterizedType(ClassClosure* type);
-		void addParameterizedType(ClassClosure* type, ClassClosure* parameterizedType);
-
-		REALLY_INLINE Domain* base() const { return m_base; }
-		REALLY_INLINE AvmCore* core() const { return m_core; }
-
-	private:
-		Domain* const                   m_base;
-		AvmCore* const                  m_core;
-		/** The domain-wide traits table (type name => instance Traits) */
-		DWB(MultinameHashtable*)        m_namedTraits;
-		/** domain-wide type table of scripts, indexed by definition name */
-		DWB(MultinameHashtable*)        m_namedScripts;
-		DWB(HeapHashtable*)             m_parameterizedTypes;
-	};
-
+class State {
+	var next = null;
 }
 
-#endif /* __avmplus_Domain__ */
+const depths = new Vector.<State>(2,true);
+
+function expand(depth)
+{
+	var x = new State;
+	x.next = depths[depth];
+	return(x);
+}
+
+var TITLE   = "Regression Testcase for Bug 492046: null value assigned to slot raises assertion failure";
+
+startTest();
+
+AddTestCase("null value assigned to slot should not assert", "[object State]", String(expand(1)) );
+
+test();
+
+
