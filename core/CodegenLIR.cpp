@@ -682,7 +682,7 @@ namespace avmplus
             pool->codeMgr = mgr;
 #ifdef NJ_VERBOSE
             if (pool->isVerbose(VB_jit)) {
-                mgr->log.lcbits = pool->verbose_vb>>16; // upper 16bits hold our jit flags
+                mgr->log.lcbits = pool->verbose_vb;
                 mgr->labels.add(pool->core, sizeof(AvmCore), 0, "core");
             }
 #endif
@@ -719,7 +719,15 @@ namespace avmplus
 
         #ifdef VTUNE
         hasDebugInfo = false;
-       #endif /* VTUNE */
+        #endif /* VTUNE */
+
+        verbose_only(
+            if (pool->isVerbose(VB_jit)) {
+                core->console << "codegen " << i;
+                core->console <<
+                    " required=" << ms->requiredParamCount() <<
+                    " optional=" << (ms->param_count() - ms->requiredParamCount()) << "\n";
+            })
     }
 
     CodegenLIR::~CodegenLIR() {
@@ -1254,7 +1262,7 @@ namespace avmplus
         verbose_only(
             vbWriter = 0;
             vbNames = 0;
-            if (verbose() && !core->quiet_opt()) {
+            if (verbose()) {
                 vbNames = new (*lir_alloc) LirNameMap(*lir_alloc, &pool->codeMgr->labels);
                 prolog_buf->names = vbNames;
                 lirout = vbWriter = new (*alloc1) VerboseWriter(*alloc1, lirout, vbNames, &log, "PROLOG");
@@ -1521,7 +1529,7 @@ namespace avmplus
             body = new (*alloc1) ValidateWriter(body, "writePrologue(body)");
         )
         verbose_only(
-            if (verbose() && !core->quiet_opt()) {
+            if (verbose()) {
                 AvmAssert(vbNames != NULL);
                 body_buf->names = vbNames;
                 body = vbWriter = new (*alloc1) VerboseWriter(*alloc1, body, vbNames, &log);
@@ -2823,6 +2831,9 @@ namespace avmplus
             plive(alloc);
     }
 
+    // This is for VTable->createInstance which is called by OP_construct
+    FUNCTION(CALL_INDIRECT, SIG3(V,P,P,P), createInstance)
+
     void CodegenLIR::emitCall(AbcOpcode opcode, intptr_t method_id, int argc, Traits* result)
     {
         int sp = state->sp();
@@ -2890,7 +2901,8 @@ namespace avmplus
             LIns* vtable = loadVTable(objDisp);
             LIns* ivtable = loadIns(LIR_ldcp, offsetof(VTable, ivtable), vtable);
             method = loadIns(LIR_ldcp, offsetof(VTable, init), ivtable);
-            LIns* inst = callIns(FUNCTIONID(newInstance),1, localGetp(objDisp));
+            LIns* createInstance = loadIns(LIR_ldp, offsetof(VTable, createInstance), ivtable);
+            LIns* inst = callIns(FUNCTIONID(createInstance), 3, createInstance, localGetp(objDisp), ivtable);
             localSet(dest, inst, result);
             break;
         }
@@ -5304,7 +5316,7 @@ namespace avmplus
         while (again);
 
         // now make a final pass, modifying LIR to delete dead stores (make them LIR_neartramps)
-        verbose_only( if (pool->isVerbose(VB_jit))
+        verbose_only( if (pool->isVerbose(LC_Liveness))
             AvmLog("killing dead stores after %d LA iterations.\n",iter);
         )
     }
@@ -5322,7 +5334,7 @@ namespace avmplus
         };
 
         verbose_only(LirNameMap *names = frag->lirbuf->names;)
-        verbose_only(bool verbose = names && pool->isVerbose(VB_jit); )
+        verbose_only(bool verbose = names && pool->isVerbose(LC_Liveness);)
         LIns *catcher = exBranch ? exBranch->getTarget() : 0;
         livein.reset();
         bool vars_touched = false;
@@ -5491,7 +5503,7 @@ namespace avmplus
 
         CodeMgr *mgr = pool->codeMgr;
         #ifdef NJ_VERBOSE
-        if (verbose()) {
+        if (pool->isVerbose(LC_ReadLIR)) {
             StUTF8String name(info->format(core));
             char *title = new (*lir_alloc) char[VMPI_strlen(name.c_str()) + 20];
             VMPI_sprintf(title, "Final LIR %s", name.c_str());
@@ -5885,7 +5897,7 @@ namespace avmplus
             lirout = new (*alloc1) ValidateWriter(lirout, "InvokerCompiler");
         )
         verbose_only(
-            if (verbose() && !core->quiet_opt()) {
+            if (verbose()) {
                 CodeMgr *codeMgr = method->pool()->codeMgr;
                 core->console << "compileInvoker " << method << "\n";
                 core->console <<
@@ -6048,7 +6060,7 @@ namespace avmplus
     {
         CodeMgr* codeMgr = method->pool()->codeMgr;
 
-        verbose_only(if (verbose()) {
+        verbose_only(if (pool->isVerbose(LC_Liveness)) {
             Allocator live_alloc;
             LirReader in(frag->lastIns);
             nanojit::live(&in, live_alloc, frag, &codeMgr->log);
