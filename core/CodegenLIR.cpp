@@ -673,7 +673,7 @@ namespace avmplus
             pool->codeMgr = mgr;
 #ifdef NJ_VERBOSE
             if (pool->isVerbose(VB_jit)) {
-                mgr->log.lcbits = pool->verbose_vb>>16; // upper 16bits hold our jit flags
+                mgr->log.lcbits = pool->verbose_vb;
                 mgr->labels.add(pool->core, sizeof(AvmCore), 0, "core");
             }
 #endif
@@ -711,6 +711,14 @@ namespace avmplus
         #ifdef AVMPLUS_MAC_CARBON
         setjmpInit();
         #endif
+
+        verbose_only(
+            if (pool->isVerbose(VB_jit)) {
+                core->console << "codegen " << i;
+                core->console <<
+                    " required=" << ms->requiredParamCount() <<
+                    " optional=" << (ms->param_count() - ms->requiredParamCount()) << "\n";
+            })
     }
 
     CodegenLIR::~CodegenLIR() {
@@ -1581,7 +1589,7 @@ namespace avmplus
         verbose_only(
             vbWriter = 0;
             vbNames = 0;
-            if (verbose() && !core->quiet_opt()) {
+            if (verbose()) {
                 vbNames = new (*lir_alloc) LirNameMap(*lir_alloc, &pool->codeMgr->labels);
                 prolog_buf->names = vbNames;
                 lirout = vbWriter = new (*alloc1) VerboseWriter(*alloc1, lirout, vbNames, &log, "PROLOG");
@@ -1844,7 +1852,7 @@ namespace avmplus
             body = new (*alloc1) ValidateWriter(body, "writePrologue(body)");
         )
         verbose_only(
-            if (verbose() && !core->quiet_opt()) {
+            if (verbose()) {
                 AvmAssert(vbNames != NULL);
                 body_buf->names = vbNames;
                 body = vbWriter = new (*alloc1) VerboseWriter(*alloc1, body, vbNames, &log);
@@ -3159,6 +3167,9 @@ namespace avmplus
             plive(alloc);
     }
 
+    // This is for VTable->createInstance which is called by OP_construct
+    FUNCTION(CALL_INDIRECT, SIG3(V,P,P,P), createInstance)
+
 #ifdef DEBUG
     /**
      * emitTypedCall is used when the Verifier has found an opportunity to early bind,
@@ -3260,7 +3271,8 @@ namespace avmplus
             LIns* vtable = loadVTable(obj, objType);
             LIns* ivtable = loadIns(LIR_ldcp, offsetof(VTable, ivtable), vtable);
             method = loadIns(LIR_ldcp, offsetof(VTable, init), ivtable);
-            obj = callIns(FUNCTIONID(newInstance),1, obj);
+            LIns* createInstance = loadIns(LIR_ldp, offsetof(VTable, createInstance), ivtable);
+            obj = callIns(FUNCTIONID(createInstance), 3, createInstance, obj, ivtable);
             objType = result;
             // the call below to the init function is void; the expression result we want
             // is the new object, not the result from the init function.  save it now.
@@ -5741,7 +5753,7 @@ namespace avmplus
                 CASE64(LIR_qcall:)
                 case LIR_icall:
                 case LIR_fcall:
-                    if (catcher && !i->isCse()) {
+                    if (catcher && !i->callInfo()->_cse) {
                         // non-cse call is like a conditional forward branch to the catcher label.
                         // this could be made more precise by checking whether this call
                         // can really throw, and only processing edges to the subset of
@@ -5763,7 +5775,7 @@ namespace avmplus
         while (again);
 
         // now make a final pass, modifying LIR to delete dead stores (make them LIR_neartramps)
-        verbose_only( if (pool->isVerbose(VB_jit))
+        verbose_only( if (pool->isVerbose(LC_Liveness))
             AvmLog("killing dead stores after %d LA iterations.\n",iter);
         )
     }
@@ -5775,7 +5787,7 @@ namespace avmplus
         // TODO this can go away if we turn this kill pass into a LirReader
         // and do the work inline with the assembly pass.
         static const uint8_t lirSizes[] = {
-        #define OP___(op, number, repkind, retType) sizeof(LIns##repkind),
+        #define OP___(op, number, repkind, retType, isCse) sizeof(LIns##repkind),
         #include "../nanojit/LIRopcode.tbl"
         #undef OP___
                 0
@@ -5904,7 +5916,7 @@ namespace avmplus
                 CASE64(LIR_qcall:)
                 case LIR_icall:
                 case LIR_fcall:
-                    if (catcher && !i->isCse()) {
+                    if (catcher && !i->callInfo()->_cse) {
                         // non-cse call is like a conditional branch to the catcher label.
                         // this could be made more precise by checking whether this call
                         // can really throw, and only processing edges to the subset of
@@ -6016,7 +6028,7 @@ namespace avmplus
 
         CodeMgr *mgr = pool->codeMgr;
         #ifdef NJ_VERBOSE
-        if (verbose()) {
+        if (pool->isVerbose(LC_ReadLIR)) {
             StUTF8String name(info->format(core));
             char *title = new (*lir_alloc) char[VMPI_strlen(name.c_str()) + 20];
             VMPI_sprintf(title, "Final LIR %s", name.c_str());
@@ -6410,7 +6422,7 @@ namespace avmplus
             lirout = new (*alloc1) ValidateWriter(lirout, "InvokerCompiler");
         )
         verbose_only(
-            if (verbose() && !core->quiet_opt()) {
+            if (verbose()) {
                 CodeMgr *codeMgr = method->pool()->codeMgr;
                 core->console << "compileInvoker " << method << "\n";
                 core->console <<
@@ -6573,7 +6585,7 @@ namespace avmplus
     {
         CodeMgr* codeMgr = method->pool()->codeMgr;
 
-        verbose_only(if (verbose()) {
+        verbose_only(if (pool->isVerbose(LC_Liveness)) {
             Allocator live_alloc;
             LirReader in(frag->lastIns);
             nanojit::live(&in, live_alloc, frag, &codeMgr->log);

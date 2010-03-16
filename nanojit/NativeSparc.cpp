@@ -159,7 +159,7 @@ namespace nanojit
         // Do this after we've handled the call result, so we don't
         // force the call result to be spilled unnecessarily.
 
-        evictScratchRegs();
+        evictScratchRegsExcept(0);
 
         const CallInfo* call = ins->callInfo();
 
@@ -458,7 +458,7 @@ namespace nanojit
         NIns* at = 0;
         LOpcode condop = cond->opcode();
         NanoAssert(cond->isCmp());
-        if (condop >= LIR_feq && condop <= LIR_fge)
+        if (isFCmpOpcode(condop))
             {
                 return asm_fbranch(branchOnFalse, cond, targ);
             }
@@ -574,7 +574,7 @@ namespace nanojit
         Register r = deprecated_prepResultReg(ins, AllowableFlagRegs);
         underrunProtect(8);
         LOpcode condop = ins->opcode();
-        NanoAssert(condop >= LIR_feq && condop <= LIR_fge);
+        NanoAssert(isFCmpOpcode(condop));
         if (condop == LIR_feq)
             MOVFEI(1, 0, 0, 0, r);
         else if (condop == LIR_fle)
@@ -680,11 +680,11 @@ namespace nanojit
         else
             {
                 int c = rhs->imm32();
-                if (op == LIR_add || op == LIR_iaddp || op == LIR_addxov)
+                if (op == LIR_add || op == LIR_iaddp || op == LIR_addxov) {
                     ADDCC(rr, L2, rr);
-                else if (op == LIR_sub || op == LIR_subxov)
+                } else if (op == LIR_sub || op == LIR_subxov)
                     SUBCC(rr, L2, rr);
-                else if (op == LIR_and)
+                } else if (op == LIR_and)
                     AND(rr, L2, rr);
                 else if (op == LIR_or)
                     OR(rr, L2, rr);
@@ -790,6 +790,8 @@ namespace nanojit
             case LIR_uge: MOVCS (iffalsereg, 1, 0, 0, rr); break;
                 debug_only( default: NanoAssert(0); break; )
                     }
+        } else if (op == LIR_qcmov) {
+            NanoAssert(0);
         }
         /*const Register iftruereg =*/ findSpecificRegFor(iftrue, rr);
         asm_cmp(condval);
@@ -930,7 +932,7 @@ namespace nanojit
     {
         NIns *at = 0;
         LOpcode condop = cond->opcode();
-        NanoAssert(condop >= LIR_feq && condop <= LIR_fge);
+        NanoAssert(isFCmpOpcode(condop));
         underrunProtect(32);
         intptr_t tt = ((intptr_t)targ - (intptr_t)_nIns + 8) >> 2;
         // !targ means that it needs patch.
