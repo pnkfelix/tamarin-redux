@@ -391,7 +391,7 @@ namespace nanojit
 
     void Assembler::asm_regarg(ArgSize sz, LInsp p, Register r)
     {
-        NanoAssert(isKnownReg(r));
+        NanoAssert(deprecated_isKnownReg(r));
         if (sz & ARGSIZE_MASK_INT) {
             // arg goes in specific register
             if (p->isconst())
@@ -427,7 +427,7 @@ namespace nanojit
     {
         bool isF64 = arg->isF64();
         Register rr;
-        if (arg->isUsed() && (rr = arg->deprecated_getReg(), isKnownReg(rr))) {
+        if (arg->isUsed() && (rr = arg->deprecated_getReg(), deprecated_isKnownReg(rr))) {
             // The argument resides somewhere in registers, so we simply need to
             // push it onto the stack.
             if (!cpu_has_fpu || !isF64) {
@@ -542,7 +542,7 @@ namespace nanojit
         Register ft = registerAllocTmp(FpRegs & ~(rmask(fr)));    // allocate temporary register for constant
 
         // todo: support int value in memory, as per x86
-        NanoAssert(isKnownReg(v));
+        NanoAssert(deprecated_isKnownReg(v));
 
         // mtc1       $v,$ft
         // bgez       $v,1f
@@ -603,8 +603,6 @@ namespace nanojit
             LInsp rhs = ins->oprnd2();
             LOpcode op = ins->opcode();
 
-            NanoAssert(op >= LIR_fadd && op <= LIR_fdiv);
-
             // rr = ra OP rb
 
             Register rr = deprecated_prepResultReg(ins, FpRegs);
@@ -644,7 +642,7 @@ namespace nanojit
 
         deprecated_freeRsrcOf(ins, false);
 
-        if (cpu_has_fpu && isKnownReg(rr)) {
+        if (cpu_has_fpu && deprecated_isKnownReg(rr)) {
             asm_spill(rr, d, false, true);
             asm_li_d(rr, ins->imm64_1(), ins->imm64_0());
         }
@@ -684,7 +682,7 @@ namespace nanojit
         NanoAssert(IsGpReg(rbase));
         deprecated_freeRsrcOf(ins, false);
 
-        if (cpu_has_fpu && isKnownReg(rd)) {
+        if (cpu_has_fpu && deprecated_isKnownReg(rd)) {
             NanoAssert(IsFpReg(rd));
             asm_ldst64 (false, rd, dr, rbase);
         }
@@ -692,7 +690,7 @@ namespace nanojit
             // Either FPU is not available or the result needs to go into memory;
             // in either case, FPU instructions are not required. Note that the
             // result will never be loaded into registers if FPU is not available.
-            NanoAssert(!isKnownReg(rd));
+            NanoAssert(!deprecated_isKnownReg(rd));
             NanoAssert(ds != 0);
 
             NanoAssert(isS16(dr) && isS16(dr+4));
@@ -951,8 +949,8 @@ namespace nanojit
         Register rb;
 
         // Don't re-use the registers we've already allocated.
-        NanoAssert(isKnownReg(rr));
-        NanoAssert(isKnownReg(ra));
+        NanoAssert(deprecated_isKnownReg(rr));
+        NanoAssert(deprecated_isKnownReg(ra));
         allow &= ~rmask(rr);
         allow &= ~rmask(ra);
 
@@ -1020,7 +1018,7 @@ namespace nanojit
 
         // general case, put rhs in register
         rb = (rhs == lhs) ? ra : findRegFor(rhs, allow);
-        NanoAssert(isKnownReg(rb));
+        NanoAssert(deprecated_isKnownReg(rb));
 
         switch (op) {
             case LIR_add:
@@ -1175,7 +1173,7 @@ namespace nanojit
 
     void Assembler::asm_cmp(LOpcode condop, LIns *a, LIns *b, Register cr)
     {
-        RegisterMask allow = condop >= LIR_feq && condop <= LIR_fge ? FpRegs : GpRegs;
+        RegisterMask allow = isFCmpOpcode(condop) ? FpRegs : GpRegs;
         Register ra = findRegFor(a, allow);
         Register rb = (b==a) ? ra : findRegFor(b, allow & ~rmask(ra));
 
@@ -1244,7 +1242,7 @@ namespace nanojit
         LOpcode condop = cond->opcode();
         NanoAssert(cond->isCond());
         bool inrange;
-        RegisterMask allow = condop >= LIR_feq && condop <= LIR_fge ? FpRegs : GpRegs;
+        RegisterMask allow = isFCmpOpcode(condop) ? FpRegs : GpRegs;
         LIns *a = cond->oprnd1();
         LIns *b = cond->oprnd2();
         Register ra = findRegFor(a, allow);
@@ -1319,7 +1317,7 @@ namespace nanojit
         }
 
         NIns *patch = NULL;
-        if (cpu_has_fpu && (condop >= LIR_feq && condop <= LIR_fge)) {
+        if (cpu_has_fpu && isFCmpOpcode(condop)) {
             // c.xx.d $ra,$rb
             // bc1x   btarg
             switch (condop) {
@@ -1568,7 +1566,7 @@ namespace nanojit
         // Do this after we've handled the call result, so we don't
         // force the call result to be spilled unnecessarily.
 
-        evictScratchRegs();
+        evictScratchRegsExcept(0);
 
         const CallInfo* call = ins->callInfo();
         ArgSize sizes[MAXARGS];
