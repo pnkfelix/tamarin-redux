@@ -289,7 +289,7 @@ namespace avmplus
 		: ClassClosure(vtable)
     {
 		toplevel()->intVectorClass = this;
-        prototype = toplevel()->objectClass->construct();
+        setPrototypePtr(toplevel()->objectClass->construct());
 	}
 
 	ScriptObject* IntVectorClass::createInstance(VTable *ivtable,
@@ -307,7 +307,7 @@ namespace avmplus
 		if( AvmCore::istype(argv[1], ivtable()->traits ) )
 			return argv[1];
 
-		IntVectorObject* v = (IntVectorObject*)createInstance(ivtable(), prototype);
+		IntVectorObject* v = (IntVectorObject*)createInstance(ivtable(), prototypePtr());
 
 		v->initWithObj(argv[1]);
 
@@ -318,7 +318,7 @@ namespace avmplus
 	{
 		VTable* ivtable = this->ivtable();
 		IntVectorObject *v = new (core()->GetGC(), ivtable->getExtraSize()) 
-			IntVectorObject(ivtable, prototype);
+			IntVectorObject(ivtable, prototypePtr());
 		v->set_length(length);
 		return v;
 	}
@@ -337,7 +337,7 @@ namespace avmplus
 		: ClassClosure(vtable)
     {
 		toplevel()->uintVectorClass = this;
-        prototype = toplevel()->objectClass->construct();
+        setPrototypePtr( toplevel()->objectClass->construct());
 	}
 
 	ScriptObject* UIntVectorClass::createInstance(VTable *ivtable,
@@ -356,7 +356,7 @@ namespace avmplus
 		if( AvmCore::istype(argv[1], ivtable()->traits ) )
 			return argv[1];
 
-		UIntVectorObject* v = (UIntVectorObject*)createInstance(ivtable(), prototype);
+		UIntVectorObject* v = (UIntVectorObject*)createInstance(ivtable(), prototypePtr());
 
 		v->initWithObj(argv[1]);
 
@@ -367,7 +367,7 @@ namespace avmplus
 	{
 		VTable* ivtable = this->ivtable();
 		UIntVectorObject *v = new (core()->GetGC(), ivtable->getExtraSize()) 
-			UIntVectorObject(ivtable, prototype);
+		UIntVectorObject(ivtable, prototypePtr());
 		v->set_length(length);
 		return v;
 	}
@@ -385,7 +385,7 @@ namespace avmplus
 		: ClassClosure(vtable)
 	{
 		toplevel()->doubleVectorClass = this;
-        prototype = toplevel()->objectClass->construct();
+        setPrototypePtr( toplevel()->objectClass->construct());
 	}
 
 	ScriptObject* DoubleVectorClass::createInstance(VTable *ivtable,
@@ -404,7 +404,7 @@ namespace avmplus
 		if( AvmCore::istype(argv[1], ivtable()->traits ) )
 			return argv[1];
 
-		DoubleVectorObject* v = (DoubleVectorObject*)createInstance(ivtable(), prototype);
+		DoubleVectorObject* v = (DoubleVectorObject*)createInstance(ivtable(), prototypePtr());
 
 		v->initWithObj(argv[1]);
 
@@ -415,7 +415,7 @@ namespace avmplus
 	{
 		VTable* ivtable = this->ivtable();
 		DoubleVectorObject *v = new (core()->GetGC(), ivtable->getExtraSize()) 
-			DoubleVectorObject(ivtable, prototype);
+			DoubleVectorObject(ivtable, prototypePtr());
 		v->set_length(length);
 		return v;
 	}
@@ -433,7 +433,7 @@ namespace avmplus
 	: ClassClosure(vtable)
 	{
 		toplevel()->vectorClass = this;
-		prototype = toplevel()->objectClass->construct();
+		setPrototypePtr( toplevel()->objectClass->construct());
 	}
 
 	/*static*/ Stringp VectorClass::makeVectorClassName(AvmCore* core, Traits* t)
@@ -449,7 +449,7 @@ namespace avmplus
 	{
         Toplevel* toplevel = this->toplevel();
         
-		// Vector only takes 1 type argument
+		//Vector only takes 1 type argument
 		AvmAssert(argc==1);
 		if (argc != 1)
 		{
@@ -457,7 +457,7 @@ namespace avmplus
 		}
 
 		Atom const typeAtom = argv[0];
-        
+
         ClassClosure* parameterizedType;
         if (ISNULL(typeAtom))
         {
@@ -487,7 +487,7 @@ namespace avmplus
                 Traits* typeTraits = typeObj->vtable->traits->itraits;
                 if (!typeTraits)
                     toplevel->throwVerifyError(kCorruptABCError);
-                
+
                 ClassClosure* typeClass = (ClassClosure*)typeObj;
                 Domain* typeDomain = typeObj->traits()->pool->domain;
                 if ((parameterizedType = typeDomain->getParameterizedType(typeClass)) == NULL)
@@ -498,10 +498,10 @@ namespace avmplus
 
                     ObjectVectorClass* parameterizedVector = new (vt->gc(), vt->getExtraSize()) ObjectVectorClass(vt);
                     parameterizedVector->index_type = typeClass;
-                    parameterizedVector->setDelegate(toplevel->classClass->prototype);
+                    parameterizedVector->setDelegate(toplevel->classClass->prototypePtr());
 
                     // Is this right?  Should each instantiation get its own prototype?
-                    parameterizedVector->prototype = toplevel->objectVectorClass->prototype;
+                    parameterizedVector->setPrototypePtr(toplevel->objectVectorClass->prototypePtr());
                     typeDomain->addParameterizedType(typeClass, parameterizedVector);
 
                     parameterizedType = parameterizedVector;
@@ -522,7 +522,7 @@ namespace avmplus
 		if( AvmCore::istype(argv[1], ivtable()->traits ) )
 			return argv[1];
 
-		ObjectVectorObject* v = (ObjectVectorObject*)createInstance(ivtable(), prototype);
+		ObjectVectorObject* v = (ObjectVectorObject*)createInstance(ivtable(), prototypePtr());
 
 		v->initWithObj(argv[1]);
 
@@ -552,7 +552,7 @@ namespace avmplus
     {
 		if( !toplevel()->objectVectorClass )
 			toplevel()->objectVectorClass = this;
-        prototype = toplevel()->objectClass->construct();
+        setPrototypePtr(toplevel()->objectClass->construct());
 	}
 
 	ScriptObject* ObjectVectorClass::createInstance(VTable *ivtable,
@@ -567,7 +567,7 @@ namespace avmplus
 	{
 		VTable* ivtable = this->ivtable();
 		ObjectVectorObject *v = new (core()->GetGC(), ivtable->getExtraSize()) 
-			ObjectVectorObject(ivtable, prototype);
+			ObjectVectorObject(ivtable, prototypePtr());
 		v->set_type(this->index_type->atom());
 		v->set_length(length);
 		return v;
