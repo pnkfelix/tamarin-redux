@@ -235,6 +235,13 @@ namespace avmshell
  		return false;
 	}
 
+#ifdef DEBUGGER
+    uint64_t ByteArray::bytesUsed() const
+    {
+        return m_capacity * sizeof(U8);
+    }
+#endif
+
 	//
 	// ByteArrayFile
 	//
@@ -615,6 +622,15 @@ namespace avmshell
 		m_byteArray.Write(b, len);
 	}
 	
+#ifdef DEBUGGER
+    uint64_t ByteArrayObject::bytesUsed() const
+    {
+        uint64_t size = ScriptObject::bytesUsed();
+        size += m_byteArray.bytesUsed();
+        return size;
+    }
+#endif
+
 	//
 	// ByteArrayClass
 	//
@@ -622,7 +638,7 @@ namespace avmshell
 	ByteArrayClass::ByteArrayClass(VTable *vtable)
 		: ClassClosure(vtable)
     {
-        prototype = toplevel()->objectClass->construct();
+        setPrototypePtr(toplevel()->objectClass->construct());
 	}
 
 	ScriptObject* ByteArrayClass::createInstance(VTable *ivtable,
