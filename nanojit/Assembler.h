@@ -136,6 +136,7 @@ namespace nanojit
         {
         private:
             const AR& _ar;
+            // '_i' points to the start of the entries for an LIns, or to the first NULL entry.
             uint32_t _i;
         public:
             inline Iter(const AR& ar) : _ar(ar), _i(1) { }
@@ -296,7 +297,7 @@ namespace nanojit
             Assembler(CodeAlloc& codeAlloc, Allocator& dataAlloc, Allocator& alloc, AvmCore* core, LogControl* logc, const Config& config);
 
             void        compile(Fragment *frag, Allocator& alloc, bool optimize
-                                verbose_only(, LabelMap*));
+                                verbose_only(, LInsPrinter*));
 
             void        endAssembly(Fragment* frag);
             void        assemble(Fragment* frag, LirFilter* reader);
@@ -337,7 +338,7 @@ namespace nanojit
             void        registerResetAll();
             void        evictAllActiveRegs();
             void        evictSomeActiveRegs(RegisterMask regs);
-            void        evictScratchRegs();
+            void        evictScratchRegsExcept(RegisterMask ignore);
             void        intersectRegisterState(RegAlloc& saved);
             void        unionRegisterState(RegAlloc& saved);
             void        assignSaved(RegAlloc &saved, RegisterMask skip);
@@ -368,7 +369,7 @@ namespace nanojit
                                   verbose_only(, size_t &nBytes));
             bool        canRemat(LIns*);
 
-            bool isKnownReg(Register r) {
+            bool deprecated_isKnownReg(Register r) {
                 return r != deprecated_UnknownReg;
             }
 
@@ -426,7 +427,10 @@ namespace nanojit
             void        asm_spill(Register rr, int d, bool pop, bool quad);
             void        asm_load64(LInsp i);
             void        asm_ret(LInsp p);
-            void        asm_quad(LInsp i);
+#ifdef NANOJIT_64BIT
+            void        asm_immq(LInsp i);
+#endif
+            void        asm_immf(LInsp i);
             void        asm_fcond(LInsp i);
             void        asm_cond(LInsp i);
             void        asm_arith(LInsp i);
@@ -434,7 +438,7 @@ namespace nanojit
             void        asm_load32(LInsp i);
             void        asm_cmov(LInsp i);
             void        asm_param(LInsp i);
-            void        asm_int(LInsp i);
+            void        asm_immi(LInsp i);
 #if NJ_SOFTFLOAT_SUPPORTED
             void        asm_qlo(LInsp i);
             void        asm_qhi(LInsp i);
