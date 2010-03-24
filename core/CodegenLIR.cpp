@@ -514,7 +514,7 @@ namespace avmplus
     {
         // calls could potentially resize globalMemorySize, so we
         // can't collapse range checks across them
-        if (!ci->_cse)
+        if (!ci->_isPure)
         {
             flushRangeChecks();
             clearMemBaseAndSize();
@@ -684,10 +684,8 @@ namespace avmplus
             CodeMgr *mgr = mmfx_new( CodeMgr() );
             pool->codeMgr = mgr;
 #ifdef NJ_VERBOSE
-            if (pool->isVerbose(VB_jit)) {
-                mgr->log.lcbits = pool->verbose_vb>>16; // upper 16bits hold our jit flags
-                mgr->labels.add(pool->core, sizeof(AvmCore), 0, "core");
-            }
+            if (pool->isVerbose(VB_jit))
+                mgr->log.lcbits = pool->verbose_vb;
 #endif
         }
         return pool->codeMgr;
@@ -723,6 +721,14 @@ namespace avmplus
         #ifdef AVMPLUS_MAC_CARBON
         setjmpInit();
         #endif
+
+        verbose_only(
+            if (pool->isVerbose(VB_jit)) {
+                core->console << "codegen " << i;
+                core->console <<
+                    " required=" << ms->requiredParamCount() <<
+                    " optional=" << (ms->param_count() - ms->requiredParamCount()) << "\n";
+            })
     }
 
     CodegenLIR::~CodegenLIR() {
@@ -1066,12 +1072,12 @@ namespace avmplus
         }
 
         // monitor loads emitted by the LIR generator, track access to vars and tags
-        LIns *insLoad(LOpcode op, LIns *base, int32_t d) {
+        LIns *insLoad(LOpcode op, LIns *base, int32_t d, AccSet accSet) {
             if (base == vars) {
                 int i = varOffsetToIndex(d);
                 LIns *val = varTracker[i];
                 if (!val) {
-                    val = out->insLoad(op, base, d);
+                    val = out->insLoad(op, base, d, accSet);
                     trackVarLoad(val, i);
                 }
                 return val;
@@ -1080,22 +1086,22 @@ namespace avmplus
                 int i = tagOffsetToIndex(d);
                 LIns *tag = tagTracker[i];
                 if (!tag) {
-                    tag = out->insLoad(op, base, d);
+                    tag = out->insLoad(op, base, d, accSet);
                     trackTagLoad(tag, i);
                 }
                 return tag;
             }
-            return out->insLoad(op, base, d);
+            return out->insLoad(op, base, d, accSet);
         }
 
         // monitor all stores emitted by LIR generator, update our tracking state
         // when we see stores to vars or tags.
-        LIns *insStore(LOpcode op, LIns *value, LIns *base, int32_t d) {
+        LIns *insStore(LOpcode op, LIns *value, LIns *base, int32_t d, AccSet accSet) {
             if (base == vars)
                 trackVarStore(value, varOffsetToIndex(d));
             else if (base == tags)
                 trackTagStore(value, tagOffsetToIndex(d));
-            return out->insStore(op, value, base, d);
+            return out->insStore(op, value, base, d, accSet);
         }
 
         // we expect the frontend to use CodegenLabels and call trackLabel for all
@@ -1137,7 +1143,7 @@ namespace avmplus
         // assume any non-pure function can throw an exception, and that pure functions cannot.
         bool canThrow(const CallInfo* call)
         {
-            return !call->_cse;
+            return !call->_isPure;
         }
 
         // if debugging is attached, clear our tracking state when calling side-effect
@@ -1207,7 +1213,7 @@ namespace avmplus
         // we must Ignore catch blocks that the verifier has determined are not reachable,
         // because we emit a call to debugExit (modeled as possibly throwing) as part of
         // OP_returnvoid/returnvalue, which ordinarily don't throw.
-        if (!ci->_cse && pc >= state->verifier->tryFrom && pc < state->verifier->tryTo) {
+        if (!ci->_isPure && pc >= state->verifier->tryFrom && pc < state->verifier->tryTo) {
             // inside exception handler range, calling a function that could throw
             ExceptionHandlerTable *exTable = info->abc_exceptions();
             for (int i=0, n=exTable->exception_count; i < n; i++) {
@@ -1235,8 +1241,8 @@ namespace avmplus
         // create params for saved regs -- processor specific
         for (int i=0; i < NumSavedRegs; i++) {
             LIns *p = lirout->insParam(i, 1); (void) p;
-            verbose_only(if (lirbuf->names)
-                lirbuf->names->addName(p, regNames[Assembler::savedRegs[i]]);)
+            verbose_only(if (lirbuf->printer)
+                lirbuf->printer->lirNameMap->addName(p, regNames[Assembler::savedRegs[i]]);)
         }
     }
 
@@ -1402,12 +1408,12 @@ namespace avmplus
             return out->insCall(call,args);
         }
 
-        LIns *insStore(LOpcode op, LIns *value, LIns *base, int32_t d) {
+        LIns *insStore(LOpcode op, LIns *value, LIns *base, int32_t d, AccSet accSet) {
             if (base == vars)
                 trackStore(value, d,false);
             else if (base == traits)
                 trackStore(value, d,true);
-            return out->insStore(op, value, base, d);
+            return out->insStore(op, value, base, d, accSet);
         }
 
     };
@@ -1469,11 +1475,11 @@ namespace avmplus
         virtual LInsp insImmf(double d) {
             return lastIns = out->insImmf(d);
         }
-        virtual LInsp insLoad(LOpcode op, LIns* base, int32_t d) {
-            return lastIns = out->insLoad(op, base, d);
+        virtual LInsp insLoad(LOpcode op, LIns* base, int32_t d, AccSet accSet) {
+            return lastIns = out->insLoad(op, base, d, accSet);
         }
-        virtual LInsp insStore(LOpcode op, LIns* value, LIns* base, int32_t d) {
-            return lastIns = out->insStore(op, value, base, d);
+        virtual LInsp insStore(LOpcode op, LIns* value, LIns* base, int32_t d, AccSet accSet) {
+            return lastIns = out->insStore(op, value, base, d, accSet);
         }
         // args[] is in reverse order, ie. args[0] holds the rightmost arg.
         virtual LInsp insCall(const CallInfo *call, LInsp args[]) {
@@ -1593,9 +1599,10 @@ namespace avmplus
         verbose_only(
             vbWriter = 0;
             vbNames = 0;
-            if (verbose() && !core->quiet_opt()) {
-                vbNames = new (*lir_alloc) LirNameMap(*lir_alloc, &pool->codeMgr->labels);
-                prolog_buf->names = vbNames;
+            if (verbose()) {
+                vbNames = new (*lir_alloc) LInsPrinter(*lir_alloc);
+                vbNames->addrNameMap->addAddrRange(pool->core, sizeof(AvmCore), 0, "core");
+                prolog_buf->printer = vbNames;
                 lirout = vbWriter = new (*alloc1) VerboseWriter(*alloc1, lirout, vbNames, &log, "PROLOG");
             }
         )
@@ -1647,13 +1654,13 @@ namespace avmplus
         // allocate room for a MethodFrame structure
         methodFrame = InsAlloc(sizeof(MethodFrame));
         verbose_only( if (vbNames) {
-            vbNames->addName(methodFrame, "methodFrame");
+            vbNames->lirNameMap->addName(methodFrame, "methodFrame");
         })
 
         coreAddr = InsConstPtr(core);
 
         // replicate MethodFrame ctor inline
-        LIns* currentMethodFrame = loadIns(LIR_ldp, offsetof(AvmCore,currentMethodFrame), coreAddr);
+        LIns* currentMethodFrame = loadIns(LIR_ldp, offsetof(AvmCore,currentMethodFrame), coreAddr, ACC_LOAD_ANY);
         // save env in MethodFrame.envOrCodeContext
         //     explicitly leave IS_EXPLICIT_CODECONTEXT clear
         //     explicitly leave DXNS_NOT_NULL clear, dxns is effectively null without doing the store here.
@@ -1675,16 +1682,16 @@ namespace avmplus
         }
         varTracker->init(vars, tags);
 
-        verbose_only( if (prolog_buf->names) {
-            prolog_buf->names->addName(env_param, "env");
-            prolog_buf->names->addName(argc_param, "argc");
-            prolog_buf->names->addName(ap_param, "ap");
-            prolog_buf->names->addName(vars, "vars");
-            prolog_buf->names->addName(tags, "tags");
+        verbose_only( if (prolog_buf->printer) {
+            prolog_buf->printer->lirNameMap->addName(env_param, "env");
+            prolog_buf->printer->lirNameMap->addName(argc_param, "argc");
+            prolog_buf->printer->lirNameMap->addName(ap_param, "ap");
+            prolog_buf->printer->lirNameMap->addName(vars, "vars");
+            prolog_buf->printer->lirNameMap->addName(tags, "tags");
         })
 
         // stack overflow check - use methodFrame address as comparison
-        LIns *d = loadIns(LIR_ldp, offsetof(AvmCore, minstack), coreAddr);
+        LIns *d = loadIns(LIR_ldp, offsetof(AvmCore, minstack), coreAddr, ACC_LOAD_ANY);
         LIns *c = binaryIns(LIR_pult, methodFrame, d);
         CodegenLabel &begin_label = createLabel("begin");
         branchToLabel(LIR_jf, c, begin_label);
@@ -1702,7 +1709,7 @@ namespace avmplus
             // note that this now updates traits for values on the scopechain as well as locals
             varTraits = InsAlloc((state->verifier->local_count + state->verifier->max_scope) * sizeof(Traits*));
             verbose_only( if (vbNames) {
-                vbNames->addName(varTraits, "varTraits");
+                vbNames->lirNameMap->addName(varTraits, "varTraits");
             })
             debug_only( checker->init(vars,varTraits); )
         }
@@ -1718,8 +1725,8 @@ namespace avmplus
             _save_eip = InsAlloc(sizeof(intptr_t));
             _ef       = InsAlloc(sizeof(ExceptionFrame));
             verbose_only( if (vbNames) {
-                vbNames->addName(_save_eip, "_save_eip");
-                vbNames->addName(_ef, "_ef");
+                vbNames->lirNameMap->addName(_save_eip, "_save_eip");
+                vbNames->lirNameMap->addName(_ef, "_ef");
             })
         } else {
             _save_eip = NULL;
@@ -1731,7 +1738,7 @@ namespace avmplus
             // Allocate space for the call stack
             csn = InsAlloc(sizeof(CallStackNode));
             verbose_only( if (vbNames) {
-                vbNames->addName(csn, "csn");
+                vbNames->lirNameMap->addName(csn, "csn");
             })
         }
         #endif
@@ -1856,9 +1863,9 @@ namespace avmplus
             body = new (*alloc1) ValidateWriter(body, "writePrologue(body)");
         )
         verbose_only(
-            if (verbose() && !core->quiet_opt()) {
+            if (verbose()) {
                 AvmAssert(vbNames != NULL);
-                body_buf->names = vbNames;
+                body_buf->printer = vbNames;
                 body = vbWriter = new (*alloc1) VerboseWriter(*alloc1, body, vbNames, &log);
             }
         )
@@ -1887,18 +1894,18 @@ namespace avmplus
         LIns *arg;
         switch (bt(type)) {
         case BUILTIN_number:
-            arg = loadIns(LIR_ldfc, offset, apArg);
+            arg = loadIns(LIR_ldf, offset, apArg, ACC_READONLY);
             offset += sizeof(double);
             break;
         case BUILTIN_int:
         case BUILTIN_uint:
         case BUILTIN_boolean:
             // in the args these are widened to intptr_t or uintptr_t, so truncate here.
-            arg = p2i(loadIns(LIR_ldcp, offset, apArg));
+            arg = p2i(loadIns(LIR_ldp, offset, apArg, ACC_READONLY));
             offset += sizeof(Atom);
             break;
         default:
-            arg = loadIns(LIR_ldcp, offset, apArg);
+            arg = loadIns(LIR_ldp, offset, apArg, ACC_READONLY);
             offset += sizeof(Atom);
             break;
         }
@@ -1913,7 +1920,7 @@ namespace avmplus
     {
         Traits* t = info->declaringScope()->getScopeTraitsAt(scope_index);
         LIns* scope = loadEnvScope();
-        LIns* scopeobj = loadIns(LIR_ldcp, offsetof(ScopeChain,_scopes) + scope_index*sizeof(Atom), scope);
+        LIns* scopeobj = loadIns(LIR_ldp, offsetof(ScopeChain,_scopes) + scope_index*sizeof(Atom), scope, ACC_READONLY);
         localSet(dest, atomToNativeRep(t, scopeobj), t);
     }
 
@@ -1943,7 +1950,7 @@ namespace avmplus
         // If this is a backwards branch, generate an interrupt check.
         // current verifier state, includes tack pointer.
         if (interruptable && core->config.interrupts && state->targetOfBackwardsBranch) {
-            LIns* interrupted = loadIns(LIR_ld, offsetof(AvmCore,interrupted), coreAddr);
+            LIns* interrupted = loadIns(LIR_ld, offsetof(AvmCore,interrupted), coreAddr, ACC_LOAD_ANY);
             LIns* cond = binaryIns(LIR_eq, interrupted, InsConst(AvmCore::NotInterrupted));
             branchToLabel(LIR_jf, cond, interrupt_label);
         }
@@ -2651,7 +2658,7 @@ namespace avmplus
             // load "true" or "false" string constant from AvmCore.booleanStrings[]
             LIns *offset = binaryIns(LIR_pilsh, i2p(localGet(index)), InsConst(PTR_SCALE));
             LIns *arr = InsConstPtr(&core->booleanStrings);
-            return loadIns(LIR_ldcp, 0, binaryIns(LIR_addp, arr, offset));
+            return loadIns(LIR_ldp, 0, binaryIns(LIR_addp, arr, offset), ACC_READONLY);
         }
         default:
             if (value.notNull) {
@@ -3171,6 +3178,9 @@ namespace avmplus
             plive(alloc);
     }
 
+    // This is for VTable->createInstance which is called by OP_construct
+    FUNCTION(CALL_INDIRECT, SIG3(V,P,P,P), createInstance)
+
 #ifdef DEBUG
     /**
      * emitTypedCall is used when the Verifier has found an opportunity to early bind,
@@ -3223,8 +3233,8 @@ namespace avmplus
         {
             // env->vtable->base->init->enter32v(argc, ...);
             LIns* vtable = loadEnvVTable();
-            LIns* base = loadIns(LIR_ldcp, offsetof(VTable,base), vtable);
-            method = loadIns(LIR_ldcp, offsetof(VTable,init), base);
+            LIns* base = loadIns(LIR_ldp, offsetof(VTable,base), vtable, ACC_READONLY);
+            method = loadIns(LIR_ldp, offsetof(VTable,init), base, ACC_READONLY);
             break;
         }
         case OP_callmethod:
@@ -3234,7 +3244,7 @@ namespace avmplus
             // sp[-argc] = callmethod(disp_id, argc, ...);
             // method_id is disp_id of virtual method
             LIns* vtable = loadVTable(obj, objType);
-            method = loadIns(LIR_ldcp, int32_t(offsetof(VTable,methods)+sizeof(MethodEnv*)*method_id), vtable);
+            method = loadIns(LIR_ldp, int32_t(offsetof(VTable,methods)+sizeof(MethodEnv*)*method_id), vtable, ACC_READONLY);
             break;
         }
         case OP_callsuperid:
@@ -3243,8 +3253,8 @@ namespace avmplus
             // stack out: result
             // method_id is disp_id of super method
             LIns* declvtable = loadEnvVTable();
-            LIns* basevtable = loadIns(LIR_ldcp, offsetof(VTable, base), declvtable);
-            method = loadIns(LIR_ldcp, int32_t(offsetof(VTable,methods)+sizeof(MethodEnv*)*method_id), basevtable);
+            LIns* basevtable = loadIns(LIR_ldp, offsetof(VTable, base), declvtable, ACC_READONLY);
+            method = loadIns(LIR_ldp, int32_t(offsetof(VTable,methods)+sizeof(MethodEnv*)*method_id), basevtable, ACC_READONLY);
             break;
         }
         case OP_callstatic:
@@ -3252,7 +3262,7 @@ namespace avmplus
             // stack in: obj arg1..N
             // stack out: result
             LIns* abcenv = loadEnvAbcEnv();
-            method = loadIns(LIR_ldcp, int32_t(offsetof(AbcEnv,m_methods)+sizeof(MethodEnv*)*method_id), abcenv);
+            method = loadIns(LIR_ldp, int32_t(offsetof(AbcEnv,m_methods)+sizeof(MethodEnv*)*method_id), abcenv, ACC_READONLY);
             break;
         }
         case OP_callinterface:
@@ -3261,7 +3271,7 @@ namespace avmplus
             int index = int(method_id % VTable::IMT_SIZE);
             LIns* vtable = loadVTable(obj, objType);
             // note, could be MethodEnv* or ImtThunkEnv*
-            method = loadIns(LIR_ldcp, offsetof(VTable,imt)+sizeof(ImtThunkEnv*)*index, vtable);
+            method = loadIns(LIR_ldp, offsetof(VTable,imt)+sizeof(ImtThunkEnv*)*index, vtable, ACC_READONLY);
             iid = InsConstPtr((void*)method_id);
             break;
         }
@@ -3270,9 +3280,10 @@ namespace avmplus
             // stack in: ctor arg1..N
             // stack out: newinstance
             LIns* vtable = loadVTable(obj, objType);
-            LIns* ivtable = loadIns(LIR_ldcp, offsetof(VTable, ivtable), vtable);
-            method = loadIns(LIR_ldcp, offsetof(VTable, init), ivtable);
-            obj = callIns(FUNCTIONID(newInstance),1, obj);
+            LIns* ivtable = loadIns(LIR_ldp, offsetof(VTable, ivtable), vtable, ACC_READONLY);
+            method = loadIns(LIR_ldp, offsetof(VTable, init), ivtable, ACC_READONLY);
+            LIns* createInstance = loadIns(LIR_ldp, offsetof(VTable, createInstance), ivtable, ACC_LOAD_ANY);
+            obj = callIns(FUNCTIONID(createInstance), 3, createInstance, obj, ivtable);
             objType = result;
             // the call below to the init function is void; the expression result we want
             // is the new object, not the result from the init function.  save it now.
@@ -3339,10 +3350,10 @@ namespace avmplus
         ap->setSize(disp);
 
 #if VMCFG_METHODENV_IMPL32
-        LIns* target = loadIns(LIR_ldp, offsetof(MethodEnvProcHolder,_implGPR), method);
+        LIns* target = loadIns(LIR_ldp, offsetof(MethodEnvProcHolder,_implGPR), method, ACC_LOAD_ANY);
 #else
-        LIns* meth = loadIns(LIR_ldp, offsetof(MethodEnvProcHolder, method), method);
-        LIns* target = loadIns(LIR_ldp, offsetof(MethodInfoProcHolder, _implGPR), meth);
+        LIns* meth = loadIns(LIR_ldp, offsetof(MethodEnvProcHolder, method), method, ACC_LOAD_ANY);
+        LIns* target = loadIns(LIR_ldp, offsetof(MethodInfoProcHolder, _implGPR), meth, ACC_LOAD_ANY);
 #endif
         LIns* apAddr = leaIns(pad, ap);
 
@@ -3405,7 +3416,7 @@ namespace avmplus
         case BUILTIN_boolean:   op = LIR_ld;    break;
         default:                op = LIR_ldp;   break;
         }
-        return loadIns(op, offset, ptr);
+        return loadIns(op, offset, ptr, ACC_LOAD_ANY);
     }
 
     void CodegenLIR::emitGetslot(int slot, int ptr_index, Traits *slotType)
@@ -3448,7 +3459,7 @@ namespace avmplus
                 // global is outer scope 0
                 t = scopeTypes->getScopeTraitsAt(0);
                 LIns* scope = loadEnvScope();
-                LIns* scopeobj = loadIns(LIR_ldp, offsetof(ScopeChain,_scopes) + 0*sizeof(Atom), scope);
+                LIns* scopeobj = loadIns(LIR_ldp, offsetof(ScopeChain,_scopes) + 0*sizeof(Atom), scope, ACC_LOAD_ANY);
                 ptr = atomToNativeRep(t, scopeobj);
             }
         }
@@ -3564,7 +3575,7 @@ namespace avmplus
             #ifdef VMCFG_MOPS_USE_EXPANDED_LOADSTORE_INT
                 int32_t disp = 0;
                 LIns* realAddr = mopAddrToRangeCheckedRealAddrAndDisp(mopAddr, mi.size, &disp);
-                LIns* i2 = loadIns(mi.op, disp, realAddr);
+                LIns* i2 = loadIns(mi.op, disp, realAddr, ACC_LOAD_ANY);
             #else
                 LIns* realAddr = mopAddrToRangeCheckedRealAddrAndDisp(mopAddr, mi.size, NULL);
                 LIns* i2 = callIns(mi.call, 1, realAddr);
@@ -3582,7 +3593,7 @@ namespace avmplus
             #ifdef VMCFG_MOPS_USE_EXPANDED_LOADSTORE_FP
                 int32_t disp = 0;
                 LIns* realAddr = mopAddrToRangeCheckedRealAddrAndDisp(mopAddr, mi.size, &disp);
-                LIns* i2 = loadIns(mi.op, disp, realAddr);
+                LIns* i2 = loadIns(mi.op, disp, realAddr, ACC_LOAD_ANY);
             #else
                 LIns* realAddr = mopAddrToRangeCheckedRealAddrAndDisp(mopAddr, mi.size, NULL);
                 LIns* i2 = callIns(mi.call, 1, realAddr);
@@ -3714,7 +3725,7 @@ namespace avmplus
                 }
 
                 // replicate MethodFrame dtor inline -- must come after endTry call (if any)
-                LIns* nextMethodFrame = loadIns(LIR_ldp, offsetof(MethodFrame,next), methodFrame);
+                LIns* nextMethodFrame = loadIns(LIR_ldp, offsetof(MethodFrame,next), methodFrame, ACC_LOAD_ANY);
                 stp(nextMethodFrame, coreAddr, offsetof(AvmCore,currentMethodFrame));
 
                 Traits* t = ms->returnTraits();
@@ -3955,8 +3966,8 @@ namespace avmplus
                 sti(localGet(index_index), index, 0);      // int32 index
                 LIns* i1 = callIns(FUNCTIONID(hasnextproto), 3,
                                      env_param, obj, index);
-                localSet(obj_index, loadIns(LIR_ldp, 0, obj), OBJECT_TYPE);  // Atom obj
-                localSet(index_index, loadIns(LIR_ld, 0, index), INT_TYPE); // int32 index
+                localSet(obj_index, loadIns(LIR_ldp, 0, obj, ACC_LOAD_ANY), OBJECT_TYPE);  // Atom obj
+                localSet(index_index, loadIns(LIR_ld, 0, index, ACC_LOAD_ANY), INT_TYPE); // int32 index
                 AvmAssert(result == BOOLEAN_TYPE);
                 localSet(sp+1, i1, result);
                 break;
@@ -4041,7 +4052,7 @@ namespace avmplus
                     // and we call (*cache->handler)(cache, obj, argc, args*, MethodEnv*)
                     CallCache* cache = call_cache_builder.allocateCacheSlot(name);
                     LIns* cacheAddr = InsConstPtr(cache);
-                    LIns* handler = loadIns(LIR_ldp, offsetof(CallCache, call_handler), cacheAddr);
+                    LIns* handler = loadIns(LIR_ldp, offsetof(CallCache, call_handler), cacheAddr, ACC_LOAD_ANY);
                     out = callIns(FUNCTIONID(call_cache_handler), 6,
                         handler, cacheAddr, base, InsConst(argc), ap, env_param);
                 }
@@ -4433,7 +4444,7 @@ namespace avmplus
                         // static name, use property cache
                         GetCache* cache = get_cache_builder.allocateCacheSlot(multiname);
                         LIns* cacheAddr = InsConstPtr(cache);
-                        LIns* handler = loadIns(LIR_ldp, offsetof(GetCache, get_handler), cacheAddr);
+                        LIns* handler = loadIns(LIR_ldp, offsetof(GetCache, get_handler), cacheAddr, ACC_LOAD_ANY);
                         value = callIns(FUNCTIONID(get_cache_handler), 4, handler, cacheAddr, env_param, obj);
                     }
 
@@ -4625,7 +4636,7 @@ namespace avmplus
                             // use inline cache for dynamic setproperty access
                             SetCache* cache = set_cache_builder.allocateCacheSlot(multiname);
                             LIns* cacheAddr = InsConstPtr(cache);
-                            LIns* handler = loadIns(LIR_ldp, offsetof(SetCache, set_handler), cacheAddr);
+                            LIns* handler = loadIns(LIR_ldp, offsetof(SetCache, set_handler), cacheAddr, ACC_LOAD_ANY);
                             callIns(FUNCTIONID(set_cache_handler), 5, handler, cacheAddr, obj, value, env_param);
                         } else {
                             // last resort slow path for OP_setproperty
@@ -4825,8 +4836,7 @@ namespace avmplus
             #ifdef DEBUGGER
             if (haveDebugger) {
                 // todo refactor api's so we don't have to pass argv/argc
-                LIns* debugger = loadIns(LIR_ldcp, offsetof(AvmCore, _debugger),
-                                            coreAddr);
+                LIns* debugger = loadIns(LIR_ldp, offsetof(AvmCore, _debugger), coreAddr, ACC_READONLY);
                 callIns(FUNCTIONID(debugFile), 2,
                         debugger,
                         InsConstPtr((String*)op1));
@@ -4843,8 +4853,7 @@ namespace avmplus
             #ifdef DEBUGGER
             if (haveDebugger) {
                 // todo refactor api's so we don't have to pass argv/argc
-                LIns* debugger = loadIns(LIR_ldcp, offsetof(AvmCore, _debugger),
-                                            coreAddr);
+                LIns* debugger = loadIns(LIR_ldp, offsetof(AvmCore, _debugger), coreAddr, ACC_READONLY);
                 callIns(FUNCTIONID(debugLine), 2,
                         debugger,
                         InsConst((int32_t)op1));
@@ -5135,20 +5144,20 @@ namespace avmplus
             emitLabel(catch_label);
 
             // exception case
-            LIns *exptr = loadIns(LIR_ldp, offsetof(AvmCore, exceptionAddr), coreAddr);
-            LIns *exAtom = loadIns(LIR_ldp, offsetof(Exception, atom), exptr);
+            LIns *exptr = loadIns(LIR_ldp, offsetof(AvmCore, exceptionAddr), coreAddr, ACC_LOAD_ANY);
+            LIns *exAtom = loadIns(LIR_ldp, offsetof(Exception, atom), exptr, ACC_LOAD_ANY);
             localSet(state->verifier->stackBase, exAtom, NULL);
             // need to convert exception from atom to native rep, at top of
             // catch handler.  can't do it here because it could be any type.
 
             // _ef.beginCatch()
-            LIns* pc = loadIns(LIR_ldp, 0, _save_eip);
+            LIns* pc = loadIns(LIR_ldp, 0, _save_eip, ACC_LOAD_ANY);
             LIns* handler = callIns(FUNCTIONID(beginCatch), 5,
                 coreAddr, _ef, InsConstPtr(info), pc, exptr);
 
             int handler_count = info->abc_exceptions()->exception_count;
             // Jump to catch handler
-            LIns *handler_target = loadIns(LIR_ld, offsetof(ExceptionHandler, target), handler);
+            LIns *handler_target = loadIns(LIR_ld, offsetof(ExceptionHandler, target), handler, ACC_LOAD_ANY);
             // Do a compare & branch to each possible target.
             for (int i=0; i < handler_count; i++) {
                 ExceptionHandler* h = &info->abc_exceptions()->exceptions[i];
@@ -5303,9 +5312,9 @@ namespace avmplus
         LIns* scope = prolog->env_scope;
         if (!scope)
         {
-            prolog->env_scope = scope = prolog->insLoad(LIR_ldcp, env_param, offsetof(MethodEnv, _scope));
+            prolog->env_scope = scope = prolog->insLoad(LIR_ldp, env_param, offsetof(MethodEnv, _scope), ACC_READONLY);
             verbose_only( if (vbNames) {
-                vbNames->addName(scope, "env_scope");
+                vbNames->lirNameMap->addName(scope, "env_scope");
             })
             verbose_only( if (vbWriter) { vbWriter->flush(); } )
         }
@@ -5318,9 +5327,9 @@ namespace avmplus
         if (!vtable)
         {
             LIns* scope = loadEnvScope();
-            prolog->env_vtable = vtable = prolog->insLoad(LIR_ldcp, scope, offsetof(ScopeChain, _vtable));
+            prolog->env_vtable = vtable = prolog->insLoad(LIR_ldp, scope, offsetof(ScopeChain, _vtable), ACC_READONLY);
             verbose_only( if (vbNames) {
-                vbNames->addName(vtable, "env_vtable");
+                vbNames->lirNameMap->addName(vtable, "env_vtable");
             })
             verbose_only( if (vbWriter) { vbWriter->flush(); } )
         }
@@ -5333,9 +5342,9 @@ namespace avmplus
         if (!abcenv)
         {
             LIns* scope = loadEnvScope();
-            prolog->env_abcenv = abcenv = prolog->insLoad(LIR_ldcp, scope, offsetof(ScopeChain, _abcEnv));
+            prolog->env_abcenv = abcenv = prolog->insLoad(LIR_ldp, scope, offsetof(ScopeChain, _abcEnv), ACC_READONLY);
             verbose_only( if (vbNames) {
-                vbNames->addName(abcenv, "env_abcenv");
+                vbNames->lirNameMap->addName(abcenv, "env_abcenv");
             })
             verbose_only( if (vbWriter) { vbWriter->flush(); } )
         }
@@ -5348,9 +5357,9 @@ namespace avmplus
         if (!domainenv)
         {
             LIns* abcenv = loadEnvAbcEnv();
-            prolog->env_domainenv = domainenv = prolog->insLoad(LIR_ldcp, abcenv, offsetof(AbcEnv, m_domainEnv));
+            prolog->env_domainenv = domainenv = prolog->insLoad(LIR_ldp, abcenv, offsetof(AbcEnv, m_domainEnv), ACC_READONLY);
             verbose_only( if (vbNames) {
-                vbNames->addName(domainenv, "env_domainenv");
+                vbNames->lirNameMap->addName(domainenv, "env_domainenv");
             })
             verbose_only( if (vbWriter) { vbWriter->flush(); } )
         }
@@ -5363,9 +5372,9 @@ namespace avmplus
         if (!toplevel)
         {
             LIns* vtable = loadEnvVTable();
-            prolog->env_toplevel = toplevel = prolog->insLoad(LIR_ldcp, vtable, offsetof(VTable, _toplevel));
+            prolog->env_toplevel = toplevel = prolog->insLoad(LIR_ldp, vtable, offsetof(VTable, _toplevel), ACC_READONLY);
             verbose_only( if (vbNames) {
-                vbNames->addName(toplevel, "env_toplevel");
+                vbNames->lirNameMap->addName(toplevel, "env_toplevel");
             })
             verbose_only( if (vbWriter) { vbWriter->flush(); } )
         }
@@ -5384,7 +5393,7 @@ namespace avmplus
         {
             // must be a pointer to a scriptobject, and we've done the n
             // all other types are ScriptObject, and we've done the null check
-            return loadIns(LIR_ldcp, offsetof(ScriptObject, vtable), obj);
+            return loadIns(LIR_ldp, offsetof(ScriptObject, vtable), obj, ACC_READONLY);
         }
 
         LIns* toplevel = loadEnvToplevel();
@@ -5405,9 +5414,9 @@ namespace avmplus
 
         // now offset != -1 and we are returning a primitive vtable
 
-        LIns* cc = loadIns(LIR_ldcp, offset, toplevel);
-        LIns* cvtable = loadIns(LIR_ldcp, offsetof(ClassClosure, vtable), cc);
-        return loadIns(LIR_ldcp, offsetof(VTable, ivtable), cvtable);
+        LIns* cc = loadIns(LIR_ldp, offset, toplevel, ACC_READONLY);
+        LIns* cvtable = loadIns(LIR_ldp, offsetof(ClassClosure, vtable), cc, ACC_READONLY);
+        return loadIns(LIR_ldp, offsetof(VTable, ivtable), cvtable, ACC_READONLY);
     }
 
     LIns* CodegenLIR::promoteNumberIns(Traits* t, int i)
@@ -5451,7 +5460,7 @@ namespace avmplus
 
 #ifdef NJ_VERBOSE
         if (vbNames && label.name)
-            vbNames->addName(label.labelIns, label.name);
+            vbNames->lirNameMap->addName(label.labelIns, label.name);
 #endif
     }
 
@@ -5582,11 +5591,7 @@ namespace avmplus
         return lirout->insAlloc(size >= 4 ? size : 4);
     }
 
-    CodeMgr::CodeMgr() : codeAlloc()
-#ifdef NJ_VERBOSE
-        , labels(allocator, &log)
-#endif
-        , bindingCaches(NULL)
+    CodeMgr::CodeMgr() : codeAlloc(), bindingCaches(NULL)
     {
         verbose_only( log.lcbits = 0; )
     }
@@ -5686,13 +5691,9 @@ namespace avmplus
                     }
                     break;
                 CASE64(LIR_ldq:)
-                CASE64(LIR_ldqc:)
                 case LIR_ld:
-                case LIR_ldc:
                 case LIR_ldf:
-                case LIR_ldfc:
                 case LIR_ldzb: case LIR_ldsb:
-                case LIR_ldcb: case LIR_ldcsb:
                     if (i->oprnd1() == vars) {
                         int d = i->disp() >> 3;
                         varlivein.set(d);
@@ -5756,7 +5757,7 @@ namespace avmplus
                 CASE64(LIR_qcall:)
                 case LIR_icall:
                 case LIR_fcall:
-                    if (catcher && !i->isCse()) {
+                    if (catcher && !i->callInfo()->_isPure) {
                         // non-cse call is like a conditional forward branch to the catcher label.
                         // this could be made more precise by checking whether this call
                         // can really throw, and only processing edges to the subset of
@@ -5778,7 +5779,7 @@ namespace avmplus
         while (again);
 
         // now make a final pass, modifying LIR to delete dead stores (make them LIR_neartramps)
-        verbose_only( if (pool->isVerbose(VB_jit))
+        verbose_only( if (pool->isVerbose(LC_Liveness))
             AvmLog("killing dead stores after %d LA iterations.\n",iter);
         )
     }
@@ -5790,7 +5791,7 @@ namespace avmplus
         // TODO this can go away if we turn this kill pass into a LirReader
         // and do the work inline with the assembly pass.
         static const uint8_t lirSizes[] = {
-        #define OP___(op, number, repkind, retType) sizeof(LIns##repkind),
+        #define OP___(op, number, repkind, retType, isCse) sizeof(LIns##repkind),
         #include "../nanojit/LIRopcode.tbl"
         #undef OP___
                 0
@@ -5807,8 +5808,11 @@ namespace avmplus
     void CodegenLIR::deadvars_kill(nanojit::BitSet& varlivein, HashMap<LIns*, nanojit::BitSet*> &varlabels,
             nanojit::BitSet& taglivein, HashMap<LIns*, nanojit::BitSet*> &taglabels)
     {
-        verbose_only(LirNameMap *names = frag->lirbuf->names;)
-        verbose_only(bool verbose = names && pool->isVerbose(VB_jit); )
+#ifdef NJ_VERBOSE
+        LInsPrinter *printer = frag->lirbuf->printer;
+        bool verbose = printer && pool->isVerbose(VB_jit);
+        InsBuf b;
+#endif
         LIns *catcher = this->catch_label.labelIns;
         varlivein.reset();
         taglivein.reset();
@@ -5832,7 +5836,7 @@ namespace avmplus
                         int d = i->disp() >> 3;
                         if (!varlivein.get(d)) {
                             verbose_only(if (verbose)
-                                AvmLog("- %s\n", names->formatIns(i));)
+                                AvmLog("- %s\n", printer->formatIns(&b, i));)
                             // erase the store by rewriting it as a skip
                             LIns* prevIns = findPrevIns(i);
                             if (prologLastIns == i)
@@ -5848,7 +5852,7 @@ namespace avmplus
                         int d = i->disp() / TAGSIZE;
                         if (!taglivein.get(d)) {
                             verbose_only(if (verbose)
-                                AvmLog("- %s\n", names->formatIns(i));)
+                                AvmLog("- %s\n", printer->formatIns(&b, i));)
                             // erase the store by rewriting it as a skip
                             LIns* prevIns = findPrevIns(i);
                             if (prologLastIns == i)
@@ -5869,13 +5873,9 @@ namespace avmplus
                     }
                     break;
                 CASE64(LIR_ldq:)
-                CASE64(LIR_ldqc:)
                 case LIR_ld:
-                case LIR_ldc:
                 case LIR_ldf:
-                case LIR_ldfc:
                 case LIR_ldzb: case LIR_ldsb:
-                case LIR_ldcb: case LIR_ldcsb:
                     if (i->oprnd1() == vars) {
                         int d = i->disp() >> 3;
                         varlivein.set(d);
@@ -5919,7 +5919,7 @@ namespace avmplus
                 CASE64(LIR_qcall:)
                 case LIR_icall:
                 case LIR_fcall:
-                    if (catcher && !i->isCse()) {
+                    if (catcher && !i->callInfo()->_isPure) {
                         // non-cse call is like a conditional branch to the catcher label.
                         // this could be made more precise by checking whether this call
                         // can really throw, and only processing edges to the subset of
@@ -5940,7 +5940,7 @@ namespace avmplus
                     break;
             }
             verbose_only(if (verbose) {
-                AvmLog("  %s\n", names->formatIns(i));
+                AvmLog("  %s\n", printer->formatIns(&b, i));
             })
         }
         // if we have not removed all stores to the tags array, mark it live
@@ -6004,7 +6004,7 @@ namespace avmplus
     {
         SeqReader seqReader(frag->lastIns, prologLastIns);
         Allocator lister_alloc;
-        ReverseLister lister(&seqReader, lister_alloc, frag->lirbuf->names, &log, title);
+        ReverseLister lister(&seqReader, lister_alloc, frag->lirbuf->printer, &log, title);
         for (LIns* ins = lister.read(); !ins->isop(LIR_start); ins = lister.read())
         {}
         lister.finish();
@@ -6031,7 +6031,7 @@ namespace avmplus
 
         CodeMgr *mgr = pool->codeMgr;
         #ifdef NJ_VERBOSE
-        if (verbose()) {
+        if (pool->isVerbose(LC_ReadLIR)) {
             StUTF8String name(info->format(core));
             char *title = new (*lir_alloc) char[VMPI_strlen(name.c_str()) + 20];
             VMPI_sprintf(title, "Final LIR %s", name.c_str());
@@ -6261,15 +6261,16 @@ namespace avmplus
 
 namespace nanojit
 {
-    void StackFilter::getTops(LInsp /*br*/, int& /*spTop*/, int& /*rpTop*/) {
+    int StackFilter::getTop(LInsp /*br*/) {
         AvmAssert(false);
+        return 0;
     }
 
     #ifdef NJ_VERBOSE
-    void LirNameMap::formatGuard(LIns*, char*) {
+    void LInsPrinter::formatGuard(InsBuf*, LIns*) {
         AvmAssert(false);
     }
-    void LirNameMap::formatGuardXov(LIns*, char*) {
+    void LInsPrinter::formatGuardXov(InsBuf*, LIns*) {
         AvmAssert(false);
     }
     #endif
@@ -6425,14 +6426,15 @@ namespace avmplus
             lirout = new (*alloc1) ValidateWriter(lirout, "InvokerCompiler");
         )
         verbose_only(
-            if (verbose() && !core->quiet_opt()) {
+            if (verbose()) {
                 CodeMgr *codeMgr = method->pool()->codeMgr;
                 core->console << "compileInvoker " << method << "\n";
                 core->console <<
                     " required=" << ms->requiredParamCount() <<
                     " optional=" << (ms->param_count() - ms->requiredParamCount()) << "\n";
-                lirbuf->names = new (*lir_alloc) LirNameMap(*lir_alloc, &codeMgr->labels);
-                lirout = new (*alloc1) VerboseWriter(*alloc1, lirout, lirbuf->names, &codeMgr->log);
+                lirbuf->printer = new (*lir_alloc) LInsPrinter(*lir_alloc);
+                lirbuf->printer->addrNameMap->addAddrRange(pool->core, sizeof(AvmCore), 0, "core");
+                lirout = new (*alloc1) VerboseWriter(*alloc1, lirout, lirbuf->printer, &codeMgr->log);
             }
         )
 #if defined(NANOJIT_ARM)
@@ -6588,7 +6590,7 @@ namespace avmplus
     {
         CodeMgr* codeMgr = method->pool()->codeMgr;
 
-        verbose_only(if (verbose()) {
+        verbose_only(if (pool->isVerbose(LC_Liveness)) {
             Allocator live_alloc;
             LirReader in(frag->lastIns);
             nanojit::live(&in, live_alloc, frag, &codeMgr->log);
@@ -6624,7 +6626,8 @@ namespace avmplus
     {
         // We know we've called the method at least once, so method->implGPR pointer is correct.
         CallInfo* call = (CallInfo*) lir_alloc->alloc(sizeof(CallInfo));
-        call->_cse = call->_fold = 0;
+        call->_isPure = 0;
+        call->_storeAccSet = ACC_STORE_ANY;
         call->_abi = ABI_FUNCTION;
         verbose_only( if (verbose()) {
             StUTF8String name(method->getMethodName());
