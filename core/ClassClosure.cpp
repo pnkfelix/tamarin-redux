@@ -70,7 +70,7 @@ namespace avmplus
 
 		if (AvmCore::isNullOrUndefined(value))
 		{
-			this->prototype = NULL;
+			setPrototypePtr(NULL);
 		}
 		else
 		{
@@ -80,27 +80,15 @@ namespace avmplus
 			}
 
 			// allow any prototype object.  if the object has methods or slots, so be it
-			this->prototype = AvmCore::atomToScriptObject(value);
+			setPrototypePtr(AvmCore::atomToScriptObject(value));
 		}
 	}
 
-	VTable* ClassClosure::ivtable() const
+	void ClassClosure::setPrototypePtr(ScriptObject* p)
 	{
-		return vtable->ivtable;
-	}
-
-	// Called from construct or generated code to alloc a new instance
-	ScriptObject* ClassClosure::newInstance() 
-	{
-		VTable* ivtable = this->ivtable();
-		AvmAssert(ivtable != NULL);
-
-		if (prototype == NULL) // ES3 spec, 13.2.2 (we've already ensured prototype is either an Object or null)
-			prototype = AvmCore::atomToScriptObject(toplevel()->objectClass->get_prototype());
-
-		ScriptObject *obj = createInstance(ivtable, prototype);
-
-		return obj;
+		prototype = p;
+		if (p == NULL)
+			this->ivtable()->createInstance = ScriptObject::genericCreateInstance;
 	}
 
 	// this = argv[0] (ignored)
