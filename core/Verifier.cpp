@@ -2413,7 +2413,14 @@ namespace avmplus
     Traits* Verifier::readBinding(Traits* traits, Binding b)
     {
         if (traits)
+        {
             traits->resolveSignatures(toplevel);
+        }
+        else
+        {
+            AvmAssert(AvmCore::bindingKind(b) == BKIND_NONE);
+        }
+
         switch (AvmCore::bindingKind(b))
         {
         default:
