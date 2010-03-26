@@ -65,10 +65,10 @@ REALLY_INLINE BuiltinType LirHelper::bt(Traits *t)
     return Traits::getBuiltinType(t);
 }
 
-REALLY_INLINE LIns* CodegenLIR::loadIns(LOpcode op, int32_t disp, LIns *base)
+REALLY_INLINE LIns* CodegenLIR::loadIns(LOpcode op, int32_t disp, LIns *base, AccSet accSet)
 {
     AvmAssert(isS32(disp));
-    return lirout->insLoad(op, base, (int32_t)disp);
+    return lirout->insLoad(op, base, (int32_t)disp, accSet);
 }
 
 REALLY_INLINE LIns* CodegenLIR::Ins(LOpcode op)
@@ -229,8 +229,8 @@ REALLY_INLINE LIns* LirHelper::param(int id, const char *name)
 {
     LIns* param = lirout->insParam(id, 0);
 #ifdef NJ_VERBOSE
-    if (frag->lirbuf->names)
-        frag->lirbuf->names->addName(param, name);
+    if (frag->lirbuf->printer)
+        frag->lirbuf->printer->lirNameMap->addName(param, name);
 #else
     (void)name;
 #endif
