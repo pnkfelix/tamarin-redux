@@ -392,22 +392,26 @@ namespace nanojit
         void emitxm_rel(uint64_t op, Register r, NIns* addr64);\
         bool isTargetWithinS8(NIns* target);\
         bool isTargetWithinS32(NIns* target);\
-        void asm_int(Register r, int32_t v, bool canClobberCCs);\
-        void asm_quad(Register r, uint64_t v, bool canClobberCCs);\
-        void asm_regarg(ArgSize, LIns*, Register);\
-        void asm_stkarg(ArgSize, LIns*, int);\
+        void asm_immi(Register r, int32_t v, bool canClobberCCs);\
+        void asm_immq(Register r, uint64_t v, bool canClobberCCs);\
+        void asm_immf(Register r, uint64_t v, bool canClobberCCs);\
+        void asm_regarg(ArgType, LIns*, Register);\
+        void asm_stkarg(ArgType, LIns*, int);\
         void asm_shift(LIns*);\
         void asm_shift_imm(LIns*);\
         void asm_arith_imm(LIns*);\
-        void regalloc_unary(LIns *ins, RegisterMask allow, Register &rr, Register &ra);\
-        void regalloc_binary(LIns *ins, RegisterMask allow, Register &rr, Register &ra, Register &rb);\
-        void regalloc_load(LIns *ins, RegisterMask allow, Register &rr, int32_t &d, Register &rb);\
+        void beginOp1Regs(LIns *ins, RegisterMask allow, Register &rr, Register &ra);\
+        void beginOp2Regs(LIns *ins, RegisterMask allow, Register &rr, Register &ra, Register &rb);\
+        void endOpRegs(LIns *ins, Register rr, Register ra);\
+        void beginLoadRegs(LIns *ins, RegisterMask allow, Register &rr, int32_t &d, Register &rb);\
+        void endLoadRegs(LIns *ins);\
         void dis(NIns *p, int bytes);\
         void asm_cmp(LIns*);\
         void asm_cmp_imm(LIns*);\
-        void fcmp(LIns*, LIns*);\
+        void asm_fcmp(LIns*, LIns*);\
         NIns* asm_fbranch(bool, LIns*, NIns*);\
-        void asm_div_mod(LIns *i);\
+        void asm_div(LIns *ins);\
+        void asm_div_mod(LIns *ins);\
         int max_stk_used;\
         void PUSHR(Register r);\
         void POPR(Register r);\
@@ -475,6 +479,7 @@ namespace nanojit
         void MOVSXDR(Register l, Register r);\
         void MOVZX8(Register l, Register r);\
         void XORPS(Register r);\
+        void XORPS(Register l, Register r);\
         void DIVSD(Register l, Register r);\
         void MULSD(Register l, Register r);\
         void ADDSD(Register l, Register r);\
