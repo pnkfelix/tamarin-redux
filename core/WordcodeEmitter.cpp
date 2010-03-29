@@ -161,14 +161,8 @@ namespace avmplus
 			label_info* l = labels;
 			while (l != NULL && l->old_offset != old_offset)
 				l = l->next;
-			// See https://bugzilla.mozilla.org/show_bug.cgi?id=481171.  Arguably this is a verification
-			// error, but work around the lack of a verification error here.
-			if (l == NULL) {
-				if (avm_toplevel != NULL)
-					core->throwErrorV(avm_toplevel->verifyErrorClass(), kInvalidBranchTargetError);
-				else
-					core->throwAtom(core->newStringLatin1("word code translator: missing LABEL for backward branch")->atom());
-			}
+			// See https://bugzilla.mozilla.org/show_bug.cgi?id=481171.  Verifier should have caught the invalid target.
+			AvmAssert(l != NULL);
 			*dest++ = l->new_offset - base_offset;
 		}
 		else
@@ -344,14 +338,23 @@ namespace avmplus
 		return (WordOpcode)opcodeInfo[opcode].wordCode;
 	}
 
-    void WordcodeEmitter::writePrologue(const FrameState*, const byte *pc)
+    void WordcodeEmitter::writePrologue(const FrameState* state, const byte *pc)
 	{
         #if defined DEBUGGER
 		if (core->debugger()) emitOp0(pc, WOP_debugenter);
 		#else
 		(void)pc;
         #endif
-        computeExceptionFixups();
+		const byte* tryFrom = state->verifier->tryFrom;
+		const byte* tryTo = state->verifier->tryTo;
+		const byte* code_end = code_start + state->verifier->code_length;
+		if (tryFrom >= code_start && tryTo <= code_end) {
+		    // we're in the same abc code that contains try blocks
+	        computeExceptionFixups();
+		} else {
+		    // we're in vm-generated abc code preceding an OP_abs_jump,
+		    // or the method doesn't have try blocks.
+		}
 	}
 
 	void WordcodeEmitter::writeEpilogue(const FrameState*)
@@ -359,8 +362,10 @@ namespace avmplus
 		epilogue();
 	}
 
-	void WordcodeEmitter::writeBlockStart(const FrameState*)
-	{}
+	void WordcodeEmitter::writeBlockStart(const FrameState* state)
+	{
+		emitLabel(state->verifier->code_pos + state->pc);
+	}
 
 	void WordcodeEmitter::writeOpcodeVerified(const FrameState*, const byte*, AbcOpcode)
 	{}
@@ -536,7 +541,7 @@ namespace avmplus
 		    // do nothing, all values on stack are atoms
 		    break;
 		case OP_label:
-		    emitLabel(pc);
+			// do nothing, we generate implicit and explicit labels in writeBlockStart()
 			break;
 		case OP_pushfalse:
 		case OP_pushtrue:
