@@ -1,5 +1,6 @@
 // Generated from ST_avmplus_peephole.st
-// -*- mode: c++ -*-
+// -*- mode: c; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*-
+// vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 //
 // ***** BEGIN LICENSE BLOCK *****
 // Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -70,7 +71,7 @@ case 0: test0(); return;
 void ST_avmplus_peephole::prologue() {
 
 #ifdef AVMPLUS_DIRECT_THREADED
-	opcode_labels = interpGetOpcodeLabels();
+    opcode_labels = interpGetOpcodeLabels();
 #endif
 
 }
