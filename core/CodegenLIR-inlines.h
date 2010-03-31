@@ -65,10 +65,10 @@ REALLY_INLINE BuiltinType LirHelper::bt(Traits *t)
     return Traits::getBuiltinType(t);
 }
 
-REALLY_INLINE LIns* CodegenLIR::loadIns(LOpcode op, int32_t disp, LIns *base)
+REALLY_INLINE LIns* CodegenLIR::loadIns(LOpcode op, int32_t disp, LIns *base, AccSet accSet)
 {
     AvmAssert(isS32(disp));
-    return lirout->insLoad(op, base, (int32_t)disp);
+    return lirout->insLoad(op, base, (int32_t)disp, accSet);
 }
 
 REALLY_INLINE LIns* CodegenLIR::Ins(LOpcode op)
@@ -149,7 +149,12 @@ REALLY_INLINE LIns* LirHelper::eq0(LIns* ptr)
 
 REALLY_INLINE LIns* LirHelper::peq(LIns* a, Atom b)
 {
-    return lirout->ins2(LIR_peq, a, InsConstAtom(b));
+    return peq(a, InsConstAtom(b));
+}
+
+REALLY_INLINE LIns* LirHelper::peq(LIns* a, LIns* b)
+{
+    return lirout->ins2(LIR_peq, a, b);
 }
 
 REALLY_INLINE LIns* LirHelper::choose(LIns* cond, Atom t, LIns* f)
@@ -197,27 +202,27 @@ REALLY_INLINE LIns* LirHelper::jne(LIns *a, int32_t b)
     return lirout->insBranch(LIR_jf, lirout->ins2(LIR_eq, a, InsConst(b)), NULL);
 }
 
-REALLY_INLINE LIns* LirHelper::stp(LIns* val, LIns* p, int32_t d)
+REALLY_INLINE LIns* LirHelper::stp(LIns* val, LIns* p, int32_t d, AccSet accSet)
 {
     AvmAssert(val->isPtr());
-    return lirout->insStorei(val, p, d);
+    return lirout->insStorei(val, p, d, accSet);
 }
 
-REALLY_INLINE LIns* LirHelper::sti(LIns* val, LIns* p, int32_t d)
+REALLY_INLINE LIns* LirHelper::sti(LIns* val, LIns* p, int32_t d, AccSet accSet)
 {
     AvmAssert(val->isI32());
-    return lirout->insStorei(val, p, d);
+    return lirout->insStorei(val, p, d, accSet);
 }
 
-REALLY_INLINE LIns* LirHelper::stf(LIns* val, LIns* p, int32_t d)
+REALLY_INLINE LIns* LirHelper::stf(LIns* val, LIns* p, int32_t d, AccSet accSet)
 {
     AvmAssert(val->isF64());
-    return lirout->insStorei(val, p, d);
+    return lirout->insStorei(val, p, d, accSet);
 }
 
-REALLY_INLINE LIns* LirHelper::ldp(LIns* p, int32_t d)
+REALLY_INLINE LIns* LirHelper::ldp(LIns* p, int32_t d, AccSet accSet)
 {
-    return lirout->insLoad(LIR_ldp, p, d);
+    return lirout->insLoad(LIR_ldp, p, d, accSet);
 }
 
 REALLY_INLINE LIns* LirHelper::plive(LIns* a)
@@ -229,8 +234,8 @@ REALLY_INLINE LIns* LirHelper::param(int id, const char *name)
 {
     LIns* param = lirout->insParam(id, 0);
 #ifdef NJ_VERBOSE
-    if (frag->lirbuf->names)
-        frag->lirbuf->names->addName(param, name);
+    if (frag->lirbuf->printer)
+        frag->lirbuf->printer->lirNameMap->addName(param, name);
 #else
     (void)name;
 #endif
