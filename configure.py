@@ -178,7 +178,7 @@ elif config.getCompiler() == 'VS':
     DEBUG_CFLAGS += "-Zi "
     DEBUG_LDFLAGS += "-DEBUG "
 elif config.getCompiler() == 'SunStudio':
-    APP_CXXFLAGS = "-template=no%extdef "
+    APP_CXXFLAGS = "-template=no%extdef -erroff=wvarhidemem"
     OPT_CXXFLAGS = "-xO5 "
     DEBUG_CXXFLAGS += "-g "
 else:
@@ -251,7 +251,7 @@ elif the_os == "linux":
         OS_LIBS.append("dl")
 elif the_os == "sunos":
     if config.getCompiler() != 'GCC':
-        APP_CXXFLAGS = "-template=no%extdef "
+        APP_CXXFLAGS = "-template=no%extdef -erroff=wvarhidemem"
         OPT_CXXFLAGS = "-xO5 "
         DEBUG_CXXFLAGS = "-g "
     MMGC_DEFINES.update({'UNIX': None,

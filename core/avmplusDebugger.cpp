@@ -321,7 +321,7 @@ namespace avmplus
 
 	void Debugger::traceCallback(int line)
 	{
-		if (!core->callStack && core->callStack->env())
+		if (!(core->callStack && core->callStack->env()))
 			return;
 			
 		Stringp file = ( core->callStack->filename() ) ? Stringp(core->callStack->filename()) : Stringp(core->kEmptyString);
@@ -700,6 +700,15 @@ namespace avmplus
 		return breakpoints.get(linenum);
 	}
 
+	bool DebugFrame::methodName(Stringp&) {
+		return false; // base implementation
+	}
+	
+	bool DebugFrame::argumentName(int, Stringp&) {
+		return false; // base implementation
+	}
+
+
 	DebugStackFrame::DebugStackFrame(int nbr, CallStackNode* tr, Debugger* debug)
 		: trace(tr)
 		, debugger(debug)
@@ -746,6 +755,25 @@ namespace avmplus
 		}
 		return worked;
 	}
+
+	bool DebugStackFrame::methodName(Stringp& result) {
+		if (trace->info()) {
+			//PoolObject* pool = trace->info()->pool();
+			//return trace->info()->pool()->getMethodInfoName(trace->info()->method_id());
+			result = trace->info()->getMethodName();
+			return true;
+		} else return false;
+	}
+	
+	bool DebugStackFrame::argumentName(int which, Stringp& result) {
+		if (trace->info()) {
+			result = trace->info()->getArgName(which);
+			return true;
+		} else return false;
+	}
+	
+
+
 
 	/**
  	 * @return a pointer to an object Atom whose members are
