@@ -1,5 +1,6 @@
 // Generated from ST_mmgc_basics.st
-// -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+// -*- mode: c; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*-
+// vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 //
 // ***** BEGIN LICENSE BLOCK *****
 // Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -96,11 +97,11 @@ case 15: test15(); return;
 }
 }
 void ST_mmgc_basics::prologue() {
-	gc=new MMgc::GC(MMgc::GCHeap::GetGCHeap(), MMgc::GC::kIncrementalGC);
-	if (gc==NULL) {
-	    MMgc::GCHeap::Init();
-	    gc=new MMgc::GC(MMgc::GCHeap::GetGCHeap(), MMgc::GC::kIncrementalGC);
-	}
+    gc=new MMgc::GC(MMgc::GCHeap::GetGCHeap(), MMgc::GC::kIncrementalGC);
+    if (gc==NULL) {
+        MMgc::GCHeap::Init();
+        gc=new MMgc::GC(MMgc::GCHeap::GetGCHeap(), MMgc::GC::kIncrementalGC);
+    }
 
 }
 void ST_mmgc_basics::epilogue() {
@@ -161,7 +162,7 @@ void ST_mmgc_basics::test3() {
 verifyPass((int)gc->GetBytesInUse()>inuse, "(int)gc->GetBytesInUse()>inuse", __FILE__, __LINE__);
     delete mygcobject;
 //    AvmLog("collect: inuse=%d current=%d\n",inuse,(int)gc->GetBytesInUse());
-    gc->Collect();      
+    gc->Collect();
 //    AvmLog("collect: inuse=%d current=%d\n",inuse,(int)gc->GetBytesInUse());
 verifyPass((int)gc->GetBytesInUse()<=inuse, "(int)gc->GetBytesInUse()<=inuse", __FILE__, __LINE__);
 
@@ -172,7 +173,7 @@ verifyPass(gc->GetGCHeap()!=NULL, "gc->GetGCHeap()!=NULL", __FILE__, __LINE__);
 }
 void ST_mmgc_basics::test5() {
     MMgc::FixedAlloc *fa;
-	fa=new MMgc::FixedAlloc(2048,MMgc::GCHeap::GetGCHeap());                                        
+    fa=new MMgc::FixedAlloc(2048,MMgc::GCHeap::GetGCHeap());
 verifyPass((int)fa->GetMaxAlloc()==0, "(int)fa->GetMaxAlloc()==0", __FILE__, __LINE__);
 verifyPass((int)fa->GetNumChunks()==0, "(int)fa->GetNumChunks()==0", __FILE__, __LINE__);
     void *data1=fa->Alloc(2048);
@@ -188,7 +189,7 @@ verifyPass((int)fa->GetItemSize()==2048, "(int)fa->GetItemSize()==2048", __FILE_
 verifyPass((int)fa->GetMaxAlloc()==1, "(int)fa->GetMaxAlloc()==1", __FILE__, __LINE__);
 verifyPass((int)fa->GetNumChunks()==1, "(int)fa->GetNumChunks()==1", __FILE__, __LINE__);
     fa->Free(data2);
-    delete fa;								  
+    delete fa;
 
 }
 void ST_mmgc_basics::test6() {
@@ -231,7 +232,7 @@ verifyPass((int)gh->GetFreeHeapSize()==startfreeheap, "(int)gh->GetFreeHeapSize(
 //    %%verify (int)gh->GetTotalHeapSize()==128
 //    AvmLog("gh->GetFreeHeapSize()=%d\n",(int)gh->GetFreeHeapSize());
 verifyPass((int)gh->GetFreeHeapSize()==startfreeheap, "(int)gh->GetFreeHeapSize()==startfreeheap", __FILE__, __LINE__);
-	   void *data = gh->Alloc(10,MMgc::GCHeap::kExpand | MMgc::GCHeap::kZero);
+       void *data = gh->Alloc(10,MMgc::GCHeap::kExpand | MMgc::GCHeap::kZero);
 verifyPass((int)gh->GetTotalHeapSize()>startfreeheap, "(int)gh->GetTotalHeapSize()>startfreeheap", __FILE__, __LINE__);
 //    AvmLog("gh->GetFreeHeapSize()=%d\n",(int)gh->GetFreeHeapSize());
 	   gh->FreeNoProfile(data);
@@ -300,21 +301,21 @@ verifyPass(true, "true", __FILE__, __LINE__);
 }
 void ST_mmgc_basics::test12() {
     MMGC_GCENTER(gc);
-	new (gc) DeleteInFinalizer(new (gc, 100) GCFinalizedObject(), new (gc) GCFinalizedObject());
-	//delete m;	delete m; // this verifies we crash, it does	
-	gc->Collect(false);
+    new (gc) DeleteInFinalizer(new (gc, 100) GCFinalizedObject(), new (gc) GCFinalizedObject());
+    //delete m; delete m; // this verifies we crash, it does
+    gc->Collect(false);
 verifyPass(true, "true", __FILE__, __LINE__);
     GCFinalizedObject *gcfo = new (gc) GCFinalizedObject();
     gcfo->~GCFinalizedObject();
     gcfo->~GCFinalizedObject(); // this used to be a deleteing dtor and would crash, not anymore
-			 
 
-									
+
+
 }
 void ST_mmgc_basics::test13() {
     GC *gcb = new GC(GCHeap::GetGCHeap(), GC::kIncrementalGC);
     MMGC_GCENTER(gc);
-    void *a = gc->Alloc(8);			       
+    void *a = gc->Alloc(8);
     {
         MMGC_GCENTER(gcb);
         a = gcb->Alloc(8);
@@ -326,31 +327,31 @@ void ST_mmgc_basics::test13() {
     }
     a = gc->Alloc(8);
     // just fishing for asserts/hangs/crashes
-verifyPass(true  , "true  ", __FILE__, __LINE__);
+verifyPass(true, "true", __FILE__, __LINE__);
     delete gcb;
-    
+
 }
 void ST_mmgc_basics::test14() {
-	{
-		GC *gcb = new GC(GCHeap::GetGCHeap(), GC::kIncrementalGC);
-		{
-			MMGC_GCENTER(gcb);
-			gcb->Alloc(8);
-		}
-		
-		// this will cause a Collection in gcb
-		GCHeap::SignalExternalFreeMemory();
-		delete gcb;
+    {
+        GC *gcb = new GC(GCHeap::GetGCHeap(), GC::kIncrementalGC);
+        {
+            MMGC_GCENTER(gcb);
+            gcb->Alloc(8);
+        }
 
-		// just fishing for asserts/hangs/crashes
-verifyPass(true  , "true  ", __FILE__, __LINE__);
+        // this will cause a Collection in gcb
+        GCHeap::SignalExternalFreeMemory();
+        delete gcb;
+
+        // just fishing for asserts/hangs/crashes
+verifyPass(true, "true", __FILE__, __LINE__);
     }
 
 }
 void ST_mmgc_basics::test15() {
     {
         GC *testGC = new GC(GCHeap::GetGCHeap(), GC::kIncrementalGC);
-        { 
+        {
             MMGC_GCENTER(testGC);
             testGC->StartIncrementalMark();
             // self test for tricky GCRoot deletion logic
