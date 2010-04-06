@@ -262,8 +262,7 @@ namespace avmplus
 		PREVENT_SIGNED_CHAR_PTR(STR)
 		PREVENT_SIGNED_CHAR_PTR(PATTERN)
         AvmAssert(patlen > 0);
-		// NB: start may be negative, the following loop will exit immediately,
-		// see comment #2 in https://bugzilla.mozilla.org/show_bug.cgi?id=551825
+        AvmAssert(start >= 0);
 
 		// even with REALLY_INLINE, some compilers will be reluctant to inline equalsImpl here,
 		// so we explicitly repeat the code here.
@@ -826,13 +825,21 @@ namespace avmplus
 		if (substr == NULL)
 			return -1;
 
-		int32_t len = this->length();
+		// bug 78346: argv[1] might be less than zero.
+		// We clamp it to zero for two reasons:
+		//	1. A movie created prior to this fix with a small negative value probably worked,
+		//	so let's fix it without breaking them.
+		//	2. I am told this is what java does.
 		if (start < 0)
 			start = 0;
+
+		int32_t len = this->length();
+
 		if (start > len)
 			start = len;
 
 		int32_t sublen = substr->length();
+
 		if (sublen == 0)
 			return start;
 
@@ -841,16 +848,6 @@ namespace avmplus
 		const int32_t right = len - sublen; 
 		if (right < 0)
 			return -1;
-
-		// bug 78346: argv[1] might be less than zero.
-		// We clamp it to zero for two reasons:
-		//	1. A movie created prior to this fix with a small negative value probably worked,
-		//	so let's fix it without breaking them.
-		//	2. I am told this is what java does.
-		//
-		// if (argv[1] > right), then we never enter the loop
-		if (start < 0) 
-			start = 0;
 
 		Width const w1 = getWidth();
 		Width const w2 = substr->getWidth();
@@ -903,27 +900,33 @@ namespace avmplus
 			return -1;
         
         // lastIndexOf("anything", negative-number) can't match anything, ever:
-        // match FP10's behavior and return -1 immediately
+        // match FP10's behavior and return -1 immediately.
 		if (start < 0)
 			return -1;
 
 		int32_t len = this->length();
+
 		if (start > len)
 			start = len;
 
 		int32_t sublen = substr->length();
 
-		// right is the last character in selfString subStr could be found at
-		// (and further, and there isn't enough of selfString remaining for a match to be possible)
-		const int32_t right = len - sublen; 
-		
+		if (sublen == 0)
+			return start;
+
+		// Any match starting after right must necessarily fail, as there will be
+		// insufficient characters remaining to match.
+		const int32_t right = len - sublen;
+
+		// The substring is longer than selfString, and therefore no match is possible.
+		// We must avoid setting start to a negative value below.
+		if (right < 0)
+			return -1;
+
 		// bug 78346: argv[1] might be greater than right
 		//	(similar reasons to above apply).
 		if (start > right) 
 			start = right;
-
-		if (sublen == 0)
-			return start;
 
 		Width w1 = getWidth();
 		Width w2 = substr->getWidth();
@@ -1263,9 +1266,7 @@ namespace avmplus
 			start = m_length;
 
 		int32_t end;
-		if (len >= 0x7ffffff)
-			end = 0x7fffffff; 
-		else if ((len > 0xffffff) || (len > 0xffffff)) // might overflow - use doubles
+		if ((len > 0x3fffffff) || (start > 0x3fffffff)) // might overflow - use doubles
 			end = int32_t(double(len) + double(start)); 
 		else
 			end = start + len;
@@ -2123,11 +2124,11 @@ namespace avmplus
 		// Do some sanity checks on our ints to see if they will fall within a valid integer range
 		// !!@what about negative values?
 		int end;
-		if (count == 0x7ffffff)			
+		if (count == 0x7fffffff)	// largest positive int value, also the default arg	
 		{
 			end = len; 
 		}
-		else if ((count > 0xffffff) || (start > 0xffffff)) // might overflow - use doubles
+		else if ((count > 0x3fffffff) || (start > 0x3fffffff)) // might overflow - use doubles
 		{
 			end = (int)NativeObjectHelpers::ClampIndex(double(count) + double(start), len); 
 		}
