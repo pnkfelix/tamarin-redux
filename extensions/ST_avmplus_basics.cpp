@@ -1,5 +1,6 @@
 // Generated from ST_avmplus_basics.st
-// -*- mode: c -*-
+// -*- mode: c; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*-
+// vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 //
 // ***** BEGIN LICENSE BLOCK *****
 // Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -85,31 +86,31 @@ verifyPass((-1 >> 1) == -1, "(-1 >> 1) == -1", __FILE__, __LINE__);
 }
 void ST_avmplus_basics::test2() {
     Stringp s = core->newConstantStringLatin1("ev\xADident");
-	bool equals = s->equalsLatin1("ev\xADident");
+    bool equals = s->equalsLatin1("ev\xADident");
 verifyPass(equals == true, "equals == true", __FILE__, __LINE__);
 
 }
 void ST_avmplus_basics::test3() {
     Stringp s = core->newConstantStringLatin1("ev\xADident");
-	bool found = s->containsLatin1("\xAD");
+    bool found = s->containsLatin1("\xAD");
 verifyPass(found == true, "found == true", __FILE__, __LINE__);
 
 }
 void ST_avmplus_basics::test4() {
     Stringp s = core->newConstantStringLatin1("ev\xADident");
-	int index = s->indexOfLatin1("\xAD");
+    int index = s->indexOfLatin1("\xAD");
 verifyPass(index == 2, "index == 2", __FILE__, __LINE__);
 
 }
 void ST_avmplus_basics::test5() {
     Stringp s = core->newConstantStringLatin1("ev\xADident");
-	bool matches1 = s->matchesLatin1("\xADi", 2, 2);
+    bool matches1 = s->matchesLatin1("\xADi", 2, 2);
 verifyPass(matches1 == true, "matches1 == true", __FILE__, __LINE__);
 
 }
 void ST_avmplus_basics::test6() {
     Stringp s = core->newConstantStringLatin1("ev\xADident");
-	bool matches2 = s->matchesLatin1_caseless("\xADIDENT", 2, 2);
+    bool matches2 = s->matchesLatin1_caseless("\xADIDENT", 2, 2);
 verifyPass(matches2 == true, "matches2 == true", __FILE__, __LINE__);
 
 
