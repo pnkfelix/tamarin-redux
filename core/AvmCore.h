@@ -66,12 +66,13 @@ const int kBufferPadding = 16;
 
     enum VB_Bits {
         // Output control bits for verbose mode
-        VB_builtins     = 1<<0, // display output for builtins (default is to ignore any builtins)
-        VB_parse        = 1<<1, // abc parsing information
-        VB_verify       = 1<<2, // verification information
-        VB_interp       = 1<<3, // interpreter information
-        VB_jit          = 1<<4, // jit information
-        VB_traits       = 1<<5, // traits creation information
+        VB_builtins     = 1<<31, // display output for builtins (default is to ignore any builtins)
+        VB_parse        = 1<<30, // abc parsing information
+        VB_verify       = 1<<29, // verification information
+        VB_interp       = 1<<28, // interpreter information
+        VB_jit          = 1<<27, // jit information
+        VB_traits       = 1<<26  // traits creation information
+        // @warning make sure these don't collide with LC_xxx bits 
     };
 
     struct Config
@@ -284,7 +285,6 @@ const int kBufferPadding = 16;
         Config config;
 
         #ifdef FEATURE_NANOJIT // accessors
-            bool quiet_opt() const;
             #if defined AVMPLUS_IA32 || defined AVMPLUS_AMD64
             bool use_sse2() const;
             #endif
@@ -292,7 +292,7 @@ const int kBufferPadding = 16;
         #ifdef AVMPLUS_VERBOSE
         bool isVerbose(uint32_t b) const;
         static bool isBitSet(uint32_t v, uint32_t bit);
-        static uint32_t parseVerboseFlags(const char* arg);
+        static uint32_t parseVerboseFlags(const char* arg, char*& badFlag);
         #endif
 
         void SetJITEnabled(bool isEnabled);
@@ -689,7 +689,14 @@ const int kBufferPadding = 16;
         /** Destructor */
         ~AvmCore();
 
-        /**
+       /**
+        * Convenience method to access the AvmCore associated
+        * the current thread. Performance may vary across platforms
+        * since the implementation depends on thread local storage.
+        */
+       static AvmCore* getActiveCore();
+
+       /**
          * Parses builtin.abc into a PoolObject, to be executed
          * later for each new Toplevel
          */
@@ -1328,10 +1335,24 @@ const int kBufferPadding = 16;
 
         // String creation. If len is omitted, zero-termination is assumed.
         Stringp newStringLatin1(const char* str, int len = -1);
+        /**
+         * Create a string out of UTF-8 data. WARNING: If strict is true,
+         * the return value may be NULL. Callers must check for this condition
+         * to avoid crashes due to malformed UTF-8 character sequences!
+         * If strict is false, malformed UTF-8 sequences are copied character
+         * by character.
+         */
         Stringp newStringUTF8(const char* str, int len = -1, bool strict = false);
+        /**
+         * Create a string out of UTF-16 data. WARNING: If strict is true,
+         * the return value may be NULL. Callers must check for this condition
+         * to avoid crashes due to malformed UTF-16 surrogate pairs!
+         * If strict is false, malformed UTF-16 surrogate pairs are copied as
+         * two characters.
+         */
         Stringp newStringUTF16(const wchar* str, int len = -1, bool strict = false);
 
-        // decodes UTF16LE or UTF16BE.
+        // decodes UTF16LE or UTF16BE. Same restriction as newStringUTF16().
         Stringp newStringEndianUTF16(bool littleEndian, const wchar* str, int len = -1, bool strict = false);
 
         // like newStringLatin1, but the string constant is assumed to remain valid
