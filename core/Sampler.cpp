@@ -339,7 +339,7 @@ namespace avmplus
 		AvmAssertMsg(s.sampleType == RAW_SAMPLE || 
 				s.sampleType == NEW_OBJECT_SAMPLE || 
 				s.sampleType == DELETED_OBJECT_SAMPLE ||
-				s.sampleType == NEW_AUX_SAMPLE, "Sample stream corruption.\n");
+				s.sampleType == NEW_AUX_SAMPLE, "Sample stream corruption.");
 
 		if(s.sampleType != DELETED_OBJECT_SAMPLE)
 		{
@@ -409,7 +409,7 @@ namespace avmplus
 		write(currentSample, sotEmpty());
 		write(currentSample, size);
 
-		AvmAssertMsg((uintptr)currentSample % 4 == 0, "Alignment should have occurred at end of raw sample.\n");
+		AvmAssertMsg((uintptr)currentSample % 4 == 0, "Alignment should have occurred at end of raw sample.");
 		numSamples++;
 
 		return uid; 
@@ -443,8 +443,8 @@ namespace avmplus
         Toplevel* toplevel = domainEnv ? domainEnv->toplevel() : NULL;
         sot = sotSetToplevel(sot, toplevel);
 
-		AvmAssertMsg(s.sampleType == NEW_AUX_SAMPLE, "Sample stream corrupt - can only add info to an AUX sample.\n");
-		AvmAssertMsg(s.ptr == (void*)obj, "Sample stream corrupt - last sample is not for same object.\n");
+		AvmAssertMsg(s.sampleType == NEW_AUX_SAMPLE, "Sample stream corrupt - can only add info to an AUX sample.");
+		AvmAssertMsg(s.ptr == (void*)obj, "Sample stream corrupt - last sample is not for same object.");
 
 		byte* pos = currentSample;
 		currentSample = old_sample;
@@ -453,7 +453,7 @@ namespace avmplus
 
 		write(currentSample, s.id);
 
-		AvmAssertMsg( ptrSamples.get(obj)==0, "Missing dealloc sample - same memory alloc'ed twice.\n");
+		AvmAssertMsg( ptrSamples.get(obj)==0, "Missing dealloc sample - same memory alloc'ed twice.");
 		ptrSamples.add(obj, currentSample);
 
 		write(currentSample, s.ptr);
@@ -461,7 +461,7 @@ namespace avmplus
 		write(currentSample, sot);
 		write(currentSample, s.alloc_size);
 
-		AvmAssertMsg((uintptr)currentSample % 4 == 0, "Alignment should have occurred at end of raw sample.\n");
+		AvmAssertMsg((uintptr)currentSample % 4 == 0, "Alignment should have occurred at end of raw sample.");
 		currentSample = pos;
 
 		return s.id;
@@ -487,7 +487,7 @@ namespace avmplus
 
 			numSamples++;
 
-			AvmAssertMsg((uintptr)currentSample % 4 == 0, "Alignment should have occurred at end of raw sample.\n");
+			AvmAssertMsg((uintptr)currentSample % 4 == 0, "Alignment should have occurred at end of raw sample.");
 		}
 
 		// Nuke the ptr in the sample stream for the newobject sample
