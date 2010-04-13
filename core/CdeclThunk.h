@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -40,39 +42,39 @@
 
 namespace avmplus
 {
-	// used to call a MethodEnv with a C cdecl implementation
-	
-	// TODO for x86-64, we probably want to split this into real 32-bit integer returning variant
-	Atom coerce32CdeclArgDescEnter(Traits* retTraits, uintptr_t argDesc, MethodEnv* env, va_list ap);
-	Atom coerce32CdeclArgDescEnter(Traits* retTraits, char* argDesc, MethodEnv* env, va_list ap);
-	Atom coerce32CdeclArgDescEnter(Traits* retTraits, MethodEnv* env, int argc, Atom* argv);
-	Atom coerce32CdeclArgDescEnter(Traits* retTraits, MethodEnv* env, int argc, uint32_t* ap);
-	double coerceNCdeclArgDescEnter(uintptr_t argDesc, MethodEnv* env, va_list ap);
-	double coerceNCdeclArgDescEnter(char* argDesc, MethodEnv* env, va_list ap);
-	double coerceNCdeclArgDescEnter(MethodEnv* env, int argc, Atom* argv);
-	double coerceNCdeclArgDescEnter(MethodEnv* env, int argc, uint32_t* ap);
+    // used to call a MethodEnv with a C cdecl implementation
 
-	// used to convert C parameters to impl32 style (argc, ap)
-	
-	// calculate size needed for ap style argument block
-	int32 argDescApSize(uintptr_t argDesc, MethodEnv* env);
-	int32 argDescApSize(char* argDesc, MethodEnv* env);
-	// convert arguments to ap style argument block, returning "argc"
-	int32 argDescArgsToAp(void* args, uintptr_t argDesc, MethodEnv* env, va_list ap);
-	int32 argDescArgsToAp(void* args, char* argDesc, MethodEnv* env, va_list ap);
+    // TODO for x86-64, we probably want to split this into real 32-bit integer returning variant
+    Atom coerce32CdeclArgDescEnter(Traits* retTraits, uintptr_t argDesc, MethodEnv* env, va_list ap);
+    Atom coerce32CdeclArgDescEnter(Traits* retTraits, char* argDesc, MethodEnv* env, va_list ap);
+    Atom coerce32CdeclArgDescEnter(Traits* retTraits, MethodEnv* env, int argc, Atom* argv);
+    Atom coerce32CdeclArgDescEnter(Traits* retTraits, MethodEnv* env, int argc, uint32_t* ap);
+    double coerceNCdeclArgDescEnter(uintptr_t argDesc, MethodEnv* env, va_list ap);
+    double coerceNCdeclArgDescEnter(char* argDesc, MethodEnv* env, va_list ap);
+    double coerceNCdeclArgDescEnter(MethodEnv* env, int argc, Atom* argv);
+    double coerceNCdeclArgDescEnter(MethodEnv* env, int argc, uint32_t* ap);
 
-	// used to convert C parameters to Atom* style (argc, atomv)
-	
-	// return number of arguments in description
-	int32 argDescArgCount(uintptr_t argDesc);
-	int32 argDescArgCount(char* argDesc);
-	// convert arguments to Atoms
-	void argDescArgsToAtomv(Atom* args, uintptr_t argDesc, MethodEnv* env, va_list ap);
-	void argDescArgsToAtomv(Atom* args, char* argDesc, MethodEnv* env, va_list ap);
-	
+    // used to convert C parameters to impl32 style (argc, ap)
+
+    // calculate size needed for ap style argument block
+    int32 argDescApSize(uintptr_t argDesc, MethodEnv* env);
+    int32 argDescApSize(char* argDesc, MethodEnv* env);
+    // convert arguments to ap style argument block, returning "argc"
+    int32 argDescArgsToAp(void* args, uintptr_t argDesc, MethodEnv* env, va_list ap);
+    int32 argDescArgsToAp(void* args, char* argDesc, MethodEnv* env, va_list ap);
+
+    // used to convert C parameters to Atom* style (argc, atomv)
+
+    // return number of arguments in description
+    int32 argDescArgCount(uintptr_t argDesc);
+    int32 argDescArgCount(char* argDesc);
+    // convert arguments to Atoms
+    void argDescArgsToAtomv(Atom* args, uintptr_t argDesc, MethodEnv* env, va_list ap);
+    void argDescArgsToAtomv(Atom* args, char* argDesc, MethodEnv* env, va_list ap);
+
 #ifdef VMCFG_AOT
-	Atom aotThunker(MethodEnv* env, uint32_t argc, Atom* argv);
-	double aotThunkerN(MethodEnv* env, uint32_t argc, Atom* argv);
+    Atom aotThunker(MethodEnv* env, uint32_t argc, Atom* argv);
+    double aotThunkerN(MethodEnv* env, uint32_t argc, Atom* argv);
 #endif
 }
 

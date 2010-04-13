@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,21 +43,21 @@
 
 namespace avmplus
 {
-	/**
-	 * The OutputStream class is an abstract base class for
-	 * output streams.  Subclasses must implement the "write"
-	 * method.
-	 *
-	 * The OutputStream class is typically layered with
-	 * a PrintWriter to facilitate easy output of text.
-	 */
-	class OutputStream : public MMgc::GCObject
-	{
-	public:
-		OutputStream() {}
-		virtual ~OutputStream() {}
-		virtual int write(const void *buffer, int count) = 0;
-	};
+    /**
+     * The OutputStream class is an abstract base class for
+     * output streams.  Subclasses must implement the "write"
+     * method.
+     *
+     * The OutputStream class is typically layered with
+     * a PrintWriter to facilitate easy output of text.
+     */
+    class OutputStream : public MMgc::GCObject
+    {
+    public:
+        OutputStream() {}
+        virtual ~OutputStream() {}
+        virtual int write(const void *buffer, int count) = 0;
+    };
 }
 
 #endif /* __avmplus_OutputStream__ */

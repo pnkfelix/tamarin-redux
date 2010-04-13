@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -40,19 +42,19 @@
 
 namespace avmplus
 {
-	BooleanClass::BooleanClass(VTable* cvtable)
-		: ClassClosure(cvtable)
+    BooleanClass::BooleanClass(VTable* cvtable)
+        : ClassClosure(cvtable)
     {
-		toplevel()->booleanClass = this;
-		createVanillaPrototype();
+        toplevel()->booleanClass = this;
+        createVanillaPrototype();
     }
 
-	Atom BooleanClass::construct(int argc, Atom* argv)
-	{
-		// TODO throw arg error if argc > 1
-		if (argc == 0)
-			return falseAtom;
-		else
-			return AvmCore::booleanAtom(argv[1]);
-	}
+    Atom BooleanClass::construct(int argc, Atom* argv)
+    {
+        // TODO throw arg error if argc > 1
+        if (argc == 0)
+            return falseAtom;
+        else
+            return AvmCore::booleanAtom(argv[1]);
+    }
 }
