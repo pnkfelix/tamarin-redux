@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,29 +43,29 @@
 
 namespace avmplus
 {
-	/**
-	 * class RegExpClass.  
-	 */
+    /**
+     * class RegExpClass.
+     */
     class RegExpClass : public ClassClosure
     {
-	public:
-		RegExpClass(VTable* cvtable);
+    public:
+        RegExpClass(VTable* cvtable);
 
-		// this = argv[0]
-		// arg1 = argv[1]
-		// argN = argv[argc]
-		Atom call(int argc, Atom* argv);
+        // this = argv[0]
+        // arg1 = argv[1]
+        // argN = argv[argc]
+        Atom call(int argc, Atom* argv);
 
-		// this = argv[0] (ignored)
-		// arg1 = argv[1]
-		// argN = argv[argc]
-		Atom construct(int argc, Atom* argv);
+        // this = argv[0] (ignored)
+        // arg1 = argv[1]
+        // argN = argv[argc]
+        Atom construct(int argc, Atom* argv);
 
-		DRCWB(String*) kindex;
-		DRCWB(String*) kinput;
-        
-		DECLARE_SLOTS_RegExpClass;
-	};
+        DRCWB(String*) kindex;
+        DRCWB(String*) kinput;
+
+        DECLARE_SLOTS_RegExpClass;
+    };
 }
 
 #endif /* __avmplus_RegExpClass__ */
