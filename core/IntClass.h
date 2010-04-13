@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,53 +43,53 @@
 
 namespace avmplus
 {
-	/**
-	 * class int
-	 */
+    /**
+     * class int
+     */
     class IntClass : public ClassClosure
     {
-	public:
-		IntClass(VTable* cvtable);
+    public:
+        IntClass(VTable* cvtable);
 
-		// this = argv[0] (ignored)
-		// arg1 = argv[1]
-		// argN = argv[argc]
-		Atom construct(int argc, Atom* argv);
+        // this = argv[0] (ignored)
+        // arg1 = argv[1]
+        // argN = argv[argc]
+        Atom construct(int argc, Atom* argv);
 
-		// this = argv[0]
-		// arg1 = argv[1]
-		// argN = argv[argc]
-		Atom call(int argc, Atom *argv) 
-		{
-			return construct(argc, argv);
-		}
-        
-		DECLARE_SLOTS_IntClass;
-	};
+        // this = argv[0]
+        // arg1 = argv[1]
+        // argN = argv[argc]
+        Atom call(int argc, Atom *argv)
+        {
+            return construct(argc, argv);
+        }
 
-	/**
-	 * class uint
-	 */
+        DECLARE_SLOTS_IntClass;
+    };
+
+    /**
+     * class uint
+     */
     class UIntClass : public ClassClosure
     {
-	public:
-		UIntClass(VTable* cvtable);
+    public:
+        UIntClass(VTable* cvtable);
 
-		// this = argv[0] (ignored)
-		// arg1 = argv[1]
-		// argN = argv[argc]
-		Atom construct(int argc, Atom* argv);
+        // this = argv[0] (ignored)
+        // arg1 = argv[1]
+        // argN = argv[argc]
+        Atom construct(int argc, Atom* argv);
 
-		// this = argv[0]
-		// arg1 = argv[1]
-		// argN = argv[argc]
-        Atom call(int argc, Atom* argv) 
-		{
-			return construct(argc,argv);
-		}
-        
-		DECLARE_SLOTS_UIntClass;
-	};
+        // this = argv[0]
+        // arg1 = argv[1]
+        // argN = argv[argc]
+        Atom call(int argc, Atom* argv)
+        {
+            return construct(argc,argv);
+        }
+
+        DECLARE_SLOTS_UIntClass;
+    };
 }
 
 #endif /* __avmplus_IntClass__ */

@@ -1,5 +1,6 @@
 // Generated from ST_avmplus_basics.st
-// -*- mode: c -*-
+// -*- mode: c; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*-
+// vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 //
 // ***** BEGIN LICENSE BLOCK *****
 // Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -73,43 +74,50 @@ case 6: test6(); return;
 void ST_avmplus_basics::test0() {
 
 // Does right shift of unsigned quantities work?
+#line 47 "ST_avmplus_basics.st"
 verifyPass((int)(~0U >> 1) > 0, "(int)(~0U >> 1) > 0", __FILE__, __LINE__);
 
 }
 void ST_avmplus_basics::test1() {
 
 // Does right shift of signed quantities work?
+#line 52 "ST_avmplus_basics.st"
 verifyPass((-1 >> 1) == -1, "(-1 >> 1) == -1", __FILE__, __LINE__);
 
 // verify that the "latin1" literal string calls work properly for hi-bit latin1 chars
 }
 void ST_avmplus_basics::test2() {
     Stringp s = core->newConstantStringLatin1("ev\xADident");
-	bool equals = s->equalsLatin1("ev\xADident");
+    bool equals = s->equalsLatin1("ev\xADident");
+#line 58 "ST_avmplus_basics.st"
 verifyPass(equals == true, "equals == true", __FILE__, __LINE__);
 
 }
 void ST_avmplus_basics::test3() {
     Stringp s = core->newConstantStringLatin1("ev\xADident");
-	bool found = s->containsLatin1("\xAD");
+    bool found = s->containsLatin1("\xAD");
+#line 63 "ST_avmplus_basics.st"
 verifyPass(found == true, "found == true", __FILE__, __LINE__);
 
 }
 void ST_avmplus_basics::test4() {
     Stringp s = core->newConstantStringLatin1("ev\xADident");
-	int index = s->indexOfLatin1("\xAD");
+    int index = s->indexOfLatin1("\xAD");
+#line 68 "ST_avmplus_basics.st"
 verifyPass(index == 2, "index == 2", __FILE__, __LINE__);
 
 }
 void ST_avmplus_basics::test5() {
     Stringp s = core->newConstantStringLatin1("ev\xADident");
-	bool matches1 = s->matchesLatin1("\xADi", 2, 2);
+    bool matches1 = s->matchesLatin1("\xADi", 2, 2);
+#line 73 "ST_avmplus_basics.st"
 verifyPass(matches1 == true, "matches1 == true", __FILE__, __LINE__);
 
 }
 void ST_avmplus_basics::test6() {
     Stringp s = core->newConstantStringLatin1("ev\xADident");
-	bool matches2 = s->matchesLatin1_caseless("\xADIDENT", 2, 2);
+    bool matches2 = s->matchesLatin1_caseless("\xADIDENT", 2, 2);
+#line 78 "ST_avmplus_basics.st"
 verifyPass(matches2 == true, "matches2 == true", __FILE__, __LINE__);
 
 
