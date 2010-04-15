@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -42,23 +44,23 @@
 
 namespace avmplus
 {
-	namespace NativeID 
-	{
-        
-		uint32_t SlotOffsetsAndAsserts::getSlotOffset(Traits* t, int nameId)
-		{
-			Multiname name;
-			t->pool->parseMultiname(name, nameId);
-			if (name.isNsset())
-				name.setNamespace(name.getNsset()->nsAt(0));
-			
-			AvmAssert(!name.isNsset());
-			
-			const TraitsBindings* tb = t->getTraitsBindings();
-			Binding b = tb->findBinding(name.getName(), name.getNamespace());
-			AvmAssert(AvmCore::isSlotBinding(b));
-			int slotId = AvmCore::bindingToSlotId(b);
-			return tb->getSlotOffset(slotId);
-		}
-	}
+    namespace NativeID
+    {
+
+        uint32_t SlotOffsetsAndAsserts::getSlotOffset(Traits* t, int nameId)
+        {
+            Multiname name;
+            t->pool->parseMultiname(name, nameId);
+            if (name.isNsset())
+                name.setNamespace(name.getNsset()->nsAt(0));
+
+            AvmAssert(!name.isNsset());
+
+            const TraitsBindings* tb = t->getTraitsBindings();
+            Binding b = tb->findBinding(name.getName(), name.getNamespace());
+            AvmAssert(AvmCore::isSlotBinding(b));
+            int slotId = AvmCore::bindingToSlotId(b);
+            return tb->getSlotOffset(slotId);
+        }
+    }
 }

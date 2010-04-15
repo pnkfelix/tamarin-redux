@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,28 +43,28 @@
 
 namespace avmplus
 {
-	/**
-	 * class XMLListClass
-	 */
+    /**
+     * class XMLListClass
+     */
     class XMLListClass : public ClassClosure
     {
-	public:
-		XMLListClass(VTable* cvtable);
+    public:
+        XMLListClass(VTable* cvtable);
 
-		// this = argv[0]
-		// arg1 = argv[1]
-		// argN = argv[argc]
-		Atom call(int argc, Atom* argv);
+        // this = argv[0]
+        // arg1 = argv[1]
+        // argN = argv[argc]
+        Atom call(int argc, Atom* argv);
 
-		// this = argv[0] (ignored)
-		// arg1 = argv[1]
-		// argN = argv[argc]
-		Atom construct(int argc, Atom* argv);
+        // this = argv[0] (ignored)
+        // arg1 = argv[1]
+        // argN = argv[argc]
+        Atom construct(int argc, Atom* argv);
 
-		Atom ToXMLList(Atom arg);
-        
-		DECLARE_SLOTS_XMLListClass;
-	};
+        Atom ToXMLList(Atom arg);
+
+        DECLARE_SLOTS_XMLListClass;
+    };
 }
 
 #endif /* __avmplus_XMLListClass__ */

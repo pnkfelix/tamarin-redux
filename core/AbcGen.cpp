@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -40,51 +42,51 @@
 
 namespace avmplus
 {
-	void AbcGen::writeInt(uint32_t v)
-	{
-		if( v < 128 )
-		{
-			bytes.add((byte)v);
-		}
-		else if ( v < 16384 )
-		{
-			byte first = (byte)((v & 0x7F) | 0x80);
-			byte second = (byte)(v>>7);
-			bytes.add(first);
-			bytes.add(second);
-		}
-		else if ( v < 2097152 )
-		{
-			byte first = (byte)((v & 0x7F) | 0x80);
-			byte second = (byte)(v>>7 | 0x80);
-			byte third = (byte)(v>>14);
-			bytes.add(first);
-			bytes.add(second);
-			bytes.add(third);
-		}
-		else if ( v < 268435456 )
-		{
-			byte first = (byte)((v & 0x7F) | 0x80);
-			byte second = (byte)(v>>7 | 0x80);
-			byte third = (byte)(v>>14 | 0x80);
-			byte fourth = (byte) ( v >>21 );
-			bytes.add(first);
-			bytes.add(second);
-			bytes.add(third);
-			bytes.add(fourth);
-		}
-		else
-		{
-			byte first = (byte)((v & 0x7F) | 0x80);
-			byte second = (byte)(v>>7 | 0x80);
-			byte third = (byte)(v>>14 | 0x80);
-			byte fourth = (byte) (v >>21 | 0x80);
-			byte fifth = (byte) (v >> 28);
-			bytes.add(first);
-			bytes.add(second);
-			bytes.add(third);
-			bytes.add(fourth);
-			bytes.add(fifth);
-		}
-	}
+    void AbcGen::writeInt(uint32_t v)
+    {
+        if( v < 128 )
+        {
+            bytes.add((byte)v);
+        }
+        else if ( v < 16384 )
+        {
+            byte first = (byte)((v & 0x7F) | 0x80);
+            byte second = (byte)(v>>7);
+            bytes.add(first);
+            bytes.add(second);
+        }
+        else if ( v < 2097152 )
+        {
+            byte first = (byte)((v & 0x7F) | 0x80);
+            byte second = (byte)(v>>7 | 0x80);
+            byte third = (byte)(v>>14);
+            bytes.add(first);
+            bytes.add(second);
+            bytes.add(third);
+        }
+        else if ( v < 268435456 )
+        {
+            byte first = (byte)((v & 0x7F) | 0x80);
+            byte second = (byte)(v>>7 | 0x80);
+            byte third = (byte)(v>>14 | 0x80);
+            byte fourth = (byte) ( v >>21 );
+            bytes.add(first);
+            bytes.add(second);
+            bytes.add(third);
+            bytes.add(fourth);
+        }
+        else
+        {
+            byte first = (byte)((v & 0x7F) | 0x80);
+            byte second = (byte)(v>>7 | 0x80);
+            byte third = (byte)(v>>14 | 0x80);
+            byte fourth = (byte) (v >>21 | 0x80);
+            byte fifth = (byte) (v >> 28);
+            bytes.add(first);
+            bytes.add(second);
+            bytes.add(third);
+            bytes.add(fourth);
+            bytes.add(fifth);
+        }
+    }
 }
