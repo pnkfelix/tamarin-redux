@@ -112,7 +112,7 @@ namespace nanojit
         #define __NanoAssertMsgf(a, file_, line_, f, ...)  \
             if (!(a)) { \
                 avmplus::AvmLog("Assertion failed: " f "%s (%s:%d)\n", __VA_ARGS__, #a, file_, line_); \
-                NanoAssertFail(); \
+                avmplus::AvmAssertFail(""); \
             }
 
         #define _NanoAssertMsgf(a, file_, line_, f, ...)   __NanoAssertMsgf(a, file_, line_, f, __VA_ARGS__)
@@ -260,7 +260,10 @@ namespace nanojit {
     public:
         // All Nanojit and jstracer printing should be routed through
         // this function.
-        void printf( const char* format, ... ) PRINTF_CHECK(2,3);
+        virtual ~LogControl() {} 
+        #ifdef NJ_VERBOSE
+        virtual void printf( const char* format, ... ) PRINTF_CHECK(2,3);
+        #endif
 
         // An OR of LC_Bits values, indicating what should be output
         uint32_t lcbits;

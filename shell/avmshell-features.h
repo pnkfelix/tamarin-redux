@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -39,7 +41,7 @@
 #define __avmshell_features__
 
 // Include the refactored, standard, system determination.  It defines
-// all the AVMSYSTEM_ names for tier-one platforms.  It may be used by 
+// all the AVMSYSTEM_ names for tier-one platforms.  It may be used by
 // other feature definition files than this one.
 
 #include "system-selection.h"
@@ -66,7 +68,7 @@
 #endif
 
 #ifndef AVMFEATURE_ALLOCATION_SAMPLER
-  // This is compatible with existing behavior: debugging support enables 
+  // This is compatible with existing behavior: debugging support enables
   // sampling support.
   #if AVMFEATURE_DEBUGGER
     #define AVMFEATURE_ALLOCATION_SAMPLER 1
@@ -147,17 +149,17 @@
 #endif
 
 #ifndef AVMFEATURE_HEAP_ALLOCA
-	#if AVMSYSTEM_SYMBIAN
-		// symbian doesn't support alloca
-		#define AVMFEATURE_HEAP_ALLOCA       1
-	#elif AVMSYSTEM_WIN32 && defined(__MSVC_RUNTIME_CHECKS)
-	    // MSVC's runtime stack checking isn't smart about longjmp/setjmp,
-	    // and will get all crashy if used in the wrong way. RTC is typically
-	    // only in Debug builds though, so just fall back to heap-always for those.
-		#define AVMFEATURE_HEAP_ALLOCA       1
-	#else
-		#define AVMFEATURE_HEAP_ALLOCA       0
-	#endif
+    #if AVMSYSTEM_SYMBIAN
+        // symbian doesn't support alloca
+        #define AVMFEATURE_HEAP_ALLOCA       1
+    #elif AVMSYSTEM_WIN32 && defined(__MSVC_RUNTIME_CHECKS)
+        // MSVC's runtime stack checking isn't smart about longjmp/setjmp,
+        // and will get all crashy if used in the wrong way. RTC is typically
+        // only in Debug builds though, so just fall back to heap-always for those.
+        #define AVMFEATURE_HEAP_ALLOCA       1
+    #else
+        #define AVMFEATURE_HEAP_ALLOCA       0
+    #endif
 #endif
 
 #ifndef AVMFEATURE_STATIC_FUNCTION_PTRS
@@ -174,10 +176,10 @@
 #endif
 
 #if !defined(_DEBUG) && !defined(DEBUG)
-	// by default, nanojit enables NJ_VERBOSE mode when AVMPLUS_VERBOSE is on,
-	// which is enabled for Debug *and* Debugger builds. 
-	#define NJ_VERBOSE_DISABLED 1
-	#define NJ_PROFILE_DISABLED 1
+    // by default, nanojit enables NJ_VERBOSE mode when AVMPLUS_VERBOSE is on,
+    // which is enabled for Debug *and* Debugger builds.
+    #define NJ_VERBOSE_DISABLED 1
+    #define NJ_PROFILE_DISABLED 1
 #endif
 
 #ifndef AVMFEATURE_OVERRIDE_GLOBAL_NEW
@@ -186,15 +188,15 @@
 
 #ifndef AVMFEATURE_MEMORY_PROFILER
 #if AVMFEATURE_DEBUGGER
-	#if AVMSYSTEM_MAC && !(AVMSYSTEM_PPC && AVMSYSTEM_64BIT)
-		#define AVMFEATURE_MEMORY_PROFILER 1
-	#elif AVMSYSTEM_WIN32 && !AVMSYSTEM_ARM // note, does not require DEBUG
-		#define AVMFEATURE_MEMORY_PROFILER 1
-	#else
-		#define AVMFEATURE_MEMORY_PROFILER 0
-	#endif
+    #if AVMSYSTEM_MAC && !(AVMSYSTEM_PPC && AVMSYSTEM_64BIT)
+        #define AVMFEATURE_MEMORY_PROFILER 1
+    #elif AVMSYSTEM_WIN32 && !AVMSYSTEM_ARM // note, does not require DEBUG
+        #define AVMFEATURE_MEMORY_PROFILER 1
+    #else
+        #define AVMFEATURE_MEMORY_PROFILER 0
+    #endif
 #else
-	#define AVMFEATURE_MEMORY_PROFILER 0
+    #define AVMFEATURE_MEMORY_PROFILER 0
 #endif
 #endif
 
