@@ -1,4 +1,5 @@
-/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,79 +42,79 @@
 
 namespace MMgc
 {
-	/**
-	 * GCAcquireSpinlock is a convenience class which acquires
-	 * the specified spinlock at construct time, then releases
-	 * the spinlock at desruct time.  The single statement
-	 *
-	 *    GCAcquireSpinlock acquire(spinlock);
-	 *
-	 * ... will acquire the spinlock at the top of the function
-	 * and release it at the end.  This makes for less error-prone
-	 * code than explicit acquire/release.
-	 */
-	class GCAcquireSpinlock
-	{
-	public:
-		REALLY_INLINE explicit GCAcquireSpinlock(vmpi_spin_lock_t *spinlock) : 
-			m_spinlock(spinlock)
-		{
-		#ifdef _DEBUG
-			bool r =
-		#endif
-			VMPI_lockAcquire(m_spinlock);
+    /**
+     * GCAcquireSpinlock is a convenience class which acquires
+     * the specified spinlock at construct time, then releases
+     * the spinlock at desruct time.  The single statement
+     *
+     *    GCAcquireSpinlock acquire(spinlock);
+     *
+     * ... will acquire the spinlock at the top of the function
+     * and release it at the end.  This makes for less error-prone
+     * code than explicit acquire/release.
+     */
+    class GCAcquireSpinlock
+    {
+    public:
+        REALLY_INLINE explicit GCAcquireSpinlock(vmpi_spin_lock_t *spinlock) :
+            m_spinlock(spinlock)
+        {
+        #ifdef _DEBUG
+            bool r =
+        #endif
+            VMPI_lockAcquire(m_spinlock);
 
-			GCAssert(r);
-		}
-		
-		REALLY_INLINE ~GCAcquireSpinlock()
-		{
-		#ifdef _DEBUG
-			bool r =
-		#endif
-			VMPI_lockRelease(m_spinlock);
+            GCAssert(r);
+        }
 
-			GCAssert(r);
-		}
+        REALLY_INLINE ~GCAcquireSpinlock()
+        {
+        #ifdef _DEBUG
+            bool r =
+        #endif
+            VMPI_lockRelease(m_spinlock);
 
-	private:
-		vmpi_spin_lock_t *m_spinlock;
+            GCAssert(r);
+        }
 
-	private: // not implemented
-		GCAcquireSpinlock();
-		GCAcquireSpinlock(const GCAcquireSpinlock&);
-		GCAcquireSpinlock& operator=(const GCAcquireSpinlock&);
-	};
+    private:
+        vmpi_spin_lock_t *m_spinlock;
 
-	class GCAcquireSpinlockWithRecursion 
-	{
-	public:
-		REALLY_INLINE explicit GCAcquireSpinlockWithRecursion(vmpi_spin_lock_t *sl, vmpi_thread_t owner)
-			: m_spinlock(sl)
-		{
-			if(!VMPI_lockTestAndAcquire(sl)) {
-				if(VMPI_currentThread() == owner) {
-					m_spinlock = NULL;
-				} else {
-					VMPI_lockAcquire(sl);
-				}				
-			}
-		}
+    private: // not implemented
+        GCAcquireSpinlock();
+        GCAcquireSpinlock(const GCAcquireSpinlock&);
+        GCAcquireSpinlock& operator=(const GCAcquireSpinlock&);
+    };
 
-		~GCAcquireSpinlockWithRecursion()
-		{
-			if(m_spinlock)
-				VMPI_lockRelease(m_spinlock);
-		}
-		
-	private:
-		vmpi_spin_lock_t *m_spinlock;
+    class GCAcquireSpinlockWithRecursion
+    {
+    public:
+        REALLY_INLINE explicit GCAcquireSpinlockWithRecursion(vmpi_spin_lock_t *sl, vmpi_thread_t owner)
+            : m_spinlock(sl)
+        {
+            if(!VMPI_lockTestAndAcquire(sl)) {
+                if(VMPI_currentThread() == owner) {
+                    m_spinlock = NULL;
+                } else {
+                    VMPI_lockAcquire(sl);
+                }
+            }
+        }
 
-	private: // not implemented
-		GCAcquireSpinlockWithRecursion();
-		GCAcquireSpinlockWithRecursion(const GCAcquireSpinlockWithRecursion&);
-		GCAcquireSpinlockWithRecursion& operator=(const GCAcquireSpinlockWithRecursion&);
-	};
+        ~GCAcquireSpinlockWithRecursion()
+        {
+            if(m_spinlock)
+                VMPI_lockRelease(m_spinlock);
+        }
+
+    private:
+        vmpi_spin_lock_t *m_spinlock;
+
+    private: // not implemented
+        GCAcquireSpinlockWithRecursion();
+        GCAcquireSpinlockWithRecursion(const GCAcquireSpinlockWithRecursion&);
+        GCAcquireSpinlockWithRecursion& operator=(const GCAcquireSpinlockWithRecursion&);
+    };
 }
 
 #endif /* __GCSpinLock__ */

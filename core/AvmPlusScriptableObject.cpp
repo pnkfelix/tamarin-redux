@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -45,14 +47,14 @@ using namespace MMgc;
 namespace avmplus
 {
 #ifdef DEBUGGER
-	AvmPlusScriptableObject::AvmPlusScriptableObject(SamplerObjectType sot)
-	{
-		AvmCore* core = this->core();
-		Sampler* s = core->get_sampler();
-		if (s && s->sampling())
-		{
-			s->recordAllocationInfo(this, sot);
-		}		
-	}
+    AvmPlusScriptableObject::AvmPlusScriptableObject(SamplerObjectType sot)
+    {
+        AvmCore* core = this->core();
+        Sampler* s = core->get_sampler();
+        if (s && s->sampling())
+        {
+            s->recordAllocationInfo(this, sot);
+        }
+    }
 #endif
 }

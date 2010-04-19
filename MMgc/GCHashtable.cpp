@@ -1,4 +1,5 @@
-/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -40,30 +41,30 @@
 
 namespace MMgc
 {
-	void* GCHashtableAllocHandler_VMPI::alloc(size_t size, bool canFail)
-	{
-		void* p = VMPI_alloc(size);
-		if (!p && !canFail)
-		{
-			// ran out of memory...
-			GCHeap::GetGCHeap()->Abort();
-		}
-		return p;
-	}
+    void* GCHashtableAllocHandler_VMPI::alloc(size_t size, bool canFail)
+    {
+        void* p = VMPI_alloc(size);
+        if (!p && !canFail)
+        {
+            // ran out of memory...
+            GCHeap::GetGCHeap()->Abort();
+        }
+        return p;
+    }
 
-	void GCHashtableAllocHandler_VMPI::free(void* ptr)
-	{
-		VMPI_free(ptr);
-	}
+    void GCHashtableAllocHandler_VMPI::free(void* ptr)
+    {
+        VMPI_free(ptr);
+    }
 
-	void* GCHashtableAllocHandler_new::alloc(size_t size, bool canFail)
-	{
-		return mmfx_alloc_opt(size, canFail ? kCanFail : kNone);
-	}
+    void* GCHashtableAllocHandler_new::alloc(size_t size, bool canFail)
+    {
+        return mmfx_alloc_opt(size, canFail ? kCanFail : kNone);
+    }
 
-	void GCHashtableAllocHandler_new::free(void* ptr)
-	{
-		mmfx_free(ptr);
-	}
+    void GCHashtableAllocHandler_new::free(void* ptr)
+    {
+        mmfx_free(ptr);
+    }
 }
 

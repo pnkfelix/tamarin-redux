@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,22 +43,22 @@
 
 namespace avmplus
 {
-	/**
-	 * class Class - the builtin Class that defines the type of each user defined class
-	 * and all other builtin classes.  (not to be confused with a superclass).
-	 */
-	class ClassClass : public ClassClosure
-	{
-	public:
-		ClassClass(VTable* cvtable);
+    /**
+     * class Class - the builtin Class that defines the type of each user defined class
+     * and all other builtin classes.  (not to be confused with a superclass).
+     */
+    class ClassClass : public ClassClosure
+    {
+    public:
+        ClassClass(VTable* cvtable);
 
-		// this = argv[0] (ignored)
-		// arg1 = argv[1]
-		// argN = argv[argc]
-		Atom construct(int argc, Atom* argv);
-        
-		DECLARE_SLOTS_ClassClass;
-	};
+        // this = argv[0] (ignored)
+        // arg1 = argv[1]
+        // argN = argv[argc]
+        Atom construct(int argc, Atom* argv);
+
+        DECLARE_SLOTS_ClassClass;
+    };
 }
 
 #endif /* __avmplus_ClassClass__ */
