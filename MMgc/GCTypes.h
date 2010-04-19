@@ -1,4 +1,5 @@
-/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -47,8 +48,8 @@ namespace MMgc
     typedef void* (*GCMallocFuncPtr)(size_t size);
     typedef void (*GCFreeFuncPtr)(void* mem);
 
-	enum FixedMallocOpts { kNone=0, kZero=1, kCanFail=2, kCanFailAndZero=3 };
-	
+    enum FixedMallocOpts { kNone=0, kZero=1, kCanFail=2, kCanFailAndZero=3 };
+
     #ifndef NULL
     #define NULL 0
     #endif

@@ -83,7 +83,7 @@ def run():
       'debugger break2',
       '%s -d testdata/debug.abc'%r.avmrd,
       input='break 45\ndelete 1\nbreak 1\nbreak 49\ninfo break\ncontinue\nquit\n',
-      expectedout=['Breakpoint 1 deleted.','3 at testdata.debug.as:49','Could not locate specified line.']
+      expectedout=['Breakpoint 1 deleted.','2 at testdata.debug.as:49','Could not locate specified line.']
     )
 
     r.run_test(
@@ -101,6 +101,13 @@ def run():
     )
 
     r.run_test(
+      'debugger arguments',
+      '%s -d testdata/debug.abc'%r.avmrd,
+      input='break 53\ncontinue\nnext\ninfo arguments\nquit\n',
+      expectedout=['arg1 = 110','arg2 = 115']
+    )
+
+    r.run_test(
       'debugger exception',
       '%s -d testdata/debug.abc'%r.avmrd,
       input='continue\nquit\n',
@@ -111,13 +118,13 @@ def run():
       'debugger where',
       '%s -d testdata/debug.abc'%r.avmrd,
       input='break 53\ncontinue\nwhere\nquit\n',
-      expectedout=['locals\(\) at testdata.debug.as:53','init\(\) at testdata.debug.as:73']
+      expectedout=['locals\(arg1=110,arg2=115\) at testdata.debug.as:53','init\(\) at testdata.debug.as:73']
     )
     r.run_test(
       'debugger bt',
       '%s -d testdata/debug.abc'%r.avmrd,
       input='break 53\ncontinue\nbt\nquit\n',
-      expectedout=['locals\(\) at testdata.debug.as:53','init\(\) at testdata.debug.as:73']
+      expectedout=['locals\(arg1=110,arg2=115\) at testdata.debug.as:53','init\(\) at testdata.debug.as:73']
     )
 
     r.run_test(

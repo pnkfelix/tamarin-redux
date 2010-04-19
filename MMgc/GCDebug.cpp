@@ -1,4 +1,5 @@
-/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,42 +42,19 @@
 
 namespace MMgc
 {
-	void GCDebugMsg(bool debuggerBreak, const char* format, ...)
-	{
-		// [ggrossman 09.24.04]
-		// Changed this to _DEBUG only because we don't link to
-		// CRT in Release builds, so vsprintf is unavailable!!
-	#ifdef _DEBUG
-		char buf[1024];
-		va_list args;
-		va_start(args, format);
-
-		int chars = VMPI_vsnprintf(buf, sizeof(buf)-2, format, args);
-		buf[chars] = '\n';
-		buf[chars+1] = '\0';
-		va_end(args);
-		VMPI_debugLog(buf);
-		if(debuggerBreak)
-			VMPI_debugBreak();
-	#else
-		(void)debuggerBreak;
-		(void)format;
-	#endif
-	}
-	
-	void GCDebugIndent(size_t count)
-	{
+    void GCDebugIndent(size_t count)
+    {
 #ifdef _DEBUG
-		while (count > 10) {
-			VMPI_debugLog("          ");
-			count -= 10;
-		}
-		while (count > 0) {
-			VMPI_debugLog(" ");
-			count--;
-		}
+        while (count > 10) {
+            VMPI_debugLog("          ");
+            count -= 10;
+        }
+        while (count > 0) {
+            VMPI_debugLog(" ");
+            count--;
+        }
 #else
-		(void)count;
+        (void)count;
 #endif
-	}
+    }
 }

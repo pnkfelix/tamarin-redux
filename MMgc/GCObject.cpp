@@ -1,4 +1,5 @@
-/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -36,21 +37,21 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
- 
+
 #include "MMgc.h"
- 
+
 namespace MMgc
 {
 #ifdef MMGC_RC_HISTORY
-	
-	void RCObject::DumpHistory()
-	{			
-		GCDebugMsg(false, "Ref count modification history for object 0x%x:\n", this);
-		for(uint32_t i=0, n=history.Count(); i<n; i++)
-		{
-			PrintStackTrace(history.Get(i));
-		}
-	}
+
+    void RCObject::DumpHistory()
+    {
+        GCDebugMsg(false, "Ref count modification history for object 0x%x:\n", this);
+        for(uint32_t i=0, n=history.Count(); i<n; i++)
+        {
+            PrintStackTrace(history.Get(i));
+        }
+    }
 
 #endif
 }
