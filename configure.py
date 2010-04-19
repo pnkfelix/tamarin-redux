@@ -165,7 +165,7 @@ elif config.getCompiler() == 'VS':
 	else:
 		APP_CXXFLAGS += "-fp:fast "
 		APP_CFLAGS += "-fp:fast "
-        OS_LDFLAGS += "-SAFESEH:NO -MAP "
+        OS_LDFLAGS += "-MAP "
         if config.getDebug():
             DEBUG_CXXFLAGS = "-Od "
             DEBUG_CFLAGS = "-Od "
@@ -178,7 +178,7 @@ elif config.getCompiler() == 'VS':
     DEBUG_CFLAGS += "-Zi "
     DEBUG_LDFLAGS += "-DEBUG "
 elif config.getCompiler() == 'SunStudio':
-    APP_CXXFLAGS = "-template=no%extdef -erroff "
+    APP_CXXFLAGS = "-template=no%extdef -erroff"
     OPT_CXXFLAGS = "-xO2 "
     DEBUG_CXXFLAGS += "-g "
 else:
@@ -251,7 +251,7 @@ elif the_os == "linux":
         OS_LIBS.append("dl")
 elif the_os == "sunos":
     if config.getCompiler() != 'GCC':
-        APP_CXXFLAGS = "-template=no%extdef -erroff "
+        APP_CXXFLAGS = "-template=no%extdef -erroff"
         OPT_CXXFLAGS = "-xO2 "
         DEBUG_CXXFLAGS = "-g "
     MMGC_DEFINES.update({'UNIX': None,
