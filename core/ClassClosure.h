@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,53 +43,56 @@
 
 namespace avmplus
 {
-	/**
-	 * a user defined class, ie class MyClass
-	 */
-	class ClassClosure : public ScriptObject
-	{
-	public:
+    /**
+     * a user defined class, ie class MyClass
+     */
+    class ClassClosure : public ScriptObject
+    {
+    public:
 
-		ClassClosure(VTable *cvtable);
+        ClassClosure(VTable *cvtable);
 
-		Atom get_prototype();
-		void set_prototype(Atom p);
+        Atom get_prototype();
+        void set_prototype(Atom p);
 
-		void createVanillaPrototype();
+        ScriptObject* prototypePtr();
+        void setPrototypePtr(ScriptObject* p);
 
-		/**
-		 * called as constructor, as in new C().  for user classes this
-		 * invokes the implicit constructor followed by the user's constructor
-		 * if any.
-		 */
-		virtual Atom construct(int argc, Atom* argv);
+        void createVanillaPrototype();
 
-		ScriptObject* newInstance();
+        /**
+         * called as constructor, as in new C().  for user classes this
+         * invokes the implicit constructor followed by the user's constructor
+         * if any.
+         */
+        virtual Atom construct(int argc, Atom* argv);
 
-		/**
-		 * called as function, as in C().  For user classes, this is the
-		 * the explicit coersion function.  For user functions, we
-		 * invoke m_call.
-		 */
-		virtual Atom call(int argc, Atom* argv);
+        ScriptObject* newInstance();
 
-		VTable* ivtable() const;
+        /**
+         * called as function, as in C().  For user classes, this is the
+         * the explicit coersion function.  For user functions, we
+         * invoke m_call.
+         */
+        virtual Atom call(int argc, Atom* argv);
+
+        VTable* ivtable() const;
 
 #ifdef DEBUGGER
-		virtual uint64_t bytesUsed() const;
+        virtual uint64_t bytesUsed() const;
 #endif
 
-		virtual Stringp implToString() const;
+        virtual Stringp implToString() const;
 
 #ifdef AVMPLUS_VERBOSE
-	public:
-		Stringp format(AvmCore* core) const;
+    public:
+        Stringp format(AvmCore* core) const;
 #endif
-	// ------------------------ DATA SECTION BEGIN
-	public: DRCWB(ScriptObject*) prototype;
-	DECLARE_SLOTS_ClassClosure;
-	// ------------------------ DATA SECTION END
-	};
+    // ------------------------ DATA SECTION BEGIN
+    private: DRCWB(ScriptObject*) prototype;
+    DECLARE_SLOTS_ClassClosure;
+    // ------------------------ DATA SECTION END
+    };
 }
 
 #endif /* __avmplus_ClassClosure__ */

@@ -1,4 +1,4 @@
-/* -*- tab-width: 4 -*-
+/* -*- c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*-
    vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5)
 
    ***** BEGIN LICENSE BLOCK *****
@@ -397,6 +397,7 @@ var FEATURES =
     <defines> VMCFG_NANOJIT  </defines>
     <defines> VMCFG_PRECOMP_NAMES </defines>
     <defines> VMCFG_LOOKUP_CACHE </defines>
+    <defines> VMCFG_METHODENV_IMPL32 </defines>
     <defines> FEATURE_NANOJIT </defines>  <!-- FIXME: legacy name -->
   </feature>
 
@@ -444,7 +445,7 @@ var FEATURES =
 
      <name>      AVMFEATURE_THREADED_INTERP </name>
      <requires>  AVMFEATURE_WORDCODE_INTERP </requires>
-     <defines>   VMCFG_WORDCODE_THREADED </defines>
+     <defines>   VMCFG_DIRECT_THREADED </defines>
   </feature>
 
   <at-most-one>
@@ -796,18 +797,18 @@ function testDefined(feature) {
         s.push("#if !defined " + name);
         if (feature.default.length() == 0)
             fail("Tweak \"" + name + "\" is missing a 'default' clause.");
-	s.push("#  define " + name + " " + (feature["default"] == "true" ? 1 : 0));
-	s.push("#endif");
+    s.push("#  define " + name + " " + (feature["default"] == "true" ? 1 : 0));
+    s.push("#endif");
         s.push("#if " + name + " != 0 && " + name + " != 1");
-	s.push("#  error \"" + name + " must be defined and 0 or 1 (only).\"");
-	s.push("#endif");
+    s.push("#  error \"" + name + " must be defined and 0 or 1 (only).\"");
+    s.push("#endif");
     }
     else {
         if (feature.default.length() > 0)
             fail("Feature \"" + name + "\" must not have a 'default' clause: " + feature.default);
         s.push("#if !defined " + name + " || " + name + " != 0 && " + name + " != 1");
-	s.push("#  error \"" + name + " must be defined and 0 or 1 (only).\"");
-	s.push("#endif");
+    s.push("#  error \"" + name + " must be defined and 0 or 1 (only).\"");
+    s.push("#endif");
     }
     return s.join("\n") + "\n";
 }

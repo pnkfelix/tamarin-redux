@@ -1,4 +1,5 @@
-/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -43,23 +44,23 @@
 namespace MMgc
 {
     /**
-	 * GCAllocObject is a base class for allocated objects.  MMgc
-	 * cannot have any dependency on the C runtime library, because
-	 * Flash Player does not.  MMgc also cannot rely on global
-	 * operator new and delete, because it may be used to implement
-	 * them!  So, GCAllocObject provides a simple operator new and
-	 * delete implementation for classes used internally by MMgc.
-	 *
-	 * The implementation of GCAllocObject is platform-dependent.
-	 */
-	class GCAllocObject
-	{
-	public:
-		void* operator new (size_t size);
-		void* operator new [] (size_t size);
-		void operator delete (void *ptr);
-		void operator delete [] (void *ptr);
-	};
+     * GCAllocObject is a base class for allocated objects.  MMgc
+     * cannot have any dependency on the C runtime library, because
+     * Flash Player does not.  MMgc also cannot rely on global
+     * operator new and delete, because it may be used to implement
+     * them!  So, GCAllocObject provides a simple operator new and
+     * delete implementation for classes used internally by MMgc.
+     *
+     * The implementation of GCAllocObject is platform-dependent.
+     */
+    class GCAllocObject
+    {
+    public:
+        void* operator new (size_t size);
+        void* operator new [] (size_t size);
+        void operator delete (void *ptr);
+        void operator delete [] (void *ptr);
+    };
 }
 
 #endif /* __GCAllocObject__ */

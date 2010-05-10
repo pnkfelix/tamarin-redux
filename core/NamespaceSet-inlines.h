@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,9 +43,9 @@
 
 namespace avmplus
 {
-    REALLY_INLINE NamespaceSetIterator::NamespaceSetIterator(const NamespaceSet* n) : 
-        nsset(n), i(0) 
-    { 
+    REALLY_INLINE NamespaceSetIterator::NamespaceSetIterator(const NamespaceSet* n) :
+        nsset(n), i(0)
+    {
     }
 
     REALLY_INLINE bool NamespaceSetIterator::hasNext() const
@@ -57,9 +59,9 @@ namespace avmplus
         return nsset->nsAt(i++);
     }
 
-    REALLY_INLINE NamespaceSet::NamespaceSet() 
-    { 
-        /* nothing */ 
+    REALLY_INLINE NamespaceSet::NamespaceSet()
+    {
+        /* nothing */
     }
 
     REALLY_INLINE bool NamespaceSet::containsAnyPublicNamespace() const
@@ -92,7 +94,7 @@ namespace avmplus
         AvmAssert(i < count());
         AvmAssert(_namespaces[i] == NULL);
         AvmAssert(ns != NULL);
-		WBRC(MMgc::GC::GetGC(this), this, &_namespaces[i], ns);
+        WBRC(MMgc::GC::GetGC(this), this, &_namespaces[i], ns);
         // note that this flag is 'sticky'; it relies on a given slot being
         // initialized exactly once. (NamespaceSets are immutable once created,
         // but creation involves multiple calls to this method.)

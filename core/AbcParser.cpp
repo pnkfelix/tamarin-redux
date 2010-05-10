@@ -305,7 +305,7 @@ namespace avmplus
     {
         uint32 index = readU30(p);
         if (index == 0 || index >= pool->cpool_mn_offsets.size())
-            toplevel->throwVerifyError(kCpoolIndexRangeError, core->toErrorString(index), 
+            toplevel->throwVerifyError(kCpoolIndexRangeError, core->toErrorString(index),
                                        core->toErrorString(pool->cpool_mn_offsets.size()));
         pool->resolveBindingNameNoCheck(index, m, toplevel);
 
@@ -647,7 +647,7 @@ namespace avmplus
             }
 #endif
         }
-        
+
         traits->verifyBindings(toplevel);
         return traits;
     }
@@ -1688,14 +1688,7 @@ namespace avmplus
 
             script->makeMethodOf(traits);
             traits->init = script;
-
-            #if defined FEATURE_NANOJIT
-            if (core->config.runmode == RM_mixed || core->config.runmode == RM_interp_all)
-            {
-                // suggest that we don't jit the $init methods
-                script->setSuggestInterp();
-            }
-            #endif
+            script->setStaticInit();
 
             pool->_scripts.set(i, traits);
 #ifdef VMCFG_AOT
@@ -1967,14 +1960,7 @@ namespace avmplus
             ctraits->itraits = itraits;
             ctraits->final = true;
             ctraits->set_needsHashtable(true);
-
-            #if defined FEATURE_NANOJIT
-            if (core->config.runmode == RM_mixed || core->config.runmode == RM_interp_all)
-            {
-                // suggest that we don't jit the class initializer
-                cinit->setSuggestInterp();
-            }
-            #endif
+            cinit->setStaticInit();
 
             pool->_classes.set(i, ctraits);
         }
@@ -1997,19 +1983,10 @@ namespace avmplus
         if (p < abcStart || p+7 >= abcEnd )
             toplevel->throwVerifyError(kCorruptABCError);
 
-        union {
-            double value;
-            #if defined AVMPLUS_BIG_ENDIAN || defined VMCFG_DOUBLE_MSW_FIRST
-                struct { uint32_t hi, lo; } words;
-            #else
-                struct { uint32_t lo, hi; } words;
-            #endif
-        };
-        // the bytes in the abc are little endian but the words
-        // in memory can be little endian or big endian.
-        words.lo = p[0] | p[1]<<8 | p[2]<<16 | p[3]<<24;
-        words.hi = p[4] | p[5]<<8 | p[6]<<16 | p[7]<<24;
+        double_overlay d;
+        d.words.lsw = p[0] | p[1]<<8 | p[2]<<16 | p[3]<<24;
+        d.words.msw = p[4] | p[5]<<8 | p[6]<<16 | p[7]<<24;
         p += 8;
-        return value;
+        return d.value;
     }
 }

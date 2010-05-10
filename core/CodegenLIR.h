@@ -125,6 +125,17 @@ namespace avmplus
 
     class BindingCache;
 
+    class AvmLogControl : public LogControl
+    {
+    public:
+        virtual ~AvmLogControl() {}
+#ifdef NJ_VERBOSE
+        void printf( const char* format, ... ) PRINTF_CHECK(2,3);
+
+        AvmCore* core; // access console via core dynamically since core may modify it.
+#endif
+    };
+
     /**
      * CodeMgr manages memory for compiled code, including the code itself
      * (in a nanojit::CodeAlloc), and any data with code lifetime
@@ -133,11 +144,8 @@ namespace avmplus
     class CodeMgr {
     public:
         CodeAlloc   codeAlloc;  // allocator for code memory
-        LogControl  log;        // controller for verbose output
+        AvmLogControl  log;        // controller for verbose output
         Allocator   allocator;  // data with same lifetime of this CodeMgr
-    #ifdef NJ_VERBOSE
-        LabelMap    labels;     // pretty names for addresses in verbose code listing
-    #endif
         BindingCache* bindingCaches;    // head of linked list of all BindingCaches allocated by this codeMgr
                                         // (only for flushing... lifetime is still managed by codeAlloc)
         CodeMgr();
@@ -320,36 +328,40 @@ namespace avmplus
         static BuiltinType bt(Traits *t);
         LIns* nativeToAtom(LIns* value, Traits* valType);
         LIns* atomToNative(BuiltinType, LIns* i);
-        LIns* eq0(LIns* i);             // eq(i, imm(0))
-        LIns* peq0(LIns* ptr);          // peq(ptr, immq(0))
-        LIns* qlo(LIns* q);             // LIR_qlo(q)
-        LIns* i2p(LIns* i);             // 32bit: nop, 64bit: i2q(i)
-        LIns* u2p(LIns* u);             // 32bit: nop, 64bit: u2q(i)
-        LIns* p2i(LIns* ptr);           // 32bit: nop, 64bit: qlo(ptr)
+        LIns* eqi0(LIns* i);             // eq(i, imm(0))
+        LIns* eqp0(LIns* ptr);          // peq(ptr, immq(0))
+        LIns* qlo(LIns* q);             // LIR_dlo2i(q)
+        LIns* i2p(LIns* i);             // 32bit: nop, 64bit: l2q(i)
+        LIns* ui2p(LIns* u);             // 32bit: nop, 64bit: ul2uq(i)
+        LIns* p2i(LIns* ptr);           // 32bit: nop, 64bit: q2l(ptr)
         LIns* InsConst(int32_t c);
         LIns* InsConstPtr(const void *p);
         LIns* InsConstAtom(Atom c);
         LIns* callIns(const CallInfo *, uint32_t argc, ...);
         LIns* vcallIns(const CallInfo *, uint32_t argc, va_list args);
-        LIns* peq(LIns* a, Atom b);
+        LIns* eqp(LIns* a, Atom b);
+        LIns* eqp(LIns* a, LIns* b);
         LIns* choose(LIns* c, Atom t, LIns* f);
+        LIns* addp(LIns* a, Atom imm);
+        LIns* addi(LIns* a, int32_t imm);
         LIns* andp(LIns* a, Atom mask);
         LIns* orp(LIns* a, Atom mask);
         LIns* ori(LIns* a, int32_t mask);
-        LIns* pret(LIns* a);
+        LIns* retp(LIns* a);
         LIns* label();
-        LIns* jlt(LIns* a, int32_t b);
-        LIns* jgt(LIns* a, int32_t b);
-        LIns* jne(LIns* a, int32_t b);
-        LIns* sti(LIns* val, LIns* p, int32_t d);
-        LIns* stp(LIns* val, LIns* p, int32_t d);
-        LIns* stf(LIns* val, LIns* p, int32_t d);
-        LIns* ldp(LIns* p, int32_t d);
-        LIns* plive(LIns*);
+        LIns* jlti(LIns* a, int32_t b);
+        LIns* jgti(LIns* a, int32_t b);
+        LIns* jnei(LIns* a, int32_t b);
+        LIns* sti(LIns* val, LIns* p, int32_t d, AccSet);
+        LIns* stp(LIns* val, LIns* p, int32_t d, AccSet);
+        LIns* std(LIns* val, LIns* p, int32_t d, AccSet);
+        LIns* ldp(LIns* p, int32_t d, AccSet);
+        LIns* livep(LIns*);
         LIns* param(int n, const char *name);
         LIns* lshi(LIns* a, int32_t b);
-        LIns* ushp(LIns* a, int32_t b);
-        void  liveAlloc(LIns* expr);        // extend lifetime of LIR_alloc, otherwise no-op
+        LIns* rshup(LIns* a, int32_t b);
+        void  liveAlloc(LIns* expr);        // extend lifetime of LIR_allocp, otherwise no-op
+        void  emitStart(Allocator&, LirBuffer*, LirWriter*&);
 
     protected: // data
         LirWriter *lirout;
@@ -359,6 +371,8 @@ namespace avmplus
         LIns *coreAddr;
         Allocator* alloc1;    // allocator used in first pass, while writing LIR
         Allocator* lir_alloc; // allocator with LIR buffer lifetime
+        debug_only(ValidateWriter* validate1;)
+        debug_only(ValidateWriter* validate2;)
     };
 
     class MopsRangeCheckFilter;
@@ -389,13 +403,12 @@ namespace avmplus
        #endif /* VTUNE */
 
     private:
-        LogControl log;
         MethodInfo *info;
         const MethodSignaturep ms;
         PoolObject *pool;
         const FrameState *state;
         MopsRangeCheckFilter* mopsRangeCheckFilter;
-        LIns *vars, *tags, *varTraits;
+        LIns *vars, *tags;
         LIns *env_param, *argc_param, *ap_param;
         LIns *_save_eip, *_ef;
         LIns *methodFrame;
@@ -423,7 +436,7 @@ namespace avmplus
         HashMap<int, CodegenLabel*> *blockLabels;
         LirWriter* redirectWriter;
         verbose_only(VerboseWriter *vbWriter;)
-        verbose_only(LirNameMap* vbNames;)
+        verbose_only(LInsPrinter* vbNames;)
 #ifdef DEBUGGER
         bool haveDebugger;
 #else
@@ -435,9 +448,10 @@ namespace avmplus
          *  Mismatches are caught in writeOpcodeVerified() after the Verifier has
          *  updated Value.sst_mask. */
         uint8_t *jit_sst;   // array of SST masks to sanity check with FrameState
+        ValidateWriter* validate3; // ValidateWriter for method body.
 #endif
 
-        LIns *InsAlloc(int32_t);
+        LIns *insAlloc(int32_t);
         LIns *atomToNativeRep(int loc, LIns *i);
         LIns *atomToNativeRep(Traits *, LIns *i);
         LIns *ptrToNativeRep(Traits*, LIns*);
@@ -489,11 +503,11 @@ namespace avmplus
         // on successful jit, allocate memory for BindingCache instances, if necessary
         void initBindingCache();
 
-        LIns *loadIns(LOpcode op, int32_t disp, LIns *base);
+        LIns *loadIns(LOpcode op, int32_t disp, LIns *base, AccSet);
         LIns *Ins(LOpcode op);
         LIns *Ins(LOpcode op, LIns *a);
         LIns *i2dIns(LIns* v);
-        LIns *u2dIns(LIns* v);
+        LIns *ui2dIns(LIns* v);
         LIns *binaryIns(LOpcode op, LIns *a, LIns *b);
         LIns* callIns(const CallInfo *, uint32_t argc, ...);
 
