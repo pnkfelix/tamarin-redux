@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,196 +43,363 @@
 #ifdef DEBUGGER
 namespace avmshell
 {
-	/**
-	 * Represents a single breakpoint in the Debugger.
-	 */
-	class BreakAction : public MMgc::GCObject
-	{
-	public:
-		BreakAction *prev;
-		BreakAction *next;
-		SourceFile *sourceFile;
-		int id;
-		Stringp filename;
-		int linenum;
+    /**
+     * Represents a single breakpoint in the Debugger.
+     */
+    class BreakAction : public MMgc::GCObject
+    {
+    public:
+        BreakAction *prev;
+        BreakAction *next;
+        SourceFile *sourceFile;
+        int id;
+        Stringp filename;
+        int linenum;
 
-		BreakAction(SourceFile *sourceFile,
-					int id,
-					Stringp filename,
-					int linenum)
-		{
-			this->sourceFile = sourceFile;
-			this->id = id;
-			this->filename = filename;
-			this->linenum = linenum;
-		}
-		
-		void print(PrintWriter& out);
-	};
+        BreakAction(SourceFile *sourceFile,
+                    int id,
+                    Stringp filename,
+                    int linenum)
+        {
+            this->sourceFile = sourceFile;
+            this->id = id;
+            this->filename = filename;
+            this->linenum = linenum;
+        }
 
-	/**
-	 * A simple command line interface for the Debugger.
-	 * Supports a gdb-like command line.
-	 */
-	class DebugCLI : public avmplus::Debugger
-	{
-	public:
-		/** @name command codes */
-		/*@{*/
-		const static int CMD_UNKNOWN		= 0;
-		const static int CMD_QUIT			= 1;
-		const static int CMD_CONTINUE		= 2;
-		const static int CMD_STEP			= 3;
-		const static int CMD_NEXT			= 4;
-		const static int CMD_FINISH			= 5;
-		const static int CMD_BREAK			= 6;
-		const static int CMD_SET			= 7;
-		const static int CMD_LIST			= 8;
-		const static int CMD_PRINT			= 9;
-		const static int CMD_TUTORIAL		= 10;
-		const static int CMD_INFO			= 11;
-		const static int CMD_HOME			= 12;
-		const static int CMD_RUN			= 13;
-		const static int CMD_FILE			= 14;
-		const static int CMD_DELETE			= 15;
-		const static int CMD_SOURCE			= 16;
-		const static int CMD_COMMENT		= 17;
-		const static int CMD_CLEAR			= 18;
-		const static int CMD_HELP			= 19;
-		const static int CMD_SHOW			= 20;
-		const static int CMD_KILL			= 21;
-		const static int CMD_HANDLE			= 22;
-		const static int CMD_DISPLAY		= 25;
-		const static int CMD_UNDISPLAY		= 26;
-		const static int CMD_COMMANDS		= 27;
-		const static int CMD_PWD            = 28;
-		const static int CMD_CF             = 29;
-		const static int CMD_CONDITION		= 30;
-		const static int CMD_AWATCH			= 31;
-		const static int CMD_WATCH			= 32;
-		const static int CMD_RWATCH			= 33;
-		const static int CMD_WHAT			= 34;
-		const static int CMD_DISASSEMBLE	= 35;
-		const static int CMD_HALT			= 36;
-		const static int CMD_MCTREE			= 37;
-		const static int CMD_VIEW_SWF		= 38;
-		/*@}*/
+        void print(PrintWriter& out);
+    };
 
-		/** @name info sub commands */
-		/*@{*/
-		const static int INFO_UNKNOWN_CMD	= 100;
-		const static int INFO_ARGS_CMD		= 101;
-		const static int INFO_BREAK_CMD		= 102;
-		const static int INFO_FILES_CMD		= 103;
-		const static int INFO_HANDLE_CMD	= 104;
-		const static int INFO_FUNCTIONS_CMD	= 105;
-		const static int INFO_LOCALS_CMD	= 106;
-		const static int INFO_SOURCES_CMD	= 107;
-		const static int INFO_STACK_CMD		= 108;
-		const static int INFO_VARIABLES_CMD	= 109;
-		const static int INFO_DISPLAY_CMD	= 110;
-		const static int INFO_TARGETS_CMD   = 111;
-		const static int INFO_SWFS_CMD		= 112;
-		/*@}*/
+    /**
+     * This can be either an l-value or an r-value.
+     */
+    class IValue
+    {
+    public:
+        virtual ~IValue() {}
 
-		/** @name show subcommands */
-		/*@{*/
-		const static int SHOW_UNKNOWN_CMD	= 200;
-		const static int SHOW_NET_CMD		= 201;
-		const static int SHOW_FUNC_CMD		= 202;
-		const static int SHOW_URI_CMD		= 203;
-		const static int SHOW_PROPERTIES_CMD= 204;
-		const static int SHOW_FILES_CMD		= 205;
-		const static int SHOW_BREAK_CMD		= 206;
-		const static int SHOW_VAR_CMD		= 207;
-		const static int SHOW_MEM_CMD		= 208;
-		/*@}*/
+        virtual bool isLValue() = 0;
+        virtual Atom get() = 0;
+        virtual void set(Atom newValue) = 0;
+    };
 
-		/** @name misc subcommands */
-		/*@{*/
-		const static int ENABLE_ONCE_CMD	= 301;
-		/*@}*/
+    class ConstantValue: public IValue
+    {
+    public:
+        ConstantValue(Atom value) : value(value) { }
 
-		/**
-		 * StringIntArray is used to store the command arrays
-		 * used to translate command strings into command codes
-		 */
-		struct StringIntArray
-		{
-			const char *text;
-			int id;
-		};
-		
-		DebugCLI(AvmCore *core, Debugger::TraceLevel tracelevel);
-		~DebugCLI();
-		
-		void enterDebugger();
-		void setCurrentSource(Stringp file);
-		bool filterException(Exception *exception, bool willBeCaught);
-		bool hitWatchpoint() { return false; }
+        virtual bool isLValue() { return false; }
+        virtual Atom get() { return value; }
+        virtual void set(Atom /*newValue*/) { AvmAssert(false); }
 
-		/**
-		 * @name command implementations
-		 */
-		/*@{*/
-		void breakpoint(char *location);
-		void deleteBreakpoint(char *idstr);
-		void showBreakpoints();
-		void bt();
-		void locals();
-		void info();
-		void set();
-		void list(const char* line);
-		void print(const char *name);
-		void quit();
-		/*@}*/
+    private:
+        Atom value;
+    };
 
-		void activate() { activeFlag = true; }
-		
-	private:
-		bool activeFlag;
-		char *currentSource;
-		uint32_t currentSourceLen;
-		Stringp currentFile;
-		int breakpointCount;
+    /**
+     * An IValue representing a local variable.
+     */
+    class LocalValue: public IValue
+    {
+    public:
+        LocalValue(DebugFrame* frame, int index) : frame(frame), index(index) { }
+
+        virtual bool isLValue() { return true; }
+        virtual Atom get()
+        {
+            Atom* locals;
+            int countLocals;
+            frame->locals(locals, countLocals);
+            return locals[index];
+        }
+        virtual void set(Atom newValue)
+        {
+            frame->setLocal(index, newValue);
+        }
+
+    private:
+        DebugFrame* frame;
+        int index;
+    };
+
+    /**
+     * An IValue representing an argument to a function.
+     */
+    class ArgumentValue: public IValue
+    {
+    public:
+        ArgumentValue(DebugFrame* frame, int index) : frame(frame), index(index) { }
+
+        virtual bool isLValue() { return true; }
+        virtual Atom get()
+        {
+            Atom* arguments;
+            int countArguments;
+            frame->arguments(arguments, countArguments);
+            return arguments[index];
+        }
+        virtual void set(Atom newValue)
+        {
+            frame->setArgument(index, newValue);
+        }
+
+    private:
+        DebugFrame* frame;
+        int index;
+    };
+
+    /**
+     * An IValue representing a property of an object.
+     */
+    class PropertyValue: public IValue
+    {
+    public:
+        PropertyValue(ScriptObject* parent, Multiname* propertyname)
+        : parent(parent), propertyname(propertyname) { }
+
+        virtual bool isLValue() { return true; }
+        virtual Atom get()
+        {
+            return parent->toplevel()->getproperty(parent->atom(), propertyname, parent->vtable);
+        }
+        virtual void set(Atom newValue)
+        {
+            parent->toplevel()->setproperty(parent->atom(), propertyname, newValue, parent->vtable);
+        }
+
+    private:
+        ScriptObject* parent;
+        Multiname* propertyname;
+    };
+
+    /**
+     * A simple command line interface for the Debugger.
+     * Supports a gdb-like command line.
+     */
+    class DebugCLI : public avmplus::Debugger
+    {
+    public:
+        /** @name command codes */
+        /*@{*/
+        enum {
+            CMD_UNKNOWN = 0,
+            CMD_QUIT,
+            CMD_CONTINUE,
+            CMD_STEP,
+            CMD_NEXT,
+            CMD_FINISH,
+            CMD_BREAK,
+            CMD_SET,
+            CMD_LIST,
+            CMD_PRINT,
+            CMD_INFO,
+            CMD_DELETE,
+            CMD_COMMENT,
+            CMD_HELP,
+        };
+        /*@}*/
+
+        /** @name info sub commands */
+        /*@{*/
+        enum {
+            INFO_UNKNOWN_CMD = 100,
+            INFO_ARGS_CMD,
+            INFO_BREAK_CMD,
+            INFO_FILES_CMD,
+            INFO_FUNCTIONS_CMD,
+            INFO_LOCALS_CMD,
+            INFO_STACK_CMD,
+        };
+        /*@}*/
+
+        /**
+         * StringInt is used to store the command arrays
+         * used to translate command strings into command codes
+         */
+        struct StringInt
+        {
+            const char *text;
+            int id;
+        };
+
+        DebugCLI(AvmCore *core, Debugger::TraceLevel tracelevel);
+        ~DebugCLI();
+
+        void enterDebugger();
+        void setCurrentSource(Stringp file);
+        bool filterException(Exception *exception, bool willBeCaught);
+        bool hitWatchpoint() { return false; }
+
+        /**
+         * @name command implementations
+         */
+        /*@{*/
+        void breakpoint(char *location);
+        void deleteBreakpoint(char *idstr);
+        void showBreakpoints();
+        void help();
+        void locals(int frameNumber);
+        void arguments(int frameNumber);
+
+        static void bt();
+        static bool printFrame(int frameNumber);
+        static bool debuggerInterruptOnEnter;
+
+
+        void info();
+        void set();
+        void list(const char* line);
+        void print(char *name);
+        void quit();
+        /*@}*/
+
+        void activate() { activeFlag = true; }
+
+        static MethodInfo* functionFor(SourceInfo* src, int line);
+
+        /**
+         * Formats a value for display to the user.  Very similar to
+         * AvmCore::format(), but does a few extra things.
+         */
+        Stringp formatValue(Atom value);
+
+    private:
+        bool activeFlag;
+        char *currentSource;
+        uint32_t currentSourceLen;
+        Stringp currentFile;
+        int breakpointCount;
         bool warnMissingSource;
 
-		BreakAction *firstBreakAction, *lastBreakAction;
-		
-		enum { kMaxCommandLine = 1024 };
-		char commandLine[kMaxCommandLine];
-		char lastCommand[kMaxCommandLine];
-		char *currentToken;
-		char *nextToken();
+        BreakAction *firstBreakAction, *lastBreakAction;
 
-		void printIP();
-		void displayLines(int linenum, int count);
-				
-		char* lineStart(int linenum);
-		Atom ease2Atom(const char* to, Atom baseline);
-		MethodInfo* functionFor(SourceInfo* src, int line);
+        enum { kMaxCommandLine = 1024 };
+        char commandLine[kMaxCommandLine];
+        char lastCommand[kMaxCommandLine];
+        char *currentToken;
+        char *nextToken();
 
-		/**
-		 * @name command name arrays and support code
-		 */
-		/*@{*/
-		int determineCommand(StringIntArray cmdList[],
-							 const char *input,
-							 int defCmd);
-		const char* commandNumberToCommandName(StringIntArray cmdList[],
-											   int cmdNumber);
-		int commandFor(const char *input) {
-			return determineCommand(commandArray, input, CMD_UNKNOWN);
-		}
-		int infoCommandFor(const char *input) {
-			return determineCommand(infoCommandArray, input, INFO_UNKNOWN_CMD);
-		}
-		
-		static StringIntArray commandArray[];
-		static StringIntArray infoCommandArray[];
-		static StringIntArray showCommandArray[];
-		/*@}*/
-	};
+        void printIP();
+        void displayLines(int linenum, int count);
+
+        char* lineStart(int linenum);
+        Atom ease2Atom(const char* to, Atom baseline);
+
+        void throwUndefinedVarError(const char* name);
+
+        /**
+         * Gets a value.  "name" can be either a constant (string,
+         * number, boolean, undefined, null, xml, xmllist), or the
+         * name of a local, argument, or member of a variable on
+         * the scope chain.
+         */
+        IValue* getValue(const char *name);
+
+        /**
+         * Evaluates an expression, and returns its value.
+         * *outSawTrailingDot is set to true if the expression has a trailing
+         * dot, e.g. "foo." or "foo.bar."
+         */
+        IValue* evaluate(char *expr, bool* outSawTrailingDot);
+
+       /**
+         * @name command name arrays and support code
+         */
+        /*@{*/
+        int determineCommand(StringInt cmdList[],
+                             const char *input,
+                             int defCmd);
+        const char* commandNumberToCommandName(StringInt cmdList[],
+                                               int cmdNumber);
+        int commandFor(const char *input) {
+            return determineCommand(commandArray, input, CMD_UNKNOWN);
+        }
+        int infoCommandFor(const char *input) {
+            return determineCommand(infoCommandArray, input, INFO_UNKNOWN_CMD);
+        }
+
+        static StringInt commandArray[];
+        static StringInt infoCommandArray[];
+        /*@}*/
+    };
+
+    /**
+     * Helper class to iterate over all properties of an object (both slots
+     * and dynamic properties).
+     */
+    class PropertyIterator
+    {
+    public:
+        /**
+         * atom: the object whose properties we will iterate over.
+         */
+        PropertyIterator(AvmCore* core, Atom atom);
+        virtual ~PropertyIterator() {}
+
+        /**
+         * Iterates over all the object's properties, and calls process()
+         * for each one.  If process() ever returns false, iteration halts.
+         */
+        void iterate();
+
+    protected:
+        /**
+         * Called once for each property that has been found.  If process()
+         * ever returns false, iteration halts.
+         */
+        virtual bool process(Multiname* key, BindingKind bk) = 0;
+
+        AvmCore* core;
+        ScriptObject* object;
+    };
+
+    /**
+     * Helper to find a property with the given name.  Since this is for the
+     * debugger, it ignores visibility issues -- e.g. it will match any property
+     * with the given name, even if that property is private and therefore not
+     * visible from the caller's context.
+     *
+     * After you call iterate(), 'value' will be the property's value if it was
+     * found, or NULL if it was not found.
+     *
+     * This class can only be used on the stack.  ('value' does not have a write
+     * barrier around it.)
+     */
+    class StPropertyFinder: public PropertyIterator
+    {
+    public:
+        /**
+         * atom:         The object in which we want to look for a property.
+         * propertyname: The property name to look for.
+         */
+        StPropertyFinder(AvmCore* core, Atom atom, const char* propertyname);
+
+        IValue* value;
+
+    protected:
+        /**
+         * Returns true if the key matches the originally passed-in property name.
+         */
+        bool matches(const Multiname* key) const;
+
+        virtual bool process(Multiname* key, BindingKind bk);
+
+        const char* propertyname;
+    };
+
+    /**
+     * Prints all of an object's properties, and their values, to core->console.
+     */
+    class PropertyPrinter: public PropertyIterator
+    {
+    public:
+        PropertyPrinter(AvmCore* core, DebugCLI* debugger, Atom atom);
+
+    protected:
+        virtual bool process(Multiname* key, BindingKind bk);
+
+        DebugCLI* debugger;
+    };
 }
 #endif
 

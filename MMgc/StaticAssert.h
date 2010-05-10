@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -40,9 +42,9 @@
 
 namespace MMgc
 {
-	template <int> struct static_assert_MMgc {};
-	template <bool> struct STATIC_ASSERTION_FAILED;
-	template <> struct STATIC_ASSERTION_FAILED<true> {};
+    template <int> struct static_assert_MMgc {};
+    template <bool> struct STATIC_ASSERTION_FAILED;
+    template <> struct STATIC_ASSERTION_FAILED<true> {};
 }
 
 #define _MMGC_JOIN(x,y) _MMGC_DO_JOIN(x,y)
@@ -50,7 +52,7 @@ namespace MMgc
 #define _MMGC_DO_JOIN2(x,y) x##y
 
 #define MMGC_STATIC_ASSERT(condition) \
-	typedef ::MMgc::static_assert_MMgc<sizeof (::MMgc::STATIC_ASSERTION_FAILED<(bool)(condition)>)> \
-		_MMGC_JOIN(MMgc_static_assert_line_, __LINE__)
+    typedef ::MMgc::static_assert_MMgc<sizeof (::MMgc::STATIC_ASSERTION_FAILED<(bool)(condition)>)> \
+        _MMGC_JOIN(MMgc_static_assert_line_, __LINE__)
 
 #endif /* __StaticAssert__ */

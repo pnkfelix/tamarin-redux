@@ -1,4 +1,5 @@
-/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -42,7 +43,7 @@
 
 #ifndef MMGC_HEAP_GRAPH
 
-#define MMGC_WB_EDGE(_a, _v) 
+#define MMGC_WB_EDGE(_a, _v)
 
 #else
 
@@ -50,23 +51,23 @@
 
 namespace MMgc
 {
-	/**
-	   HeapGraph represents the edges in the GC heap.  
-	*/
-	class HeapGraph
-	{
-	public:
-		HeapGraph() {}
-		~HeapGraph() { clear(); }
+    /**
+       HeapGraph represents the edges in the GC heap.
+    */
+    class HeapGraph
+    {
+    public:
+        HeapGraph() {}
+        ~HeapGraph() { clear(); }
 
-		// this is called before the mutation takes place
-		void edge(const void *addr, const void *newValue);
-		GCHashtable *getPointers(const void *obj);
-		void clear();
-	private:
-		// key = addr, value = container
-		GCHashtable_VMPI backEdges;
-	};
+        // this is called before the mutation takes place
+        void edge(const void *addr, const void *newValue);
+        GCHashtable *getPointers(const void *obj);
+        void clear();
+    private:
+        // key = addr, value = container
+        GCHashtable_VMPI backEdges;
+    };
 }
 #endif // MMGC_HEAP_GRAPH
 

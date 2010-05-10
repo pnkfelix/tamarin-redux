@@ -1,4 +1,5 @@
-/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*- */
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -49,7 +50,7 @@
 
 #ifdef DEBUG
     #define MMGC_DELETE_DEBUGGING
-    #ifndef MMGC_64BIT				// see bugzilla 468501
+    #ifndef MMGC_64BIT              // see bugzilla 468501
         #define MMGC_MEMORY_INFO
     #endif
 #endif
@@ -82,35 +83,36 @@
 #endif
 
 #ifdef MMGC_POLICY_PROFILING
-	// Really for the specially interested!  These switches incur measurable overhead,
-	// so be careful when benchmarking.
+    // Really for the specially interested!  These switches incur measurable overhead,
+    // so be careful when benchmarking.
 
-	// Profile the pointer density of scanned memory
+    // Profile the pointer density of scanned memory
     //#define MMGC_POINTINESS_PROFILING
 
-	// Profile reference count traffic.  This feature adds about 8% execution time overhead
-	// to the overhead already added by MMGC_POLICY_PROFILING, on the gcbench benchmark,
-	// measured on MacOS X desktop.
-	//#define MMGC_REFCOUNT_PROFILING
+    // Profile reference count traffic.  This feature adds about 8% execution time overhead
+    // to the overhead already added by MMGC_POLICY_PROFILING, on the gcbench benchmark,
+    // measured on MacOS X desktop.
+    //#define MMGC_REFCOUNT_PROFILING
 
-	// Profile mark stack depth
-	//#define MMGC_MARKSTACK_DEPTH
+    // Profile mark stack depth
+    //#define MMGC_MARKSTACK_DEPTH
 #endif
 
 #ifdef MMGC_REFCOUNT_PROFILING
-	#define REFCOUNT_PROFILING_ONLY(x) x
-	#define REFCOUNT_PROFILING_ARG(x) , x
+    #define REFCOUNT_PROFILING_ONLY(x) x
+    #define REFCOUNT_PROFILING_ARG(x) , x
 #else
-	#define REFCOUNT_PROFILING_ONLY(x)
-	#define REFCOUNT_PROFILING_ARG(x)
+    #define REFCOUNT_PROFILING_ONLY(x)
+    #define REFCOUNT_PROFILING_ARG(x)
 #endif
 
 #ifdef MMGC_MEMORY_PROFILER
-	#define MMGC_MEMORY_PROFILER_ARG(x) , x
+    #define MMGC_MEMORY_PROFILER_ARG(x) , x
 #else
-	#define MMGC_MEMORY_PROFILER_ARG(x)
+    #define MMGC_MEMORY_PROFILER_ARG(x)
 #endif
 
+#include "AvmAssert.h"
 #include "GCDebug.h"
 #include "GCLog.h"
 
@@ -129,8 +131,8 @@
 #define MMGC_LOCK_ALLOW_RECURSION(_x, _t) MMgc::GCAcquireSpinlockWithRecursion _lock(&_x, _t)
 #include "GCSpinLock.h"
 #else
-#define MMGC_LOCK(_x) 
-#define MMGC_LOCK_ALLOW_RECURSION(_x, _t) 
+#define MMGC_LOCK(_x)
+#define MMGC_LOCK_ALLOW_RECURSION(_x, _t)
 #endif
 
 // This keeps a graph of the edges the marker finds which are printed out in Sweep
@@ -139,14 +141,14 @@
 
 namespace MMgc
 {
-	class GC;
-	class RCObject;
-	class GCWeakRef;
-	class GCFinalizedObject;
-	class GCObject;
-	class Cleaner;
-	class GCAlloc;
-	class GCHeap;
+    class GC;
+    class RCObject;
+    class GCWeakRef;
+    class GCFinalizedObject;
+    class GCObject;
+    class Cleaner;
+    class GCAlloc;
+    class GCHeap;
 }
 
 #define CAPACITY(T)  (uint32_t(GCHeap::kBlockSize) / uint32_t(sizeof(T)))

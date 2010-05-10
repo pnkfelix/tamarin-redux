@@ -248,11 +248,23 @@ namespace avmplus
                 ctraits->resolveSignatures(toplevel);
                 itraits->resolveSignatures(toplevel);
 
-                // we must always set the scopes here, whether or not they have been set yet and
-                // whether or not the traits were resolved already.
-                ctraits->setDeclaringScopes(cscope);
-                itraits->setDeclaringScopes(iscope);
-
+                const ScopeTypeChain *cur_cscope = ctraits->declaringScope();
+                const ScopeTypeChain *cur_iscope = itraits->declaringScope();
+                if (!cur_cscope) {
+                    // first time we have seen this class, capture scope types
+                    ctraits->setDeclaringScopes(cscope);
+                    itraits->setDeclaringScopes(iscope);
+                } else {
+                    // we have captured a scope already for this class.  it better match!
+                    if (!cur_cscope->equals(cscope) ||
+                        !cur_iscope ||
+                        !cur_iscope->equals(iscope)) {
+                        toplevel->throwVerifyError(kCorruptABCError);
+                    }
+                    // use the old ScopeTypeChains, discard the new ones
+                    cscope = cur_cscope;
+                    iscope = cur_iscope;
+                }
                 #ifdef AVMPLUS_VERBOSE
                 if (state->verifier->verbose)
                     state->verifier->printScope("class-scope", cscope);
@@ -2425,7 +2437,14 @@ namespace avmplus
     Traits* Verifier::readBinding(Traits* traits, Binding b)
     {
         if (traits)
+        {
             traits->resolveSignatures(toplevel);
+        }
+        else
+        {
+            AvmAssert(AvmCore::bindingKind(b) == BKIND_NONE);
+        }
+
         switch (AvmCore::bindingKind(b))
         {
         default:
@@ -2517,7 +2536,7 @@ namespace avmplus
             v2.tryTo = tryTo;
             CodeWriter stubWriter;
 
-            // The second verification pass will presumably always throw an 
+            // The second verification pass will presumably always throw an
             // error, which we ignore.  But we /must/ catch it so that we can
             // clean up the verifier resources.  Cleanup happens automatically
             // when execution reaches the end of the block.

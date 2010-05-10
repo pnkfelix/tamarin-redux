@@ -89,9 +89,9 @@ namespace avmplus
 
 #ifdef AVMPLUS_VERBOSE
     #if defined FEATURE_NANOJIT
-        const uint32_t AvmCore::DEFAULT_VERBOSE_ON = ((uint32_t)~0 & ~(nanojit::LC_FragProfile<<16));
+        const uint32_t AvmCore::DEFAULT_VERBOSE_ON = (uint32_t)~0 & ~(nanojit::LC_FragProfile); // LC_FragProfile changes generated code!?!
     #else
-        const uint32_t AvmCore::DEFAULT_VERBOSE_ON = ((uint32_t)~0);
+        const uint32_t AvmCore::DEFAULT_VERBOSE_ON = (uint32_t)~0;
     #endif
 
     static bool substrMatches(const char* pattern, const char* p, const char* e)
@@ -100,9 +100,10 @@ namespace avmplus
         return (e-p) >= patlen && !VMPI_strncmp(p, pattern, patlen);
     }
 
-    /*static*/ uint32_t AvmCore::parseVerboseFlags(const char* p)
+    /*static*/ uint32_t AvmCore::parseVerboseFlags(const char* p, char*& badFlag)
     {
         uint32_t r = 0;
+        badFlag = 0;
 
         for (;;)
         {
@@ -129,10 +130,14 @@ namespace avmplus
                 MMgc::GCHeap::GetGCHeap()->Config().verbose = true;
 #if defined FEATURE_NANOJIT
             else if (substrMatches("jit", p, e))
-                r |= VB_jit | ((nanojit::LC_Activation | nanojit::LC_Liveness | nanojit::LC_ReadLIR
-                                                | nanojit::LC_AfterSF    | nanojit::LC_RegAlloc | nanojit::LC_Assembly
-                                                ) << 16); // stuff LC_Bits into the upper 16bits
+                 r |= VB_jit | LC_Assembly;
+             else if (substrMatches("opt", p, e))
+                 r |= VB_jit | LC_Assembly | LC_Liveness | LC_ReadLIR | LC_AfterSF;
+             else if (substrMatches("regs", p, e))
+                 r |= VB_jit | LC_Assembly | LC_Activation | LC_RegAlloc;
 #endif /* FEATURE_NANOJIT */
+             else
+                 badFlag = (char*)p;
             if (*e < 32)
                 break;
             p = e+1;
@@ -316,6 +321,10 @@ namespace avmplus
 #endif
 
         _emptySupertypeList = Traits::allocSupertypeList(gc, 0);
+    }
+
+    AvmCore* AvmCore::getActiveCore() {
+        return GC::GetActiveGC()->core();
     }
 
     AvmCore::~AvmCore()
@@ -1362,17 +1371,9 @@ return the result of the comparison ToPrimitive(x) == y.
 
     void AvmCore::throwErrorV(ClassClosure *type, int errorID, Stringp arg1, Stringp arg2, Stringp arg3)
     {
+        AvmAssertMsg(type != NULL, "type should never be NULL - internal bootstrap error if it is.");
+
         Stringp out = formatErrorMessageV( errorID, arg1, arg2, arg3);
-
-        #ifdef DEBUGGER
-        if (type == NULL)
-        {
-            // print the error message, because we're still bootstrapping
-            // and the exception type is not yet defined
-            console << out << "\n";
-        }
-        #endif
-
         Atom args[3] = { nullObjectAtom, out->atom(), intToAtom(errorID) };
         throwAtom(type->construct(2, args));
     }
@@ -1820,13 +1821,10 @@ return the result of the comparison ToPrimitive(x) == y.
             }
 
             case WOP_push_doublebits: {
-                union {
-                    double d;
-                    uint32_t b[2];
-                } u;
-                u.b[0] = (uint32)*pc++;
-                u.b[1] = (uint32)*pc++;
-                buffer << wopAttrs[opcode].name << " " << u.d;
+                double_overlay d;
+                d.bits32[0] = (uint32)*pc++;
+                d.bits32[1] = (uint32)*pc++;
+                buffer << wopAttrs[opcode].name << " " << d.value;
                 break;
             }
 
@@ -2267,7 +2265,7 @@ return the result of the comparison ToPrimitive(x) == y.
 
     /*static*/ bool AvmCore::isDictionary(Atom atm)
     {
-        return isObject(atm) && atomToScriptObject(atm)->vtable->traits->isDictionary;
+        return isObject(atm) && atomToScriptObject(atm)->vtable->traits->isDictionary();
     }
 
     // Tables are from http://www.w3.org/TR/2004/REC-xml-20040204/#NT-NameChar
@@ -3545,11 +3543,6 @@ return the result of the comparison ToPrimitive(x) == y.
                                                          pattern, options);
     }
 
-    ScriptObject* AvmCore::newObject(VTable *vtable, ScriptObject *delegate)
-    {
-        return new (GetGC(), vtable->getExtraSize()) ScriptObject(vtable, delegate);
-    }
-
     Namespacep AvmCore::newNamespace(Atom prefix, Atom uri, Namespace::NamespaceType type)
     {
         // E4X - this is 13.2.3, step 3 - prefix IS specified
@@ -3642,45 +3635,27 @@ return the result of the comparison ToPrimitive(x) == y.
 
     Atom AvmCore::uintToAtom(uint32_t n)
     {
-#ifdef AVMPLUS_64BIT
-        // We can always fit the value in an Atom
-        return (((Atom)n)<<3) | kIntptrType;
-#else
-        // As kIntptrType is signed, we can only represent a 28-bit uint in it
-        if (!(n&0xF0000000)) {
-            return Atom((n<<3) | kIntptrType);
-        } else {
-            return allocDouble(n);
-        }
-#endif
+        return (atomIsValidIntptrValue_u(n) ?  // always true on 64-bit
+                atomFromIntptrValue_u(n) :
+                allocDouble(n));
     }
 
     Atom AvmCore::intToAtom(int32_t n)
     {
-#ifdef AVMPLUS_64BIT
-        // We can always fit the value in an Atom
-        return (((Atom)n)<<3) | kIntptrType;
-#else
-        // handle integer values w/out allocation
-        int32_t i29 = n << 3;
-        if ((i29>>3) == n)
-        {
-            return Atom(i29 | kIntptrType);
-        }
-        else
-        {
-            return allocDouble(n);
-        }
-#endif
+        return (atomIsValidIntptrValue(n) ? // always true on 64-bit
+                atomFromIntptrValue(n) :
+                allocDouble(n));
     }
 
-#ifdef AVMPLUS_64BIT
-    #define CAN_BE_INT_ATOM(intval,n) (((intval<<8)>>8) == n && !(intval == 0 && MathUtils::isNegZero(n)))
-#else
-    #define CAN_BE_INT_ATOM(intval,n) (((intval<<3)>>3) == n && !(intval == 0 && MathUtils::isNegZero(n)))
-#endif
+    REALLY_INLINE bool atomIsValidIntptrValueAndEqualTo(const intptr_t ival, const double orig)
+    {
+        // ival's intptr_t type is critical; implicitly casts from
+        // int32_t in most invocations of this function here.
 
-#define MAKE_INT_ATOM(intval) ((intptr_t(intval)<<3) | kIntptrType)
+        return ((((ival << atomSignExtendShift) >> atomSignExtendShift) == orig)
+                && !((ival == 0)
+                     && MathUtils::isNegZero(orig)));
+    }
 
 #if defined(AVMPLUS_IA32) || defined(AVMPLUS_AMD64)
 
@@ -3697,8 +3672,8 @@ return the result of the comparison ToPrimitive(x) == y.
     #ifdef AVMPLUS_AMD64
 
         int32_t const intval = _mm_cvttsd_si32(_mm_set_sd(n));
-        if (CAN_BE_INT_ATOM(intval, n))
-            return MAKE_INT_ATOM(intval);
+        if (atomIsValidIntptrValueAndEqualTo(intval, n))
+            return atomFromIntptrValue(intval);
         return allocDouble(n);
 
     #else // x86
@@ -3731,8 +3706,8 @@ return the result of the comparison ToPrimitive(x) == y.
 
         // MacTel always has SSE2 available
         int32_t const intval = _mm_cvttsd_si32(_mm_set_sd(n));
-        if (CAN_BE_INT_ATOM(intval, n))
-            return MAKE_INT_ATOM(intval);
+        if (atomIsValidIntptrValueAndEqualTo(intval, n))
+            return atomFromIntptrValue(intval);
 
         return allocDouble(n);
 
@@ -3745,8 +3720,8 @@ return the result of the comparison ToPrimitive(x) == y.
     #ifdef AVMPLUS_AMD64
 
         int32_t const intval = _mm_cvttsd_si32(_mm_set_sd(n));
-        if (CAN_BE_INT_ATOM(intval, n))
-            return MAKE_INT_ATOM(intval);
+        if (atomIsValidIntptrValueAndEqualTo(intval, n))
+            return atomFromIntptrValue(intval);
 
         return allocDouble(n);
 
@@ -3802,8 +3777,8 @@ return the result of the comparison ToPrimitive(x) == y.
     #endif
 
         // make sure n is integer value that fits in 29 bits
-        if (CAN_BE_INT_ATOM(intval, n))
-            return MAKE_INT_ATOM(intval);
+        if (atomIsValidIntptrValueAndEqualTo(intval, n))
+            return atomFromIntptrValue(intval);
 
         return allocDouble(n);
     }

@@ -1,3 +1,5 @@
+/* -*- Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -63,7 +65,7 @@
 // all x64, and all MacTel machines, always have sse2
 #if defined(AVMPLUS_AMD64) || (defined(AVMPLUS_MAC) && defined(AVMPLUS_IA32))
     #ifndef AVMPLUS_SSE2_ALWAYS
-	    #define AVMPLUS_SSE2_ALWAYS
+        #define AVMPLUS_SSE2_ALWAYS
     #endif
 #endif
 
@@ -76,19 +78,11 @@
 // This is here because it's not yet been refactored.
 // FIXME: refactor this.
 #ifndef VMCFG_METHOD_NAMES
-	#if defined AVMPLUS_VERBOSE || defined DEBUGGER
-		#define VMCFG_METHOD_NAMES 1
-	#else
-		#define VMCFG_METHOD_NAMES 0
-	#endif
-#endif
-
-// This is here because the conditional can't be expressed by the feature system (yet),
-// and because support for this case (word code + jit) is likely to be removed anyway.
-//
-// For word code + jit, define a verifier output module that can drive two code generators.
-#if defined VMCFG_WORDCODE && defined FEATURE_NANOJIT
-    #define FEATURE_TEEWRITER
+    #if defined AVMPLUS_VERBOSE || defined DEBUGGER
+        #define VMCFG_METHOD_NAMES 1
+    #else
+        #define VMCFG_METHOD_NAMES 0
+    #endif
 #endif
 
 // This is here because it's an always-enabled switch to externally sourced code:
@@ -114,7 +108,7 @@
 #else
 # define PERFM_NVPROF(n,v)
 # define PERFM_NTPROF(n)
-# define PERFM_TPROF_END() 
+# define PERFM_TPROF_END()
 #endif
 
 // This is here for VM performance profiling.
@@ -138,42 +132,15 @@
 #  ifndef VMCFG_WORDCODE
 #    error "You must have word code enabled to perform superword profiling"
 #  endif
-#  ifdef VMCFG_WORDCODE_THREADED
+#  ifdef VMCFG_DIRECT_THREADED
 #    error "You must disable direct threading to perform superword profiling"
 #  endif
 #endif
 
 // This is here for VM development.
 //
-// define this to 1 to keep a shadow copy of implGPR in MethodEnv (vs MethodInfo only).
-// more speed, but more memory used... not clear if the tradeoff is worthwhile yet.
-#ifndef VMCFG_METHODENV_IMPL32
-#  define VMCFG_METHODENV_IMPL32 1
-#endif
-
-// This is here for VM development.
-//
 // Enable support for printing the control flow graph in the JIT.
 //#define FEATURE_CFGWRITER
-
-// This is here for documentation purposes.
-//
-// This must be enabled (probably not in this file) if nanojit is being used outside AVM,
-// eg, in TraceMonkey.
-//#define VMCFG_NANOJIT_STANDALONE
-
-// This is here because it's slated to be deleted, but can't be deleted yet (now == Apr-2009).
-//
-// AVMPLUS_PORTING_API is completely unsupported and it /will/ be removed here and elsewhere
-// in the code.  Embedding software /must/ instead use the common configuration system, see
-// core/avmfeatures.as and core/avmfeatures.h.
-#if defined(AVMPLUS_PORTING_API)
-	// The portapi_avmbuild.h file is used to override
-	// definitions in this file. E.g. turning off
-	// features, etc.
-	//#include "portapi_avmbuild.h"
-    #error "Obsolete define"
-#endif
 
 //Enable this if compiling for fuzz testing, where informational asserts are not desired.
 //There are only a few informational asserts in the source code.
