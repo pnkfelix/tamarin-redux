@@ -37,10 +37,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "avmplus.h"
+#ifndef __vmbase_inlines__
+#define __vmbase_inlines__
 
-// non-inline Atom implementation code goes here.
+#include "atom-inlines.h"
 
-namespace avmplus
-{
-}
+#endif // __vmbase_atom__

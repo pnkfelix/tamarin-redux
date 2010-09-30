@@ -37,16 +37,10 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __vmbase__
-#define __vmbase__
+#include "avmplus.h"
 
-#include "VMPI.h"
+// non-inline Atom implementation code goes here.
 
-// vmbase.h is included by both avmplus.h and MMgc.h
-// It serves as the main header for the vmbase module, which contains platform
-// independent code used by both avmcore and MMgc, e.g. AvmAssert.
-
-#include "AvmAssert.h"
-#include "atom.h"
-
-#endif /* __vmbase__ */
+namespace vmbase
+{
+}
