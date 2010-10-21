@@ -156,7 +156,7 @@ namespace avmplus
             uint8_t*    m_oldArray;
             uint32_t    m_oldLength;
         };
-        
+
     private:
         enum { kGrowthIncr = 4096 };
 
@@ -294,6 +294,8 @@ namespace avmplus
     public:
         ByteArrayClass(VTable *vtable);
         ~ByteArrayClass() { }
+
+        ByteArrayObject* constructByteArray();
 
         ScriptObject* createInstance(VTable* ivtable, ScriptObject* delegate);
 

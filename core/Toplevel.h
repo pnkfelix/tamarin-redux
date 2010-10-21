@@ -43,22 +43,6 @@
 
 namespace avmplus
 {
-    // FIXME https://bugzilla.mozilla.org/show_bug.cgi?id=564248 
-    // Moved here (from DataIO.h) temporarily; when that file is moved into core, move this back
-    enum ObjectEncoding {
-        kAMF0 = 0,
-        kAMF3 = 3,
-        kEncodeDefault = kAMF3
-    };
-
-    // FIXME https://bugzilla.mozilla.org/show_bug.cgi?id=564248 
-    // Moved here (from DataIO.h) temporarily; when that file is moved into core, move this back
-    enum Endian
-    {
-        kBigEndian    = 0,
-        kLittleEndian = 1
-    };
-
     class IntVectorClass;
     class UIntVectorClass;
     class DoubleVectorClass;
@@ -87,6 +71,8 @@ namespace avmplus
         XMLClass* xmlClass();
         XMLListClass* xmlListClass();
         QNameClass* qnameClass();
+        ByteArrayClass* byteArrayClass();
+
         /**
          * @name Error Subclasses
          * These are subclasses of Error used in the VM.
@@ -400,7 +386,7 @@ namespace avmplus
         //  -------------------------------------------------------
 
         // 
-        // If a ByteArray doesn't begiun with a BOM, Flash may want ByteArray.toString()
+        // If a ByteArray doesn't begin with a BOM, Flash may want ByteArray.toString()
         // to attempt a conversion from the system's default codepage as though the data
         // is MBCS. If such a conversion is desirable and possible, you should return the
         // result as a String. If the conversion is either impossible or undesirable, return NULL.

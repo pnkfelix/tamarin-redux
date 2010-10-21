@@ -38,9 +38,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-// FIXME https://bugzilla.mozilla.org/show_bug.cgi?id=564248
-// this should be "avmplus.h" once this file is moved into core
-#include "avmshell.h"
+#include "avmplus.h"
 #include "zlib.h"
 
 namespace avmplus
@@ -547,7 +545,7 @@ namespace avmplus
             return getUintProperty(index);
         }
 
-        return ScriptObject::getMultinameProperty (name);
+        return ScriptObject::getMultinameProperty(name);
     }
 
     void ByteArrayObject::setMultinameProperty(const Multiname* name, Atom value)
@@ -559,7 +557,7 @@ namespace avmplus
         }
         else
         {
-            ScriptObject::setMultinameProperty (name, value);
+            ScriptObject::setMultinameProperty(name, value);
         }
     }
 
@@ -874,5 +872,11 @@ namespace avmplus
         return new (ivtable->gc(), ivtable->getExtraSize()) ByteArrayObject(ivtable, prototype, (ObjectEncoding)get_defaultObjectEncoding());
     }
 
+    ByteArrayObject* ByteArrayClass::constructByteArray()
+    {
+        Atom args[1] = { nullObjectAtom };
+        Atom outAtom = construct(0, args);
+        return (ByteArrayObject*)AvmCore::atomToScriptObject(outAtom);
+    }
 }
 
