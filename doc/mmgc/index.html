@@ -1,3 +1,4 @@
+<!--
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -15,7 +16,7 @@
  *
  * The Initial Developer of the Original Code is
  * Adobe System Incorporated.
- * Portions created by the Initial Developer are Copyright (C) 2005-2006
+ * Portions created by the Initial Developer are Copyright (C) 2010
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,58 +35,26 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+-->
+<html>
+<head>
+<title>MMgc Documentation</title>
+</head>
 
-import avmplus.System;
+<body>
+<h1>MMgc Documentation</h1>
 
-var CODE_OLD = 1115; // _ is not a constructor.
-var CODE_NEW = 1007; // Instantiation attempted on a non-constructor.
+<h2>Exact tracing</h1>
 
-var CODE;
+<b>User guides</b><br>
+<br>
+<a href="exactgc-cookbook.html">Cookbook (meets most needs)</a> <br>
+<a href="exactgc-manual.html">Full manual</a> <br>
+<br>
+<b>Mostly of interest to the MMgc team</b><br>
+<br>
+<a href="exactgc-architecture.html">Architectural document</a> <br>
+<a href="exactgc-profilers.html">The conservative and deletion profilers</a><br>
 
-if (System.swfVersion >= 11) {
-     CODE = CODE_NEW;
-} else {
-    if (System.getRunmode().indexOf('jit') != -1) {
-        CODE = CODE_NEW;
-    } else {
-        CODE = CODE_OLD;
-    }
-}
-
-//-----------------------------------------------------------
-startTest();
-//-----------------------------------------------------------
-
-try {
-        var z = "no error";
-        var OBJECT = new Object();
-        var o = new OBJECT();
-} catch (err) {
-        z = err.toString();
-} finally {
-        AddTestCase("[Object] Runtime Error", "TypeError: Error #" + CODE, typeError(z));
-}
-
-try {
-        var z = "no error";
-        var OBJECT = null;
-        var o = new OBJECT();
-} catch (err) {
-        z = err.toString();
-} finally {
-        AddTestCase("[null] Runtime Error", "TypeError: Error #" + CODE, typeError(z));
-}
-
-try {
-        var z = "no error";
-        var OBJECT;
-        var o = new OBJECT();
-} catch (err) {
-        z = err.toString();
-} finally {
-        AddTestCase("[undefined] Runtime Error", "TypeError: Error #" + CODE, typeError(z));
-}
-
-//-----------------------------------------------------------
-test();
-//-----------------------------------------------------------
+</body>
+</html>

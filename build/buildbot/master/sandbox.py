@@ -365,6 +365,7 @@ class sandbox:
     sb_linux2_compile_factory.addStep(sync_clone_sandbox)
     sb_linux2_compile_factory.addStep(sync_update)
     sb_linux2_compile_factory.addStep(bb_slaveupdate(slave="linux"))
+    sb_linux2_compile_factory.addStep(compile_builtin)
     sb_linux2_compile_factory.addStep(BuildShellCommand(
                 command=['../all/compile-generic.sh', WithProperties('%s','revision'), '--enable-shell --target=sh4-linux', 'avmshell_sh4', 'true'],
                 env={
@@ -1074,11 +1075,11 @@ class sandbox:
     sb_solaris_sparc_test_factory = factory.BuildFactory()
     sb_solaris_sparc_test_factory.addStep(test_commandline)
     sb_solaris_sparc_test_factory.addStep(test_selftest(name="Release", shellname="avmshell"))
-    sb_solaris_sparc_test_factory.addStep(test_generic(name="Release", shellname="avmshell", vmargs="", config="", scriptargs="--random --timeout=480"))
-    sb_solaris_sparc_test_factory.addStep(test_generic(name="Release-interp", shellname="avmshell", vmargs="-Dinterp", config="", scriptargs="--random --timeout=480"))
-    sb_solaris_sparc_test_factory.addStep(test_generic(name="Release-jit", shellname="avmshell", vmargs="-Ojit", config="", scriptargs="--random --timeout=480"))
-    sb_solaris_sparc_test_factory.addStep(test_generic(name="ReleaseDebugger", shellname="avmshell_s", vmargs="", config="", scriptargs="--random --timeout=480"))
-    sb_solaris_sparc_test_factory.addStep(test_generic(name="DebugDebugger", shellname="avmshell_sd", vmargs="", config="", scriptargs="--random --timeout=480"))
+    sb_solaris_sparc_test_factory.addStep(test_generic(name="Release", shellname="avmshell", vmargs="", config="", scriptargs="--random --timeout=420"))
+    sb_solaris_sparc_test_factory.addStep(test_generic(name="Release-interp", shellname="avmshell", vmargs="-Dinterp", config="", scriptargs="--random --timeout=420"))
+    sb_solaris_sparc_test_factory.addStep(test_generic(name="Release-jit", shellname="avmshell", vmargs="-Ojit", config="", scriptargs="--random --timeout=420"))
+    sb_solaris_sparc_test_factory.addStep(test_generic(name="ReleaseDebugger", shellname="avmshell_s", vmargs="", config="", scriptargs="--random --timeout=420"))
+    sb_solaris_sparc_test_factory.addStep(test_generic(name="DebugDebugger", shellname="avmshell_sd", vmargs="", config="", scriptargs="--random --timeout=420"))
     sb_solaris_sparc_test_factory.addStep(util_process_clean)
     sb_solaris_sparc_test_factory.addStep(util_clean_buildsdir)
     sb_solaris_sparc_test_factory.addStep(sync_clean)

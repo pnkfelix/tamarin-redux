@@ -1,3 +1,4 @@
+#!/bin/bash
 #  ***** BEGIN LICENSE BLOCK *****
 #  Version: MPL 1.1/GPL 2.0/LGPL 2.1
 # 
@@ -34,79 +35,23 @@
 #  the terms of any one of the MPL, the GPL or the LGPL.
 # 
 #  ***** END LICENSE BLOCK ****
-#############################
-# Directories to exclude
-.*/.hg/.*
-.*/axscript/.*
-.*/build/buildbot/slaves/scripts/.*
-.*/build/buildbot/master/custom/.*
-.*/doc/mmgc/audit-2009/.*
-.*/esc/.*
-.*/objdir/.*
-.*/other-licenses/.*
-.*/pcre/.*
-.*/performance/jsbench/.*
-.*/performance/scimark/.*
-.*/performance/sunspider/.*
-.*/platform/win32/obj/.*
-.*/platform/win32/Windows.*/.*
-.*/test/performance/v8.*/.*
+(set -o igncr) 2>/dev/null && set -o igncr; # comment is needed
+
+##
+# Bring in the environment variables
+##
+. ./environment.sh
 
 
+##
+# Calculate the change number and change id
+##
+. ../all/util-calculate-change.sh $1
 
-
-#############################
-# File extensions to exclude
-.*\.abc
-.*_abc
-.*\.asc_args
-.*\.asm
-.*\.avm_args
-.*\.dll
-.*\.dmp
-.*\.exe
-.*\.exitcode
-.*\.exp
-.*\.html
-.*\.jar
-.*\.ncb
-.*\.suo
-.*\.pch
-.*\.pbxproj
-.*\.pyc
-.*\.orig
-.*\.out
-.*\.rej
-.*\.sln
-.*\.txt
-.*\.vcproj
-.*\.pdf
-
-
-
-#############################
-# Files to exclude
-.*/Doxyfile
-.*/\.hgignore
-.*/\.hgtags
-.*/build/cygwin-wrapper\.sh
-.*/platform/mac/shell/exports\.exp
-.*/platform/win32/armasm\.rules
-.*/\.buildbot-sourcedata
-.*/test/acceptance/test\.ba
-.*/test/acceptance/misc/md5_t\.as
-.*/test/performance/canaries/simpleflexapputil/avmglue_abc
-.*/test/performance/canaries/simpleflexapputil/hello_frame1_abc
-.*/test/performance/canaries/simpleflexapputil/hello_frame2_abc
-.*/test/performance/mmgc/gcbench\.as
-.*/test/util/__init__\.py
-.*/test/util/killableprocess\.py
-.*/test/util/pexpect\.py
-.*/test/util/pexpect25\.py
-.*/test/util/subProcess\.py
-.*/test/util/threadpool\.py
-.*/test/util/which\.py
-.*/test/util/winprocess\.py
-.*/utils/nanojit-import/nanojit-import-filemap
-.*/utils/nanojit-import/nanojit-import-rev
-
+# Upload Test media
+../all/util-upload-ftp-asteam.sh $basedir/test/acceptance/acceptance-tests-abcs.zip $ftp_asteam/$branch/$change-${changeid}/acceptance-tests-abcs.zip
+ret=$?
+if [ "$ret" != "0" ]; then
+    echo "Uploading of acceptance-tests-abcs.zip failed"
+    exit 1
+fi

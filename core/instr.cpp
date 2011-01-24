@@ -228,10 +228,26 @@ Atom constructprop(Toplevel* toplevel, const Multiname* multiname, int argc, Ato
     case BKIND_CONST:
     {
         ScriptObject* ctor = AvmCore::atomToScriptObject(obj)->getSlotObject(AvmCore::bindingToSlotId(b));
+        // This code is a bit subtle.  Note that ScriptObject::getSlotObject() will return NULL if the
+        // slot is an SST_scriptobject and is NULL, or an SST_atom that is null, undefined, or not
+        // an object.  These subsume the test isObject(ctor) in op_construct(), which is inlined here.
+        // We once included an extra check, resulting in throwing a different exception when taking this
+        // path in interpreted code.  We must emulate this old behavior for backward compatibility.
+        // It is unfortunate that CLASS_TYPE and FUNCTION_TYPE expand into references to 'core', otherwise
+        // we could push the next line down into the exceptional path.
         AvmCore* core = toplevel->core();
-        if (!ctor ||
-            (!ctor->traits()->subtypeof(CLASS_TYPE) && !ctor->traits()->subtypeof(FUNCTION_TYPE)))
-            toplevel->throwTypeError(kNotConstructorError, core->toErrorString(multiname));
+        if (!ctor || (!ctor->traits()->subtypeof(CLASS_TYPE) && !ctor->traits()->subtypeof(FUNCTION_TYPE))) {
+            // We know that an exception will be thrown eventually, so now do the version check.
+            if (core->currentBugCompatibility()->bugzilla456852) {
+                // Correct behavior is to throw kConstructOfNonFunctionError as op_construct would do.
+                if (!ctor) {
+                    toplevel->throwTypeError(kConstructOfNonFunctionError);
+                }
+            } else {
+                // Stay compatible with old behavior.
+                toplevel->throwTypeError(kNotConstructorError, core->toErrorString(multiname));
+            }
+        }
         // inlined equivalent of op_construct
         return ctor->construct(argc, atomv);
     }
@@ -530,12 +546,14 @@ Atom op_add_a_aa(AvmCore* core, Atom lhs, Atom rhs)
         }
     }
 
-    if (atomIsString(lhs))
+    if (AvmCore::isString(lhs))
     {
-        if (atomIsString(rhs))
+        if (AvmCore::isString(rhs))
         {
-            return core->concatStrings(AvmCore::atomToString(lhs),
-                                       AvmCore::atomToString(rhs))->atom();
+            // AvmCore::concatStrings() coerces a null argument to the string "null".
+            // Here, we know that neither lhs nor rhs are null, so we can concatenate w/o the coercion.
+            return String::concatStrings(AvmCore::atomToString(lhs),
+                                         AvmCore::atomToString(rhs))->atom();
         }
         else
         {
@@ -558,7 +576,7 @@ Atom op_add_a_aa(AvmCore* core, Atom lhs, Atom rhs)
     lhs = AvmCore::primitive(lhs);
     rhs = AvmCore::primitive(rhs);
 
-    if (!(atomIsString(lhs) || atomIsString(rhs)))
+    if (!(AvmCore::isString(lhs) || AvmCore::isString(rhs)))
     {
         return core->doubleToAtom(AvmCore::number(lhs) + AvmCore::number(rhs));
     }
@@ -607,11 +625,11 @@ Atom op_add_a_ai(AvmCore* core, Atom lhs, int32_t rhs)
         return core->doubleToAtom(AvmCore::atomToDouble(lhs) + double(rhs));
     }
 
-    if (atomIsString(lhs) || AvmCore::isDate(lhs)) goto concat_strings;
+    if (AvmCore::isString(lhs) || AvmCore::isDate(lhs)) goto concat_strings;
 
     lhs = AvmCore::primitive(lhs);
 
-    if (!atomIsString(lhs))
+    if (!AvmCore::isString(lhs))
     {
         return core->doubleToAtom(AvmCore::number(lhs) + double(rhs));
     }
@@ -662,11 +680,11 @@ Atom op_add_a_ia(AvmCore* core, int32_t lhs, Atom rhs)
         return core->doubleToAtom(double(lhs) + AvmCore::atomToDouble(rhs));
     }
 
-    if (atomIsString(rhs) || AvmCore::isDate(rhs)) goto concat_strings;
+    if (AvmCore::isString(rhs) || AvmCore::isDate(rhs)) goto concat_strings;
 
     rhs = AvmCore::primitive(rhs);
 
-    if (!atomIsString(rhs))
+    if (!AvmCore::isString(rhs))
     {
         return core->doubleToAtom(double(lhs) + AvmCore::number(rhs));
     }
@@ -689,11 +707,11 @@ Atom op_add_a_ad(AvmCore* core, Atom lhs, double rhs)
         return core->doubleToAtom(double(atomGetIntptr(lhs)) + rhs);
     }
 
-    if (atomIsString(lhs) || AvmCore::isDate(lhs)) goto concat_strings;
+    if (AvmCore::isString(lhs) || AvmCore::isDate(lhs)) goto concat_strings;
 
     lhs = AvmCore::primitive(lhs);
 
-    if (!atomIsString(lhs))
+    if (!AvmCore::isString(lhs))
     {
         return core->doubleToAtom(AvmCore::number(lhs) + rhs);
     }
@@ -716,11 +734,11 @@ Atom op_add_a_da(AvmCore* core, double lhs, Atom rhs)
         return core->doubleToAtom(lhs + double(atomGetIntptr(rhs)));
     }
 
-    if (atomIsString(rhs) || AvmCore::isDate(rhs)) goto concat_strings;
+    if (AvmCore::isString(rhs) || AvmCore::isDate(rhs)) goto concat_strings;
 
     rhs = AvmCore::primitive(rhs);
 
-    if (!atomIsString(rhs))
+    if (!AvmCore::isString(rhs))
     {
         return core->doubleToAtom(lhs + AvmCore::number(rhs));
     }

@@ -48,4653 +48,4667 @@ const uint32_t builtin_abc_length = 48036;
 
 #ifndef VMCFG_INDIRECT_NATIVE_THUNKS
 
-double Math_private__min_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_private__min_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_double
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_min(
         AvmThunkUnbox_double(argv[argoff1])
         , AvmThunkUnbox_double(argv[argoff2])
     );
     return ret;
 }
-double Math_private__max_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_private__max_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_double
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_max(
         AvmThunkUnbox_double(argv[argoff1])
         , AvmThunkUnbox_double(argv[argoff2])
     );
     return ret;
 }
-double Math_abs_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_abs_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->abs(
         AvmThunkUnbox_double(argv[argoff1])
     );
     return ret;
 }
-double Math_acos_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_acos_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->acos(
         AvmThunkUnbox_double(argv[argoff1])
     );
     return ret;
 }
-double Math_asin_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_asin_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->asin(
         AvmThunkUnbox_double(argv[argoff1])
     );
     return ret;
 }
-double Math_atan_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_atan_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->atan(
         AvmThunkUnbox_double(argv[argoff1])
     );
     return ret;
 }
-double Math_ceil_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_ceil_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->ceil(
         AvmThunkUnbox_double(argv[argoff1])
     );
     return ret;
 }
-double Math_cos_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_cos_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->cos(
         AvmThunkUnbox_double(argv[argoff1])
     );
     return ret;
 }
-double Math_exp_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_exp_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->exp(
         AvmThunkUnbox_double(argv[argoff1])
     );
     return ret;
 }
-double Math_floor_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_floor_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->floor(
         AvmThunkUnbox_double(argv[argoff1])
     );
     return ret;
 }
-double Math_log_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_log_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->log(
         AvmThunkUnbox_double(argv[argoff1])
     );
     return ret;
 }
-double Math_round_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_round_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->round(
         AvmThunkUnbox_double(argv[argoff1])
     );
     return ret;
 }
-double Math_sin_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_sin_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->sin(
         AvmThunkUnbox_double(argv[argoff1])
     );
     return ret;
 }
-double Math_sqrt_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_sqrt_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->sqrt(
         AvmThunkUnbox_double(argv[argoff1])
     );
     return ret;
 }
-double Math_tan_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_tan_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->tan(
         AvmThunkUnbox_double(argv[argoff1])
     );
     return ret;
 }
-double Math_atan2_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_atan2_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_double
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->atan2(
         AvmThunkUnbox_double(argv[argoff1])
         , AvmThunkUnbox_double(argv[argoff2])
     );
     return ret;
 }
-double Math_pow_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_pow_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_double
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->pow(
         AvmThunkUnbox_double(argv[argoff1])
         , AvmThunkUnbox_double(argv[argoff2])
     );
     return ret;
 }
-double Math_max_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_max_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_double
     };
     const uint32_t argoffV = argoff2 + AvmThunkArgSize_double;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->max(
-        (argc < 1 ? kAvmThunkNegInfinity : AvmThunkUnbox_double(argv[argoff1]))
-        , (argc < 2 ? kAvmThunkNegInfinity : AvmThunkUnbox_double(argv[argoff2]))
+        (argc < 1 ? MathUtils::kNegInfinity : AvmThunkUnbox_double(argv[argoff1]))
+        , (argc < 2 ? MathUtils::kNegInfinity : AvmThunkUnbox_double(argv[argoff2]))
         , (argc <= 2 ? NULL : argv + argoffV)
         , (argc <= 2 ? 0 : argc - 2)
     );
     return ret;
 }
-double Math_min_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_min_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_double
     };
     const uint32_t argoffV = argoff2 + AvmThunkArgSize_double;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->min(
-        (argc < 1 ? kAvmThunkInfinity : AvmThunkUnbox_double(argv[argoff1]))
-        , (argc < 2 ? kAvmThunkInfinity : AvmThunkUnbox_double(argv[argoff2]))
+        (argc < 1 ? MathUtils::kInfinity : AvmThunkUnbox_double(argv[argoff1]))
+        , (argc < 2 ? MathUtils::kInfinity : AvmThunkUnbox_double(argv[argoff2]))
         , (argc <= 2 ? NULL : argv + argoffV)
         , (argc <= 2 ? 0 : argc - 2)
     );
     return ret;
 }
-double Math_random_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Math_random_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->random();
     return ret;
 }
-AvmBox Error_getErrorMessage_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Error_getErrorMessage_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ErrorClass* const obj = (ErrorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->getErrorMessage(
+    ErrorClass* const obj = (ErrorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->getErrorMessage(
         AvmThunkUnbox_int32_t(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Error_getStackTrace_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Error_getStackTrace_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ErrorObject* const obj = (ErrorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->getStackTrace();
-    return (AvmBox) ret;
+    ErrorObject* const obj = (ErrorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->getStackTrace();
+    return (Atom) ret;
 }
-double Date_parse_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_parse_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    DateClass* const obj = (DateClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateClass* const obj = (DateClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->parse(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
     return ret;
 }
-double Date_UTC_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_UTC_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmBox
-        , argoff4 = argoff3 + AvmThunkArgSize_AvmBox
-        , argoff5 = argoff4 + AvmThunkArgSize_AvmBox
-        , argoff6 = argoff5 + AvmThunkArgSize_AvmBox
-        , argoff7 = argoff6 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_Atom
+        , argoff4 = argoff3 + AvmThunkArgSize_Atom
+        , argoff5 = argoff4 + AvmThunkArgSize_Atom
+        , argoff6 = argoff5 + AvmThunkArgSize_Atom
+        , argoff7 = argoff6 + AvmThunkArgSize_Atom
     };
-    const uint32_t argoffV = argoff7 + AvmThunkArgSize_AvmBox;
+    const uint32_t argoffV = argoff7 + AvmThunkArgSize_Atom;
     (void)env;
-    DateClass* const obj = (DateClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateClass* const obj = (DateClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->UTC(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
-        , (argc < 3 ? AvmThunkCoerce_int32_t_AvmBox(1) : AvmThunkUnbox_AvmBox(argv[argoff3]))
-        , (argc < 4 ? AvmThunkCoerce_int32_t_AvmBox(0) : AvmThunkUnbox_AvmBox(argv[argoff4]))
-        , (argc < 5 ? AvmThunkCoerce_int32_t_AvmBox(0) : AvmThunkUnbox_AvmBox(argv[argoff5]))
-        , (argc < 6 ? AvmThunkCoerce_int32_t_AvmBox(0) : AvmThunkUnbox_AvmBox(argv[argoff6]))
-        , (argc < 7 ? AvmThunkCoerce_int32_t_AvmBox(0) : AvmThunkUnbox_AvmBox(argv[argoff7]))
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
+        , (argc < 3 ? AvmThunkCoerce_int32_t_Atom(1) : AvmThunkUnbox_Atom(argv[argoff3]))
+        , (argc < 4 ? AvmThunkCoerce_int32_t_Atom(0) : AvmThunkUnbox_Atom(argv[argoff4]))
+        , (argc < 5 ? AvmThunkCoerce_int32_t_Atom(0) : AvmThunkUnbox_Atom(argv[argoff5]))
+        , (argc < 6 ? AvmThunkCoerce_int32_t_Atom(0) : AvmThunkUnbox_Atom(argv[argoff6]))
+        , (argc < 7 ? AvmThunkCoerce_int32_t_Atom(0) : AvmThunkUnbox_Atom(argv[argoff7]))
         , (argc <= 7 ? NULL : argv + argoffV)
         , (argc <= 7 ? 0 : argc - 7)
     );
     return ret;
 }
-double Date_AS3_valueOf_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_valueOf_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_valueOf();
     return ret;
 }
-AvmBox Date_private__toString_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Date_private__toString_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->_toString(
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->_toString(
         AvmThunkUnbox_int32_t(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-double Date_private__setTime_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setTime_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setTime(
         AvmThunkUnbox_double(argv[argoff1])
     );
     return ret;
 }
-double Date_private__get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_get(
         AvmThunkUnbox_int32_t(argv[argoff1])
     );
     return ret;
 }
-double Date_AS3_getUTCFullYear_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getUTCFullYear_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getUTCFullYear();
     return ret;
 }
-double Date_AS3_getUTCMonth_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getUTCMonth_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getUTCMonth();
     return ret;
 }
-double Date_AS3_getUTCDate_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getUTCDate_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getUTCDate();
     return ret;
 }
-double Date_AS3_getUTCDay_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getUTCDay_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getUTCDay();
     return ret;
 }
-double Date_AS3_getUTCHours_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getUTCHours_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getUTCHours();
     return ret;
 }
-double Date_AS3_getUTCMinutes_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getUTCMinutes_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getUTCMinutes();
     return ret;
 }
-double Date_AS3_getUTCSeconds_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getUTCSeconds_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getUTCSeconds();
     return ret;
 }
-double Date_AS3_getUTCMilliseconds_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getUTCMilliseconds_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getUTCMilliseconds();
     return ret;
 }
-double Date_AS3_getFullYear_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getFullYear_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getFullYear();
     return ret;
 }
-double Date_AS3_getMonth_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getMonth_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getMonth();
     return ret;
 }
-double Date_AS3_getDate_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getDate_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getDate();
     return ret;
 }
-double Date_AS3_getDay_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getDay_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getDay();
     return ret;
 }
-double Date_AS3_getHours_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getHours_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getHours();
     return ret;
 }
-double Date_AS3_getMinutes_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getMinutes_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getMinutes();
     return ret;
 }
-double Date_AS3_getSeconds_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getSeconds_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getSeconds();
     return ret;
 }
-double Date_AS3_getMilliseconds_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getMilliseconds_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getMilliseconds();
     return ret;
 }
-double Date_AS3_getTimezoneOffset_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getTimezoneOffset_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getTimezoneOffset();
     return ret;
 }
-double Date_AS3_getTime_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_AS3_getTime_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_getTime();
     return ret;
 }
-double Date_private__setFullYear_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setFullYear_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setFullYear(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
     return ret;
 }
-double Date_private__setMonth_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setMonth_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setMonth(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
     return ret;
 }
-double Date_private__setDate_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setDate_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setDate(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
     return ret;
 }
-double Date_private__setHours_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setHours_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setHours(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
     return ret;
 }
-double Date_private__setMinutes_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setMinutes_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setMinutes(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
     return ret;
 }
-double Date_private__setSeconds_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setSeconds_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setSeconds(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
     return ret;
 }
-double Date_private__setMilliseconds_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setMilliseconds_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setMilliseconds(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
     return ret;
 }
-double Date_private__setUTCFullYear_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setUTCFullYear_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setUTCFullYear(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
     return ret;
 }
-double Date_private__setUTCMonth_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setUTCMonth_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setUTCMonth(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
     return ret;
 }
-double Date_private__setUTCDate_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setUTCDate_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setUTCDate(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
     return ret;
 }
-double Date_private__setUTCHours_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setUTCHours_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setUTCHours(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
     return ret;
 }
-double Date_private__setUTCMinutes_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setUTCMinutes_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setUTCMinutes(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
     return ret;
 }
-double Date_private__setUTCSeconds_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setUTCSeconds_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setUTCSeconds(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
     return ret;
 }
-double Date_private__setUTCMilliseconds_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Date_private__setUTCMilliseconds_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_setUTCMilliseconds(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
     return ret;
 }
-AvmBox RegExp_source_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom RegExp_source_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->get_source();
-    return (AvmBox) ret;
+    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->get_source();
+    return (Atom) ret;
 }
-AvmBox RegExp_global_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom RegExp_global_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->get_global();
-    return (AvmBox) ret;
+    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->get_global();
+    return (Atom) ret;
 }
-AvmBox RegExp_ignoreCase_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom RegExp_ignoreCase_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->get_ignoreCase();
-    return (AvmBox) ret;
+    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->get_ignoreCase();
+    return (Atom) ret;
 }
-AvmBox RegExp_multiline_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom RegExp_multiline_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->get_multiline();
-    return (AvmBox) ret;
+    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->get_multiline();
+    return (Atom) ret;
 }
-AvmBox RegExp_lastIndex_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom RegExp_lastIndex_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->get_lastIndex();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox RegExp_lastIndex_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom RegExp_lastIndex_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_lastIndex(
         AvmThunkUnbox_int32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox RegExp_dotall_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom RegExp_dotall_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->get_dotall();
-    return (AvmBox) ret;
+    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->get_dotall();
+    return (Atom) ret;
 }
-AvmBox RegExp_extended_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom RegExp_extended_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->get_extended();
-    return (AvmBox) ret;
+    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->get_extended();
+    return (Atom) ret;
 }
-AvmBox RegExp_AS3_exec_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom RegExp_AS3_exec_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_exec(
-        (argc < 1 ? AvmThunkConstant_AvmString(0)/* "" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_exec(
+        (argc < 1 ? AvmThunkGetConstantString(0)/* "" */ : AvmThunkUnbox_String(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_ignoreComments_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_ignoreComments_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->get_ignoreComments();
-    return (AvmBox) ret;
+    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->get_ignoreComments();
+    return (Atom) ret;
 }
-AvmBox XML_ignoreComments_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_ignoreComments_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_ignoreComments(
-        AvmThunkUnbox_AvmBool32(argv[argoff1])
+        AvmThunkUnbox_bool32(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox XML_ignoreProcessingInstructions_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_ignoreProcessingInstructions_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->get_ignoreProcessingInstructions();
-    return (AvmBox) ret;
+    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->get_ignoreProcessingInstructions();
+    return (Atom) ret;
 }
-AvmBox XML_ignoreProcessingInstructions_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_ignoreProcessingInstructions_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_ignoreProcessingInstructions(
-        AvmThunkUnbox_AvmBool32(argv[argoff1])
+        AvmThunkUnbox_bool32(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox XML_ignoreWhitespace_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_ignoreWhitespace_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->get_ignoreWhitespace();
-    return (AvmBox) ret;
+    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->get_ignoreWhitespace();
+    return (Atom) ret;
 }
-AvmBox XML_ignoreWhitespace_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_ignoreWhitespace_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_ignoreWhitespace(
-        AvmThunkUnbox_AvmBool32(argv[argoff1])
+        AvmThunkUnbox_bool32(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox XML_prettyPrinting_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_prettyPrinting_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->get_prettyPrinting();
-    return (AvmBox) ret;
+    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->get_prettyPrinting();
+    return (Atom) ret;
 }
-AvmBox XML_prettyPrinting_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_prettyPrinting_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_prettyPrinting(
-        AvmThunkUnbox_AvmBool32(argv[argoff1])
+        AvmThunkUnbox_bool32(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox XML_prettyIndent_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_prettyIndent_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->get_prettyIndent();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_prettyIndent_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_prettyIndent_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLClass* const obj = (XMLClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_prettyIndent(
         AvmThunkUnbox_int32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox XML_AS3_toString_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_toString_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->AS3_toString();
-    return (AvmBox) ret;
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->AS3_toString();
+    return (Atom) ret;
 }
-AvmBox XML_AS3_hasOwnProperty_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_hasOwnProperty_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmAtomReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->XML_AS3_hasOwnProperty(
-        (argc < 1 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff1]))
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmAtomReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->XML_AS3_hasOwnProperty(
+        (argc < 1 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_propertyIsEnumerable_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_propertyIsEnumerable_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmAtomReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->XML_AS3_propertyIsEnumerable(
-        (argc < 1 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff1]))
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmAtomReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->XML_AS3_propertyIsEnumerable(
+        (argc < 1 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_addNamespace_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_addNamespace_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLObject* const ret = obj->AS3_addNamespace(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_appendChild_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_appendChild_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLObject* const ret = obj->AS3_appendChild(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_attribute_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_attribute_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_attribute(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_attributes_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_attributes_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_attributes();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_child_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_child_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_child(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_childIndex_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_childIndex_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->AS3_childIndex();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_children_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_children_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_children();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_comments_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_comments_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_comments();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_contains_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_contains_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->AS3_contains(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->AS3_contains(
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_copy_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_copy_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLObject* const ret = obj->AS3_copy();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_descendants_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_descendants_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_descendants(
-        (argc < 1 ? AvmThunkCoerce_AvmString_AvmBox(AvmThunkConstant_AvmString(516)/* "*" */) : AvmThunkUnbox_AvmBox(argv[argoff1]))
+        (argc < 1 ? AvmThunkCoerce_String_Atom(AvmThunkGetConstantString(516)/* "*" */) : AvmThunkUnbox_Atom(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_elements_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_elements_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_elements(
-        (argc < 1 ? AvmThunkCoerce_AvmString_AvmBox(AvmThunkConstant_AvmString(516)/* "*" */) : AvmThunkUnbox_AvmBox(argv[argoff1]))
+        (argc < 1 ? AvmThunkCoerce_String_Atom(AvmThunkGetConstantString(516)/* "*" */) : AvmThunkUnbox_Atom(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_hasComplexContent_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_hasComplexContent_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->AS3_hasComplexContent();
-    return (AvmBox) ret;
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->AS3_hasComplexContent();
+    return (Atom) ret;
 }
-AvmBox XML_AS3_hasSimpleContent_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_hasSimpleContent_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->AS3_hasSimpleContent();
-    return (AvmBox) ret;
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->AS3_hasSimpleContent();
+    return (Atom) ret;
 }
-AvmBox XML_AS3_inScopeNamespaces_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_inScopeNamespaces_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     ArrayObject* const ret = obj->AS3_inScopeNamespaces();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_insertChildAfter_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_insertChildAfter_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_insertChildAfter(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_insertChildAfter(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_insertChildBefore_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_insertChildBefore_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_insertChildBefore(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_insertChildBefore(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_localName_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_localName_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_localName();
-    return (AvmBox) ret;
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_localName();
+    return (Atom) ret;
 }
-AvmBox XML_AS3_name_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_name_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_name();
-    return (AvmBox) ret;
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_name();
+    return (Atom) ret;
 }
-AvmBox XML_private__namespace_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_private__namespace_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_namespace(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_namespace(
+        AvmThunkUnbox_Atom(argv[argoff1])
         , AvmThunkUnbox_int32_t(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_namespaceDeclarations_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_namespaceDeclarations_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     ArrayObject* const ret = obj->AS3_namespaceDeclarations();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_nodeKind_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_nodeKind_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->AS3_nodeKind();
-    return (AvmBox) ret;
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->AS3_nodeKind();
+    return (Atom) ret;
 }
-AvmBox XML_AS3_normalize_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_normalize_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLObject* const ret = obj->AS3_normalize();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_parent_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_parent_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_parent();
-    return (AvmBox) ret;
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_parent();
+    return (Atom) ret;
 }
-AvmBox XML_AS3_processingInstructions_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_processingInstructions_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_processingInstructions(
-        (argc < 1 ? AvmThunkCoerce_AvmString_AvmBox(AvmThunkConstant_AvmString(516)/* "*" */) : AvmThunkUnbox_AvmBox(argv[argoff1]))
+        (argc < 1 ? AvmThunkCoerce_String_Atom(AvmThunkGetConstantString(516)/* "*" */) : AvmThunkUnbox_Atom(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_prependChild_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_prependChild_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLObject* const ret = obj->AS3_prependChild(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_removeNamespace_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_removeNamespace_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLObject* const ret = obj->AS3_removeNamespace(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_replace_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_replace_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLObject* const ret = obj->AS3_replace(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_setChildren_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_setChildren_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLObject* const ret = obj->AS3_setChildren(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_setLocalName_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_setLocalName_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->AS3_setLocalName(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox XML_AS3_setName_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_setName_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->AS3_setName(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox XML_AS3_setNamespace_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_setNamespace_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->AS3_setNamespace(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox XML_AS3_text_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_text_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_text();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_toXMLString_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_toXMLString_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->AS3_toXMLString();
-    return (AvmBox) ret;
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->AS3_toXMLString();
+    return (Atom) ret;
 }
-AvmBox XML_AS3_notification_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_notification_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     FunctionObject* const ret = obj->AS3_notification();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XML_AS3_setNotification_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XML_AS3_setNotification_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_setNotification(
-        (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff1])
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_setNotification(
+        (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_toString_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_toString_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->AS3_toString();
-    return (AvmBox) ret;
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->AS3_toString();
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_hasOwnProperty_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_hasOwnProperty_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmAtomReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->XMLList_AS3_hasOwnProperty(
-        (argc < 1 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff1]))
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmAtomReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->XMLList_AS3_hasOwnProperty(
+        (argc < 1 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_propertyIsEnumerable_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_propertyIsEnumerable_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmAtomReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->XMLList_AS3_propertyIsEnumerable(
-        (argc < 1 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff1]))
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmAtomReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->XMLList_AS3_propertyIsEnumerable(
+        (argc < 1 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_attribute_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_attribute_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_attribute(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_attributes_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_attributes_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_attributes();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_child_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_child_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_child(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_children_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_children_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_children();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_comments_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_comments_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_comments();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_contains_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_contains_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->AS3_contains(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->AS3_contains(
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_copy_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_copy_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_copy();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_descendants_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_descendants_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_descendants(
-        (argc < 1 ? AvmThunkCoerce_AvmString_AvmBox(AvmThunkConstant_AvmString(516)/* "*" */) : AvmThunkUnbox_AvmBox(argv[argoff1]))
+        (argc < 1 ? AvmThunkCoerce_String_Atom(AvmThunkGetConstantString(516)/* "*" */) : AvmThunkUnbox_Atom(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_elements_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_elements_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_elements(
-        (argc < 1 ? AvmThunkCoerce_AvmString_AvmBox(AvmThunkConstant_AvmString(516)/* "*" */) : AvmThunkUnbox_AvmBox(argv[argoff1]))
+        (argc < 1 ? AvmThunkCoerce_String_Atom(AvmThunkGetConstantString(516)/* "*" */) : AvmThunkUnbox_Atom(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_hasComplexContent_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_hasComplexContent_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->AS3_hasComplexContent();
-    return (AvmBox) ret;
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->AS3_hasComplexContent();
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_hasSimpleContent_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_hasSimpleContent_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->AS3_hasSimpleContent();
-    return (AvmBox) ret;
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->AS3_hasSimpleContent();
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_length_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_length_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->AS3_length();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_name_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_name_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_name();
-    return (AvmBox) ret;
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_name();
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_normalize_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_normalize_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_normalize();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_parent_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_parent_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_parent();
-    return (AvmBox) ret;
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_parent();
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_processingInstructions_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_processingInstructions_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_processingInstructions(
-        (argc < 1 ? AvmThunkCoerce_AvmString_AvmBox(AvmThunkConstant_AvmString(516)/* "*" */) : AvmThunkUnbox_AvmBox(argv[argoff1]))
+        (argc < 1 ? AvmThunkCoerce_String_Atom(AvmThunkGetConstantString(516)/* "*" */) : AvmThunkUnbox_Atom(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_text_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_text_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLListObject* const ret = obj->AS3_text();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_toXMLString_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_toXMLString_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->AS3_toXMLString();
-    return (AvmBox) ret;
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->AS3_toXMLString();
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_addNamespace_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_addNamespace_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLObject* const ret = obj->AS3_addNamespace(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_appendChild_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_appendChild_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLObject* const ret = obj->AS3_appendChild(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_childIndex_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_childIndex_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->AS3_childIndex();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_inScopeNamespaces_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_inScopeNamespaces_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     ArrayObject* const ret = obj->AS3_inScopeNamespaces();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_insertChildAfter_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_insertChildAfter_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_insertChildAfter(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_insertChildAfter(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_insertChildBefore_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_insertChildBefore_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_insertChildBefore(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_insertChildBefore(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_nodeKind_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_nodeKind_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->AS3_nodeKind();
-    return (AvmBox) ret;
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->AS3_nodeKind();
+    return (Atom) ret;
 }
-AvmBox XMLList_private__namespace_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_private__namespace_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_namespace(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_namespace(
+        AvmThunkUnbox_Atom(argv[argoff1])
         , AvmThunkUnbox_int32_t(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_localName_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_localName_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_localName();
-    return (AvmBox) ret;
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_localName();
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_namespaceDeclarations_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_namespaceDeclarations_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     ArrayObject* const ret = obj->AS3_namespaceDeclarations();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_prependChild_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_prependChild_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLObject* const ret = obj->AS3_prependChild(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_removeNamespace_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_removeNamespace_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLObject* const ret = obj->AS3_removeNamespace(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_replace_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_replace_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLObject* const ret = obj->AS3_replace(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_setChildren_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_setChildren_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     XMLObject* const ret = obj->AS3_setChildren(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox XMLList_AS3_setLocalName_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_setLocalName_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->AS3_setLocalName(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox XMLList_AS3_setName_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_setName_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->AS3_setName(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox XMLList_AS3_setNamespace_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom XMLList_AS3_setNamespace_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    XMLListObject* const obj = (XMLListObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->AS3_setNamespace(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox QName_localName_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom QName_localName_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    QNameObject* const obj = (QNameObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->get_localName();
-    return (AvmBox) ret;
+    QNameObject* const obj = (QNameObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->get_localName();
+    return (Atom) ret;
 }
-AvmBox QName_uri_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom QName_uri_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    QNameObject* const obj = (QNameObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->get_uri();
-    return (AvmBox) ret;
+    QNameObject* const obj = (QNameObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->get_uri();
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_defaultObjectEncoding_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_defaultObjectEncoding_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayClass* const obj = (ByteArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayClass* const obj = (ByteArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->get_defaultObjectEncoding();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_defaultObjectEncoding_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_defaultObjectEncoding_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayClass* const obj = (ByteArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayClass* const obj = (ByteArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_defaultObjectEncoding(
         AvmThunkUnbox_uint32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_readBytes_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_readBytes_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_ScriptObject
         , argoff3 = argoff2 + AvmThunkArgSize_uint32_t
     };
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->readBytes(
-        (ByteArrayObject*)AvmThunkUnbox_AvmObject(argv[argoff1])
+        (ByteArrayObject*)AvmThunkUnbox_ScriptObject(argv[argoff1])
         , (argc < 2 ? AvmThunkCoerce_int32_t_uint32_t(0) : AvmThunkUnbox_uint32_t(argv[argoff2]))
         , (argc < 3 ? AvmThunkCoerce_int32_t_uint32_t(0) : AvmThunkUnbox_uint32_t(argv[argoff3]))
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_writeBytes_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_writeBytes_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_ScriptObject
         , argoff3 = argoff2 + AvmThunkArgSize_uint32_t
     };
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->writeBytes(
-        (ByteArrayObject*)AvmThunkUnbox_AvmObject(argv[argoff1])
+        (ByteArrayObject*)AvmThunkUnbox_ScriptObject(argv[argoff1])
         , (argc < 2 ? AvmThunkCoerce_int32_t_uint32_t(0) : AvmThunkUnbox_uint32_t(argv[argoff2]))
         , (argc < 3 ? AvmThunkCoerce_int32_t_uint32_t(0) : AvmThunkUnbox_uint32_t(argv[argoff3]))
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_writeBoolean_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_writeBoolean_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->writeBoolean(
-        AvmThunkUnbox_AvmBool32(argv[argoff1])
+        AvmThunkUnbox_bool32(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_writeByte_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_writeByte_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->writeByte(
         AvmThunkUnbox_int32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_writeShort_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_writeShort_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->writeShort(
         AvmThunkUnbox_int32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_writeInt_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_writeInt_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->writeInt(
         AvmThunkUnbox_int32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_writeUnsignedInt_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_writeUnsignedInt_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->writeUnsignedInt(
         AvmThunkUnbox_uint32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_writeFloat_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_writeFloat_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->writeFloat(
         AvmThunkUnbox_double(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_writeDouble_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_writeDouble_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->writeDouble(
         AvmThunkUnbox_double(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_writeMultiByte_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_writeMultiByte_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_String
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->writeMultiByte(
-        AvmThunkUnbox_AvmString(argv[argoff1])
-        , AvmThunkUnbox_AvmString(argv[argoff2])
+        AvmThunkUnbox_String(argv[argoff1])
+        , AvmThunkUnbox_String(argv[argoff2])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_writeUTF_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_writeUTF_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->writeUTF(
-        AvmThunkUnbox_AvmString(argv[argoff1])
+        AvmThunkUnbox_String(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_writeUTFBytes_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_writeUTFBytes_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->writeUTFBytes(
-        AvmThunkUnbox_AvmString(argv[argoff1])
+        AvmThunkUnbox_String(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_readBoolean_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_readBoolean_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->readBoolean();
-    return (AvmBox) ret;
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->readBoolean();
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_readByte_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_readByte_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->readByte();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_readUnsignedByte_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_readUnsignedByte_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->readUnsignedByte();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_readShort_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_readShort_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->readShort();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_readUnsignedShort_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_readUnsignedShort_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->readUnsignedShort();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_readInt_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_readInt_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->readInt();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_readUnsignedInt_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_readUnsignedInt_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->readUnsignedInt();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-double flash_utils_ByteArray_readFloat_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double flash_utils_ByteArray_readFloat_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->readFloat();
     return ret;
 }
-double flash_utils_ByteArray_readDouble_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double flash_utils_ByteArray_readDouble_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->readDouble();
     return ret;
 }
-AvmBox flash_utils_ByteArray_readMultiByte_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_readMultiByte_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_uint32_t
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->readMultiByte(
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->readMultiByte(
         AvmThunkUnbox_uint32_t(argv[argoff1])
-        , AvmThunkUnbox_AvmString(argv[argoff2])
+        , AvmThunkUnbox_String(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_readUTF_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_readUTF_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->readUTF();
-    return (AvmBox) ret;
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->readUTF();
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_readUTFBytes_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_readUTFBytes_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->readUTFBytes(
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->readUTFBytes(
         AvmThunkUnbox_uint32_t(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_length_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_length_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->get_length();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_length_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_length_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_length(
         AvmThunkUnbox_uint32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_writeObject_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_writeObject_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->writeObject(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_readObject_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_readObject_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->readObject();
-    return (AvmBox) ret;
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->readObject();
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_private__compress_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_private__compress_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_compress(
-        AvmThunkUnbox_AvmString(argv[argoff1])
+        AvmThunkUnbox_String(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_private__uncompress_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_private__uncompress_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_uncompress(
-        AvmThunkUnbox_AvmString(argv[argoff1])
+        AvmThunkUnbox_String(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_private__toString_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_private__toString_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->_toString();
-    return (AvmBox) ret;
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->_toString();
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_bytesAvailable_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_bytesAvailable_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->get_bytesAvailable();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_position_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_position_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->get_position();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_position_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_position_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_position(
         AvmThunkUnbox_uint32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_objectEncoding_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_objectEncoding_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->get_objectEncoding();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_objectEncoding_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_objectEncoding_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_objectEncoding(
         AvmThunkUnbox_uint32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_endian_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_endian_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->get_endian();
-    return (AvmBox) ret;
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->get_endian();
+    return (Atom) ret;
 }
-AvmBox flash_utils_ByteArray_endian_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_endian_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_endian(
-        AvmThunkUnbox_AvmString(argv[argoff1])
+        AvmThunkUnbox_String(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox flash_utils_ByteArray_clear_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom flash_utils_ByteArray_clear_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->clear();
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox Object_private__hasOwnProperty_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Object_private__hasOwnProperty_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->_hasOwnProperty(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmString(argv[argoff2])
+    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->_hasOwnProperty(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_String(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Object_private__propertyIsEnumerable_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Object_private__propertyIsEnumerable_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->_propertyIsEnumerable(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmString(argv[argoff2])
+    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->_propertyIsEnumerable(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_String(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Object_protected__setPropertyIsEnumerable_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Object_protected__setPropertyIsEnumerable_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_String
     };
     (void)argc;
     (void)env;
-    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_setPropertyIsEnumerable(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmString(argv[argoff2])
-        , AvmThunkUnbox_AvmBool32(argv[argoff3])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_String(argv[argoff2])
+        , AvmThunkUnbox_bool32(argv[argoff3])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox Object_private__isPrototypeOf_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Object_private__isPrototypeOf_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->_isPrototypeOf(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->_isPrototypeOf(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Object_private__toString_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Object_private__toString_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->_toString(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->_toString(
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Class_prototype_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Class_prototype_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ClassClosure* const obj = (ClassClosure*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->get_prototype();
-    return (AvmBox) ret;
+    ClassClosure* const obj = (ClassClosure*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->get_prototype();
+    return (Atom) ret;
 }
-AvmBox Function_prototype_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Function_prototype_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    FunctionObject* const obj = (FunctionObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->get_prototype();
-    return (AvmBox) ret;
+    FunctionObject* const obj = (FunctionObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->get_prototype();
+    return (Atom) ret;
 }
-AvmBox Function_prototype_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Function_prototype_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    FunctionObject* const obj = (FunctionObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    FunctionObject* const obj = (FunctionObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_prototype(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox Function_length_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Function_length_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    FunctionObject* const obj = (FunctionObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    FunctionObject* const obj = (FunctionObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->get_length();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Function_AS3_call_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Function_AS3_call_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
-    const uint32_t argoffV = argoff1 + AvmThunkArgSize_AvmBox;
+    const uint32_t argoffV = argoff1 + AvmThunkArgSize_Atom;
     (void)env;
-    FunctionObject* const obj = (FunctionObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_call(
-        (argc < 1 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff1]))
+    FunctionObject* const obj = (FunctionObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_call(
+        (argc < 1 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff1]))
         , (argc <= 1 ? NULL : argv + argoffV)
         , (argc <= 1 ? 0 : argc - 1)
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Function_AS3_apply_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Function_AS3_apply_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)env;
-    FunctionObject* const obj = (FunctionObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_apply(
-        (argc < 1 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff1]))
-        , (argc < 2 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff2]))
+    FunctionObject* const obj = (FunctionObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_apply(
+        (argc < 1 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff1]))
+        , (argc < 2 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff2]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Namespace_prefix_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Namespace_prefix_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    Namespace* const obj = (Namespace*)AvmThunkUnbox_AvmReceiver(AvmNamespace, argv[argoff0]);
-    AvmBox const ret = obj->get_prefix();
-    return (AvmBox) ret;
+    Namespace* const obj = (Namespace*)AvmThunkUnbox_AvmReceiver(Namespace*, argv[argoff0]);
+    Atom const ret = obj->get_prefix();
+    return (Atom) ret;
 }
-AvmBox Namespace_uri_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Namespace_uri_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    Namespace* const obj = (Namespace*)AvmThunkUnbox_AvmReceiver(AvmNamespace, argv[argoff0]);
-    AvmString const ret = obj->get_uri();
-    return (AvmBox) ret;
+    Namespace* const obj = (Namespace*)AvmThunkUnbox_AvmReceiver(Namespace*, argv[argoff0]);
+    String* const ret = obj->get_uri();
+    return (Atom) ret;
 }
-AvmBox Number_private__numberToString_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Number_private__numberToString_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_double
     };
     (void)argc;
     (void)env;
-    NumberClass* const obj = (NumberClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->_numberToString(
+    NumberClass* const obj = (NumberClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->_numberToString(
         AvmThunkUnbox_double(argv[argoff1])
         , AvmThunkUnbox_int32_t(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Number_private__convert_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Number_private__convert_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_double
         , argoff3 = argoff2 + AvmThunkArgSize_int32_t
     };
     (void)argc;
     (void)env;
-    NumberClass* const obj = (NumberClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->_convert(
+    NumberClass* const obj = (NumberClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->_convert(
         AvmThunkUnbox_double(argv[argoff1])
         , AvmThunkUnbox_int32_t(argv[argoff2])
         , AvmThunkUnbox_int32_t(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-double Number_private__minValue_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double Number_private__minValue_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    NumberClass* const obj = (NumberClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    NumberClass* const obj = (NumberClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_minValue();
     return ret;
 }
-AvmBox String_AS3_fromCharCode_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_AS3_fromCharCode_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->AS3_fromCharCode(
+    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->AS3_fromCharCode(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_private__match_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_private__match_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_String
     };
     (void)argc;
     (void)env;
-    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     ArrayObject* const ret = obj->_match(
-        AvmThunkUnbox_AvmString(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+        AvmThunkUnbox_String(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_private__replace_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_private__replace_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_String
+        , argoff3 = argoff2 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->_replace(
-        AvmThunkUnbox_AvmString(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->_replace(
+        AvmThunkUnbox_String(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_private__search_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_private__search_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_String
     };
     (void)argc;
     (void)env;
-    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->_search(
-        AvmThunkUnbox_AvmString(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+        AvmThunkUnbox_String(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_private__split_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_private__split_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_String
+        , argoff3 = argoff2 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     ArrayObject* const ret = obj->_split(
-        AvmThunkUnbox_AvmString(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+        AvmThunkUnbox_String(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
         , AvmThunkUnbox_uint32_t(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_length_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_length_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
     int32_t const ret = obj->get_length();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_private__indexOf_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_private__indexOf_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
+        , argoff2 = argoff1 + AvmThunkArgSize_String
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
     int32_t const ret = obj->_indexOf(
-        AvmThunkUnbox_AvmString(argv[argoff1])
+        AvmThunkUnbox_String(argv[argoff1])
         , (argc < 2 ? 0 : AvmThunkUnbox_int32_t(argv[argoff2]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_AS3_indexOf_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_AS3_indexOf_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
+        , argoff2 = argoff1 + AvmThunkArgSize_String
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
     int32_t const ret = obj->AS3_indexOf(
-        (argc < 1 ? AvmThunkConstant_AvmString(58)/* "undefined" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+        (argc < 1 ? AvmThunkGetConstantString(58)/* "undefined" */ : AvmThunkUnbox_String(argv[argoff1]))
         , (argc < 2 ? AvmThunkCoerce_int32_t_double(0) : AvmThunkUnbox_double(argv[argoff2]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_private__lastIndexOf_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_private__lastIndexOf_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
+        , argoff2 = argoff1 + AvmThunkArgSize_String
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
     int32_t const ret = obj->_lastIndexOf(
-        AvmThunkUnbox_AvmString(argv[argoff1])
+        AvmThunkUnbox_String(argv[argoff1])
         , (argc < 2 ? 2147483647 : AvmThunkUnbox_int32_t(argv[argoff2]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_AS3_lastIndexOf_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_AS3_lastIndexOf_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
+        , argoff2 = argoff1 + AvmThunkArgSize_String
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
     int32_t const ret = obj->AS3_lastIndexOf(
-        (argc < 1 ? AvmThunkConstant_AvmString(58)/* "undefined" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+        (argc < 1 ? AvmThunkGetConstantString(58)/* "undefined" */ : AvmThunkUnbox_String(argv[argoff1]))
         , (argc < 2 ? AvmThunkCoerce_int32_t_double(2147483647) : AvmThunkUnbox_double(argv[argoff2]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_AS3_charAt_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_AS3_charAt_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
-    AvmString const ret = obj->AS3_charAt(
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
+    String* const ret = obj->AS3_charAt(
         (argc < 1 ? AvmThunkCoerce_int32_t_double(0) : AvmThunkUnbox_double(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-double String_AS3_charCodeAt_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double String_AS3_charCodeAt_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
     double const ret = obj->AS3_charCodeAt(
         (argc < 1 ? AvmThunkCoerce_int32_t_double(0) : AvmThunkUnbox_double(argv[argoff1]))
     );
     return ret;
 }
-AvmBox String_AS3_localeCompare_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_AS3_localeCompare_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
     int32_t const ret = obj->AS3_localeCompare(
-        (argc < 1 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff1]))
+        (argc < 1 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_private__slice_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_private__slice_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
         , argoff2 = argoff1 + AvmThunkArgSize_int32_t
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
-    AvmString const ret = obj->_slice(
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
+    String* const ret = obj->_slice(
         (argc < 1 ? 0 : AvmThunkUnbox_int32_t(argv[argoff1]))
         , (argc < 2 ? 2147483647 : AvmThunkUnbox_int32_t(argv[argoff2]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_AS3_slice_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_AS3_slice_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
         , argoff2 = argoff1 + AvmThunkArgSize_double
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
-    AvmString const ret = obj->AS3_slice(
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
+    String* const ret = obj->AS3_slice(
         (argc < 1 ? AvmThunkCoerce_int32_t_double(0) : AvmThunkUnbox_double(argv[argoff1]))
         , (argc < 2 ? AvmThunkCoerce_int32_t_double(2147483647) : AvmThunkUnbox_double(argv[argoff2]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_private__substring_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_private__substring_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
         , argoff2 = argoff1 + AvmThunkArgSize_int32_t
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
-    AvmString const ret = obj->_substring(
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
+    String* const ret = obj->_substring(
         (argc < 1 ? 0 : AvmThunkUnbox_int32_t(argv[argoff1]))
         , (argc < 2 ? 2147483647 : AvmThunkUnbox_int32_t(argv[argoff2]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_AS3_substring_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_AS3_substring_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
         , argoff2 = argoff1 + AvmThunkArgSize_double
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
-    AvmString const ret = obj->AS3_substring(
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
+    String* const ret = obj->AS3_substring(
         (argc < 1 ? AvmThunkCoerce_int32_t_double(0) : AvmThunkUnbox_double(argv[argoff1]))
         , (argc < 2 ? AvmThunkCoerce_int32_t_double(2147483647) : AvmThunkUnbox_double(argv[argoff2]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_private__substr_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_private__substr_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
         , argoff2 = argoff1 + AvmThunkArgSize_int32_t
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
-    AvmString const ret = obj->_substr(
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
+    String* const ret = obj->_substr(
         (argc < 1 ? 0 : AvmThunkUnbox_int32_t(argv[argoff1]))
         , (argc < 2 ? 2147483647 : AvmThunkUnbox_int32_t(argv[argoff2]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_AS3_substr_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_AS3_substr_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
         , argoff2 = argoff1 + AvmThunkArgSize_double
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
-    AvmString const ret = obj->AS3_substr(
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
+    String* const ret = obj->AS3_substr(
         (argc < 1 ? AvmThunkCoerce_int32_t_double(0) : AvmThunkUnbox_double(argv[argoff1]))
         , (argc < 2 ? AvmThunkCoerce_int32_t_double(2147483647) : AvmThunkUnbox_double(argv[argoff2]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox String_AS3_toLowerCase_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_AS3_toLowerCase_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
-    AvmString const ret = obj->AS3_toLowerCase();
-    return (AvmBox) ret;
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
+    String* const ret = obj->AS3_toLowerCase();
+    return (Atom) ret;
 }
-AvmBox String_AS3_toUpperCase_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom String_AS3_toUpperCase_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
-    AvmString const ret = obj->AS3_toUpperCase();
-    return (AvmBox) ret;
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
+    String* const ret = obj->AS3_toUpperCase();
+    return (Atom) ret;
 }
-AvmBox Array_private__pop_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__pop_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_pop(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_pop(
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_private__reverse_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__reverse_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_reverse(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_reverse(
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_private__concat_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__concat_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     ArrayObject* const ret = obj->_concat(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (ArrayObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (ArrayObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_private__shift_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__shift_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_shift(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_shift(
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_private__slice_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__slice_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
         , argoff3 = argoff2 + AvmThunkArgSize_double
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     ArrayObject* const ret = obj->_slice(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
         , AvmThunkUnbox_double(argv[argoff2])
         , AvmThunkUnbox_double(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_private__unshift_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__unshift_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->_unshift(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (ArrayObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (ArrayObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_private__splice_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__splice_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     ArrayObject* const ret = obj->_splice(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (ArrayObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (ArrayObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_private__sort_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__sort_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_sort(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (ArrayObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_sort(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (ArrayObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_private__sortOn_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__sortOn_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_sortOn(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_sortOn(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_private__indexOf_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__indexOf_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->_indexOf(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
         , AvmThunkUnbox_int32_t(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_private__lastIndexOf_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__lastIndexOf_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_Atom
     };
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->_lastIndexOf(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
         , (argc < 3 ? 0 : AvmThunkUnbox_int32_t(argv[argoff3]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_private__every_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__every_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->_every(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->_every(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_private__filter_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__filter_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     ArrayObject* const ret = obj->_filter(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_private__forEach_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__forEach_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_forEach(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox Array_private__map_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__map_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     ArrayObject* const ret = obj->_map(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_private__some_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_private__some_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->_some(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->_some(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_length_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_length_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ArrayObject* const obj = (ArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayObject* const obj = (ArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->get_length();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_length_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_length_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ArrayObject* const obj = (ArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayObject* const obj = (ArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_length(
         AvmThunkUnbox_uint32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox Array_AS3_pop_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_AS3_pop_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ArrayObject* const obj = (ArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_pop();
-    return (AvmBox) ret;
+    ArrayObject* const obj = (ArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_pop();
+    return (Atom) ret;
 }
-AvmBox Array_AS3_push_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_AS3_push_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    ArrayObject* const obj = (ArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayObject* const obj = (ArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->AS3_push(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox Array_AS3_unshift_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom Array_AS3_unshift_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    ArrayObject* const obj = (ArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayObject* const obj = (ArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->AS3_unshift(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox native_script_function_bugzilla_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom native_script_function_bugzilla_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = Toplevel::bugzilla(obj
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = Toplevel::bugzilla(obj
         , AvmThunkUnbox_int32_t(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox native_script_function_decodeURI_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom native_script_function_decodeURI_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = Toplevel::decodeURI(obj
-        , (argc < 1 ? AvmThunkConstant_AvmString(58)/* "undefined" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = Toplevel::decodeURI(obj
+        , (argc < 1 ? AvmThunkGetConstantString(58)/* "undefined" */ : AvmThunkUnbox_String(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox native_script_function_decodeURIComponent_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom native_script_function_decodeURIComponent_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = Toplevel::decodeURIComponent(obj
-        , (argc < 1 ? AvmThunkConstant_AvmString(58)/* "undefined" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = Toplevel::decodeURIComponent(obj
+        , (argc < 1 ? AvmThunkGetConstantString(58)/* "undefined" */ : AvmThunkUnbox_String(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox native_script_function_encodeURI_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom native_script_function_encodeURI_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = Toplevel::encodeURI(obj
-        , (argc < 1 ? AvmThunkConstant_AvmString(58)/* "undefined" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = Toplevel::encodeURI(obj
+        , (argc < 1 ? AvmThunkGetConstantString(58)/* "undefined" */ : AvmThunkUnbox_String(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox native_script_function_encodeURIComponent_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom native_script_function_encodeURIComponent_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = Toplevel::encodeURIComponent(obj
-        , (argc < 1 ? AvmThunkConstant_AvmString(58)/* "undefined" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = Toplevel::encodeURIComponent(obj
+        , (argc < 1 ? AvmThunkGetConstantString(58)/* "undefined" */ : AvmThunkUnbox_String(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox native_script_function_isNaN_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom native_script_function_isNaN_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = Toplevel::isNaN(obj
-        , (argc < 1 ? AvmThunkCoerce_AvmBox_double(kAvmThunkUndefined) : AvmThunkUnbox_double(argv[argoff1]))
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = Toplevel::isNaN(obj
+        , (argc < 1 ? AvmThunkCoerce_Atom_double(undefinedAtom) : AvmThunkUnbox_double(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox native_script_function_isFinite_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom native_script_function_isFinite_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = Toplevel::isFinite(obj
-        , (argc < 1 ? AvmThunkCoerce_AvmBox_double(kAvmThunkUndefined) : AvmThunkUnbox_double(argv[argoff1]))
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = Toplevel::isFinite(obj
+        , (argc < 1 ? AvmThunkCoerce_Atom_double(undefinedAtom) : AvmThunkUnbox_double(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-double native_script_function_parseInt_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double native_script_function_parseInt_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_String
     };
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = Toplevel::parseInt(obj
-        , (argc < 1 ? AvmThunkConstant_AvmString(60)/* "NaN" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+        , (argc < 1 ? AvmThunkGetConstantString(60)/* "NaN" */ : AvmThunkUnbox_String(argv[argoff1]))
         , (argc < 2 ? 0 : AvmThunkUnbox_int32_t(argv[argoff2]))
     );
     return ret;
 }
-double native_script_function_parseFloat_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double native_script_function_parseFloat_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = Toplevel::parseFloat(obj
-        , (argc < 1 ? AvmThunkConstant_AvmString(60)/* "NaN" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+        , (argc < 1 ? AvmThunkGetConstantString(60)/* "NaN" */ : AvmThunkUnbox_String(argv[argoff1]))
     );
     return ret;
 }
-AvmBox native_script_function_escape_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom native_script_function_escape_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = Toplevel::escape(obj
-        , (argc < 1 ? AvmThunkConstant_AvmString(58)/* "undefined" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = Toplevel::escape(obj
+        , (argc < 1 ? AvmThunkGetConstantString(58)/* "undefined" */ : AvmThunkUnbox_String(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox native_script_function_unescape_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom native_script_function_unescape_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = Toplevel::unescape(obj
-        , (argc < 1 ? AvmThunkConstant_AvmString(58)/* "undefined" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = Toplevel::unescape(obj
+        , (argc < 1 ? AvmThunkGetConstantString(58)/* "undefined" */ : AvmThunkUnbox_String(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox native_script_function_isXMLName_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom native_script_function_isXMLName_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = Toplevel::isXMLName(obj
-        , (argc < 1 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff1]))
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = Toplevel::isXMLName(obj
+        , (argc < 1 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_object_private__every_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_private__every_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ObjectVectorClass* const obj = (ObjectVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->_every(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    ObjectVectorClass* const obj = (ObjectVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->_every(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_object_private__forEach_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_private__forEach_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ObjectVectorClass* const obj = (ObjectVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ObjectVectorClass* const obj = (ObjectVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_forEach(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_object_private__some_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_private__some_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ObjectVectorClass* const obj = (ObjectVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->_some(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    ObjectVectorClass* const obj = (ObjectVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->_some(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_object_private__sort_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_private__sort_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ObjectVectorClass* const obj = (ObjectVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_sort(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (ArrayObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
+    ObjectVectorClass* const obj = (ObjectVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_sort(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (ArrayObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_object_private_newThisType_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_private_newThisType_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     ObjectVectorObject* const ret = obj->newThisType();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_object_length_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_length_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->get_length();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_object_length_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_length_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_length(
         AvmThunkUnbox_uint32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_object_fixed_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_fixed_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_fixed(
-        AvmThunkUnbox_AvmBool32(argv[argoff1])
+        AvmThunkUnbox_bool32(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_object_fixed_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_fixed_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->get_fixed();
-    return (AvmBox) ret;
+    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->get_fixed();
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_object_AS3_push_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_AS3_push_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->AS3_push(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_object_private__reverse_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_private__reverse_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_reverse();
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_object_private__spliceHelper_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_private__spliceHelper_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_uint32_t
         , argoff3 = argoff2 + AvmThunkArgSize_uint32_t
         , argoff4 = argoff3 + AvmThunkArgSize_uint32_t
-        , argoff5 = argoff4 + AvmThunkArgSize_AvmBox
+        , argoff5 = argoff4 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_spliceHelper(
         AvmThunkUnbox_uint32_t(argv[argoff1])
         , AvmThunkUnbox_uint32_t(argv[argoff2])
         , AvmThunkUnbox_uint32_t(argv[argoff3])
-        , AvmThunkUnbox_AvmBox(argv[argoff4])
+        , AvmThunkUnbox_Atom(argv[argoff4])
         , AvmThunkUnbox_uint32_t(argv[argoff5])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_object_AS3_unshift_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_AS3_unshift_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->AS3_unshift(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_object_private__filter_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_private__filter_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_filter(
-        (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_filter(
+        (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_object_private__map_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_private__map_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_map(
-        (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_map(
+        (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_object_AS3_pop_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_AS3_pop_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_pop();
-    return (AvmBox) ret;
+    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_pop();
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_object_AS3_shift_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_object_AS3_shift_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_shift();
-    return (AvmBox) ret;
+    ObjectVectorObject* const obj = (ObjectVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_shift();
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_int_private__every_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_private__every_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    IntVectorClass* const obj = (IntVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->_every(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    IntVectorClass* const obj = (IntVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->_every(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_int_private__forEach_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_private__forEach_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    IntVectorClass* const obj = (IntVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    IntVectorClass* const obj = (IntVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_forEach(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_int_private__some_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_private__some_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    IntVectorClass* const obj = (IntVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->_some(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    IntVectorClass* const obj = (IntVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->_some(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_int_private__sort_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_private__sort_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    IntVectorClass* const obj = (IntVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_sort(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (ArrayObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
+    IntVectorClass* const obj = (IntVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_sort(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (ArrayObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_int_private_newThisType_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_private_newThisType_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     IntVectorObject* const ret = obj->newThisType();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_int_length_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_length_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->get_length();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_int_length_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_length_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_length(
         AvmThunkUnbox_uint32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_int_fixed_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_fixed_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_fixed(
-        AvmThunkUnbox_AvmBool32(argv[argoff1])
+        AvmThunkUnbox_bool32(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_int_fixed_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_fixed_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->get_fixed();
-    return (AvmBox) ret;
+    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->get_fixed();
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_int_AS3_push_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_AS3_push_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->AS3_push(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_int_private__reverse_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_private__reverse_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_reverse();
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_int_private__spliceHelper_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_private__spliceHelper_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_uint32_t
         , argoff3 = argoff2 + AvmThunkArgSize_uint32_t
         , argoff4 = argoff3 + AvmThunkArgSize_uint32_t
-        , argoff5 = argoff4 + AvmThunkArgSize_AvmBox
+        , argoff5 = argoff4 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_spliceHelper(
         AvmThunkUnbox_uint32_t(argv[argoff1])
         , AvmThunkUnbox_uint32_t(argv[argoff2])
         , AvmThunkUnbox_uint32_t(argv[argoff3])
-        , AvmThunkUnbox_AvmBox(argv[argoff4])
+        , AvmThunkUnbox_Atom(argv[argoff4])
         , AvmThunkUnbox_uint32_t(argv[argoff5])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_int_AS3_unshift_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_AS3_unshift_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->AS3_unshift(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_int_private__filter_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_private__filter_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_filter(
-        (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_filter(
+        (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_int_private__map_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_private__map_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_map(
-        (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_map(
+        (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_int_AS3_pop_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_AS3_pop_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->AS3_pop();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_int_AS3_shift_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_int_AS3_shift_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    IntVectorObject* const obj = (IntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->AS3_shift();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_uint_private__every_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_private__every_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    UIntVectorClass* const obj = (UIntVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->_every(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    UIntVectorClass* const obj = (UIntVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->_every(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_uint_private__forEach_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_private__forEach_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    UIntVectorClass* const obj = (UIntVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    UIntVectorClass* const obj = (UIntVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_forEach(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_uint_private__some_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_private__some_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    UIntVectorClass* const obj = (UIntVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->_some(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    UIntVectorClass* const obj = (UIntVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->_some(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_uint_private__sort_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_private__sort_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    UIntVectorClass* const obj = (UIntVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_sort(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (ArrayObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
+    UIntVectorClass* const obj = (UIntVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_sort(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (ArrayObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_uint_private_newThisType_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_private_newThisType_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     UIntVectorObject* const ret = obj->newThisType();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_uint_length_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_length_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->get_length();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_uint_length_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_length_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_length(
         AvmThunkUnbox_uint32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_uint_fixed_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_fixed_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_fixed(
-        AvmThunkUnbox_AvmBool32(argv[argoff1])
+        AvmThunkUnbox_bool32(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_uint_fixed_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_fixed_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->get_fixed();
-    return (AvmBox) ret;
+    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->get_fixed();
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_uint_AS3_push_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_AS3_push_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->AS3_push(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_uint_private__reverse_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_private__reverse_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_reverse();
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_uint_private__spliceHelper_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_private__spliceHelper_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_uint32_t
         , argoff3 = argoff2 + AvmThunkArgSize_uint32_t
         , argoff4 = argoff3 + AvmThunkArgSize_uint32_t
-        , argoff5 = argoff4 + AvmThunkArgSize_AvmBox
+        , argoff5 = argoff4 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_spliceHelper(
         AvmThunkUnbox_uint32_t(argv[argoff1])
         , AvmThunkUnbox_uint32_t(argv[argoff2])
         , AvmThunkUnbox_uint32_t(argv[argoff3])
-        , AvmThunkUnbox_AvmBox(argv[argoff4])
+        , AvmThunkUnbox_Atom(argv[argoff4])
         , AvmThunkUnbox_uint32_t(argv[argoff5])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_uint_AS3_unshift_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_AS3_unshift_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->AS3_unshift(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_uint_private__filter_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_private__filter_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_filter(
-        (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_filter(
+        (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_uint_private__map_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_private__map_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_map(
-        (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_map(
+        (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_uint_AS3_pop_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_AS3_pop_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->AS3_pop();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_uint_AS3_shift_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_uint_AS3_shift_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    UIntVectorObject* const obj = (UIntVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->AS3_shift();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_double_private__every_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_private__every_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    DoubleVectorClass* const obj = (DoubleVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->_every(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    DoubleVectorClass* const obj = (DoubleVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->_every(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_double_private__forEach_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_private__forEach_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    DoubleVectorClass* const obj = (DoubleVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DoubleVectorClass* const obj = (DoubleVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_forEach(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_double_private__some_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_private__some_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    DoubleVectorClass* const obj = (DoubleVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->_some(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    DoubleVectorClass* const obj = (DoubleVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->_some(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_double_private__sort_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_private__sort_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    DoubleVectorClass* const obj = (DoubleVectorClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_sort(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (ArrayObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
+    DoubleVectorClass* const obj = (DoubleVectorClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_sort(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (ArrayObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_double_private_newThisType_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_private_newThisType_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     DoubleVectorObject* const ret = obj->newThisType();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_double_length_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_length_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->get_length();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_double_length_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_length_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_length(
         AvmThunkUnbox_uint32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_double_fixed_set_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_fixed_set_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->set_fixed(
-        AvmThunkUnbox_AvmBool32(argv[argoff1])
+        AvmThunkUnbox_bool32(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_double_fixed_get_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_fixed_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->get_fixed();
-    return (AvmBox) ret;
+    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->get_fixed();
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_double_AS3_push_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_AS3_push_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->AS3_push(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_double_private__reverse_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_private__reverse_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_reverse();
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_double_private__spliceHelper_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_private__spliceHelper_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_uint32_t
         , argoff3 = argoff2 + AvmThunkArgSize_uint32_t
         , argoff4 = argoff3 + AvmThunkArgSize_uint32_t
-        , argoff5 = argoff4 + AvmThunkArgSize_AvmBox
+        , argoff5 = argoff4 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_spliceHelper(
         AvmThunkUnbox_uint32_t(argv[argoff1])
         , AvmThunkUnbox_uint32_t(argv[argoff2])
         , AvmThunkUnbox_uint32_t(argv[argoff3])
-        , AvmThunkUnbox_AvmBox(argv[argoff4])
+        , AvmThunkUnbox_Atom(argv[argoff4])
         , AvmThunkUnbox_uint32_t(argv[argoff5])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
-AvmBox __AS3___vec_Vector_double_AS3_unshift_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_AS3_unshift_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     uint32_t const ret = obj->AS3_unshift(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_double_private__filter_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_private__filter_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_filter(
-        (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_filter(
+        (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox __AS3___vec_Vector_double_private__map_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom __AS3___vec_Vector_double_private__map_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_map(
-        (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_map(
+        (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-double __AS3___vec_Vector_double_AS3_pop_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double __AS3___vec_Vector_double_AS3_pop_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_pop();
     return ret;
 }
-double __AS3___vec_Vector_double_AS3_shift_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double __AS3___vec_Vector_double_AS3_shift_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DoubleVectorObject* const obj = (DoubleVectorObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->AS3_shift();
     return ret;
 }
-AvmBox native_script_function_avmplus_describeTypeJSON_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom native_script_function_avmplus_describeTypeJSON_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = DescribeTypeClass::describeTypeJSON(obj
-        , AvmThunkUnbox_AvmBox(argv[argoff1])
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = DescribeTypeClass::describeTypeJSON(obj
+        , AvmThunkUnbox_Atom(argv[argoff1])
         , AvmThunkUnbox_uint32_t(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox native_script_function_avmplus_getQualifiedClassName_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom native_script_function_avmplus_getQualifiedClassName_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = DescribeTypeClass::getQualifiedClassName(obj
-        , AvmThunkUnbox_AvmBox(argv[argoff1])
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = DescribeTypeClass::getQualifiedClassName(obj
+        , AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
-AvmBox native_script_function_avmplus_getQualifiedSuperclassName_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom native_script_function_avmplus_getQualifiedSuperclassName_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = DescribeTypeClass::getQualifiedSuperclassName(obj
-        , AvmThunkUnbox_AvmBox(argv[argoff1])
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = DescribeTypeClass::getQualifiedSuperclassName(obj
+        , AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 #else // VMCFG_INDIRECT_NATIVE_THUNKS
 
-// Array_private__filter
-// Array_private__map
-AvmBox builtin_a2a_oaoa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// RegExp_AS3_exec
+Atom builtin_a2a_os_optsAvmThunkGetConstantString_0__________thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+    };
+    (void)env;
+    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_exec(
+        (argc < 1 ? AvmThunkGetConstantString(0)/* "" */ : AvmThunkUnbox_String(argv[argoff1]))
+    );
+    return (Atom) ret;
+}
+
+// Array_private__filter
+// Array_private__map
+Atom builtin_a2a_oaoa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
+{
+    enum {
+        argoff0 = 0
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
-    typedef AvmRetType_AvmBox (AvmObjectT::*FuncType)(AvmBox, AvmObject, AvmBox);
+    typedef ArrayObject* (ScriptObject::*FuncType)(Atom, ScriptObject*, Atom);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
 }
 
-// String_AS3_slice
-// String_AS3_substr
-// String_AS3_substring
-AvmBox builtin_s2a_sdd_opti0_opti2147483647_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// String_AS3_indexOf
+Atom builtin_i2a_ssd_optsAvmThunkGetConstantString_58_____undefined_____opti0_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
-        , argoff2 = argoff1 + AvmThunkArgSize_double
+        , argoff1 = argoff0 + AvmThunkArgSize_String
+        , argoff2 = argoff1 + AvmThunkArgSize_String
     };
-    typedef AvmRetType_AvmString (AvmStringT::*FuncType)(double, double);
-    const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0])).*(func))(
-        (argc < 1 ? AvmThunkCoerce_int32_t_double(0) : AvmThunkUnbox_double(argv[argoff1]))
-        , (argc < 2 ? AvmThunkCoerce_int32_t_double(2147483647) : AvmThunkUnbox_double(argv[argoff2]))
+    (void)env;
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
+    int32_t const ret = obj->AS3_indexOf(
+        (argc < 1 ? AvmThunkGetConstantString(58)/* "undefined" */ : AvmThunkUnbox_String(argv[argoff1]))
+        , (argc < 2 ? AvmThunkCoerce_int32_t_double(0) : AvmThunkUnbox_double(argv[argoff2]))
     );
+    return (Atom) ret;
 }
 
 // Date_AS3_getDate
@@ -4722,149 +4736,200 @@ AvmBox builtin_s2a_sdd_opti0_opti2147483647_thunk(AvmMethodEnv env, uint32_t arg
 // __AS3___vec_Vector_double_AS3_shift
 // flash_utils_ByteArray_readDouble
 // flash_utils_ByteArray_readFloat
-double builtin_d2d_o_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double builtin_d2d_o_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
-    typedef AvmRetType_double (AvmObjectT::*FuncType)();
+    typedef double (ScriptObject::*FuncType)();
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    return (*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
     );
 }
 
-// XMLList_AS3_hasOwnProperty
-// XMLList_AS3_propertyIsEnumerable
-// XML_AS3_hasOwnProperty
-// XML_AS3_propertyIsEnumerable
-AvmBox builtin_b2a_oa_optakAvmThunkUndefined_u_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// XMLList_AS3_descendants
+// XMLList_AS3_elements
+// XMLList_AS3_processingInstructions
+// XML_AS3_descendants
+// XML_AS3_elements
+// XML_AS3_processingInstructions
+Atom builtin_a2a_oa_optsAvmThunkGetConstantString_516___________thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
-    typedef AvmRetType_AvmBool32 (AvmObjectT::*FuncType)(AvmBox);
+    typedef XMLListObject* (ScriptObject::*FuncType)(Atom);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmAtomReceiver(AvmObject, argv[argoff0])).*(func))(
-        (argc < 1 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff1]))
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        (argc < 1 ? AvmThunkCoerce_String_Atom(AvmThunkGetConstantString(516)/* "*" */) : AvmThunkUnbox_Atom(argv[argoff1]))
     );
+}
+
+// String_private__lastIndexOf
+Atom builtin_i2a_ssi_opti2147483647_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
+{
+    enum {
+        argoff0 = 0
+        , argoff1 = argoff0 + AvmThunkArgSize_String
+        , argoff2 = argoff1 + AvmThunkArgSize_String
+    };
+    (void)env;
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
+    int32_t const ret = obj->_lastIndexOf(
+        AvmThunkUnbox_String(argv[argoff1])
+        , (argc < 2 ? 2147483647 : AvmThunkUnbox_int32_t(argv[argoff2]))
+    );
+    return (Atom) ret;
 }
 
 // flash_utils_ByteArray_readBytes
 // flash_utils_ByteArray_writeBytes
-AvmBox builtin_v2a_oouu_opti0_opti0_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_v2a_oouu_opti0_opti0_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_ScriptObject
         , argoff3 = argoff2 + AvmThunkArgSize_uint32_t
     };
-    typedef AvmRetType_void (AvmObjectT::*FuncType)(AvmObject, uint32_t, uint32_t);
+    typedef void (ScriptObject::*FuncType)(ScriptObject*, uint32_t, uint32_t);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    (*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        AvmThunkUnbox_AvmObject(argv[argoff1])
+    (*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        AvmThunkUnbox_ScriptObject(argv[argoff1])
         , (argc < 2 ? AvmThunkCoerce_int32_t_uint32_t(0) : AvmThunkUnbox_uint32_t(argv[argoff2]))
         , (argc < 3 ? AvmThunkCoerce_int32_t_uint32_t(0) : AvmThunkUnbox_uint32_t(argv[argoff3]))
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
 
 // String_private__match
-AvmBox builtin_a2a_osa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_a2a_osa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_String
     };
     (void)argc;
     (void)env;
-    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     ArrayObject* const ret = obj->_match(
-        AvmThunkUnbox_AvmString(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+        AvmThunkUnbox_String(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
+}
+
+// native_script_function_parseInt
+double builtin_func_d2d_osi_optsAvmThunkGetConstantString_60_____NaN_____opti0_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
+{
+    enum {
+        argoff0 = 0
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_String
+    };
+    (void)env;
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    double const ret = Toplevel::parseInt(obj
+        , (argc < 1 ? AvmThunkGetConstantString(60)/* "NaN" */ : AvmThunkUnbox_String(argv[argoff1]))
+        , (argc < 2 ? 0 : AvmThunkUnbox_int32_t(argv[argoff2]))
+    );
+    return ret;
+}
+
+// native_script_function_isFinite
+// native_script_function_isNaN
+Atom builtin_func_b2a_od_optaundefinedAtom_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
+{
+    enum {
+        argoff0 = 0
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+    };
+    typedef bool (*FuncType)(ScriptObject*, double);
+    const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_FUNCTION_HANDLER(env));
+    return (Atom)(*func)(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])
+        , (argc < 1 ? AvmThunkCoerce_Atom_double(undefinedAtom) : AvmThunkUnbox_double(argv[argoff1]))
+    );
 }
 
 // native_script_function_avmplus_getQualifiedClassName
 // native_script_function_avmplus_getQualifiedSuperclassName
-AvmBox builtin_func_s2a_oa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_func_s2a_oa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
-    typedef AvmRetType_AvmString (*FuncType)(AvmObject, AvmBox);
+    typedef String* (*FuncType)(ScriptObject*, Atom);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_FUNCTION_HANDLER(env));
-    return (AvmBox)(*func)(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])
-        , AvmThunkUnbox_AvmBox(argv[argoff1])
+    return (Atom)(*func)(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])
+        , AvmThunkUnbox_Atom(argv[argoff1])
     );
 }
 
 // native_script_function_isXMLName
-AvmBox builtin_func_b2a_oa_optakAvmThunkUndefined_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_func_b2a_oa_optaundefinedAtom_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = Toplevel::isXMLName(obj
-        , (argc < 1 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff1]))
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = Toplevel::isXMLName(obj
+        , (argc < 1 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
-// flash_utils_ByteArray_readMultiByte
-AvmBox builtin_s2a_ous_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// Array_private__unshift
+Atom builtin_u2a_oao_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_uint32_t
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->readMultiByte(
-        AvmThunkUnbox_uint32_t(argv[argoff1])
-        , AvmThunkUnbox_AvmString(argv[argoff2])
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    uint32_t const ret = obj->_unshift(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , (ArrayObject*)AvmThunkUnbox_ScriptObject(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 // XML_AS3_setNotification
-AvmBox builtin_a2a_oo_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_a2a_oo_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_setNotification(
-        (FunctionObject*)AvmThunkUnbox_AvmObject(argv[argoff1])
+    XMLObject* const obj = (XMLObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_setNotification(
+        (FunctionObject*)AvmThunkUnbox_ScriptObject(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 // Namespace_uri_get
-AvmBox builtin_s2a_n_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_s2a_n_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    Namespace* const obj = (Namespace*)AvmThunkUnbox_AvmReceiver(AvmNamespace, argv[argoff0]);
-    AvmString const ret = obj->get_uri();
-    return (AvmBox) ret;
+    Namespace* const obj = (Namespace*)AvmThunkUnbox_AvmReceiver(Namespace*, argv[argoff0]);
+    String* const ret = obj->get_uri();
+    return (Atom) ret;
 }
 
 // Error_getStackTrace
@@ -4879,54 +4944,34 @@ AvmBox builtin_s2a_n_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
 // flash_utils_ByteArray_endian_get
 // flash_utils_ByteArray_private__toString
 // flash_utils_ByteArray_readUTF
-AvmBox builtin_s2a_o_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_s2a_o_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
-    typedef AvmRetType_AvmString (AvmObjectT::*FuncType)();
+    typedef String* (ScriptObject::*FuncType)();
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
     );
 }
 
 // Number_private__numberToString
-AvmBox builtin_s2a_odi_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_s2a_odi_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_double
     };
     (void)argc;
     (void)env;
-    NumberClass* const obj = (NumberClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->_numberToString(
+    NumberClass* const obj = (NumberClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->_numberToString(
         AvmThunkUnbox_double(argv[argoff1])
         , AvmThunkUnbox_int32_t(argv[argoff2])
     );
-    return (AvmBox) ret;
-}
-
-// Math_max
-double builtin_d2d_odd_optdkAvmThunkNegInfinity_optdkAvmThunkNegInfinity_rest_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
-{
-    enum {
-        argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_double
-    };
-    const uint32_t argoffV = argoff2 + AvmThunkArgSize_double;
-    (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    double const ret = obj->max(
-        (argc < 1 ? kAvmThunkNegInfinity : AvmThunkUnbox_double(argv[argoff1]))
-        , (argc < 2 ? kAvmThunkNegInfinity : AvmThunkUnbox_double(argv[argoff2]))
-        , (argc <= 2 ? NULL : argv + argoffV)
-        , (argc <= 2 ? 0 : argc - 2)
-    );
-    return ret;
+    return (Atom) ret;
 }
 
 // Array_length_set
@@ -4939,19 +4984,19 @@ double builtin_d2d_odd_optdkAvmThunkNegInfinity_optdkAvmThunkNegInfinity_rest_th
 // flash_utils_ByteArray_objectEncoding_set
 // flash_utils_ByteArray_position_set
 // flash_utils_ByteArray_writeUnsignedInt
-AvmBox builtin_v2a_ou_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_v2a_ou_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
-    typedef AvmRetType_void (AvmObjectT::*FuncType)(uint32_t);
+    typedef void (ScriptObject::*FuncType)(uint32_t);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    (*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    (*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
         AvmThunkUnbox_uint32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
 
 // Array_private__pop
@@ -4971,62 +5016,63 @@ AvmBox builtin_v2a_ou_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
 // XML_AS3_prependChild
 // XML_AS3_removeNamespace
 // XML_AS3_setChildren
-AvmBox builtin_a2a_oa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_a2a_oa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
-    typedef AvmRetType_AvmBox (AvmObjectT::*FuncType)(AvmBox);
+    typedef XMLObject* (ScriptObject::*FuncType)(Atom);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
 }
 
-// String_AS3_indexOf
-AvmBox builtin_i2a_ssd_optsAvmThunkConstant_AvmString_58_____undefined_____opti0_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// native_script_function_avmplus_describeTypeJSON
+Atom builtin_func_a2a_oau_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
+    (void)argc;
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
-    int32_t const ret = obj->AS3_indexOf(
-        (argc < 1 ? AvmThunkConstant_AvmString(58)/* "undefined" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
-        , (argc < 2 ? AvmThunkCoerce_int32_t_double(0) : AvmThunkUnbox_double(argv[argoff2]))
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = DescribeTypeClass::describeTypeJSON(obj
+        , AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_uint32_t(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 // __AS3___vec_Vector_double_private__spliceHelper
 // __AS3___vec_Vector_int_private__spliceHelper
 // __AS3___vec_Vector_object_private__spliceHelper
 // __AS3___vec_Vector_uint_private__spliceHelper
-AvmBox builtin_v2a_ouuuau_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_v2a_ouuuau_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_uint32_t
         , argoff3 = argoff2 + AvmThunkArgSize_uint32_t
         , argoff4 = argoff3 + AvmThunkArgSize_uint32_t
-        , argoff5 = argoff4 + AvmThunkArgSize_AvmBox
+        , argoff5 = argoff4 + AvmThunkArgSize_Atom
     };
     (void)argc;
-    typedef AvmRetType_void (AvmObjectT::*FuncType)(uint32_t, uint32_t, uint32_t, AvmBox, uint32_t);
+    typedef void (ScriptObject::*FuncType)(uint32_t, uint32_t, uint32_t, Atom, uint32_t);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    (*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    (*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
         AvmThunkUnbox_uint32_t(argv[argoff1])
         , AvmThunkUnbox_uint32_t(argv[argoff2])
         , AvmThunkUnbox_uint32_t(argv[argoff3])
-        , AvmThunkUnbox_AvmBox(argv[argoff4])
+        , AvmThunkUnbox_Atom(argv[argoff4])
         , AvmThunkUnbox_uint32_t(argv[argoff5])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
 
 // Date_private__setDate
@@ -5043,77 +5089,62 @@ AvmBox builtin_v2a_ouuuau_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
 // Date_private__setUTCMinutes
 // Date_private__setUTCMonth
 // Date_private__setUTCSeconds
-double builtin_d2d_o_rest_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double builtin_d2d_o_rest_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
-    typedef AvmRetType_double (AvmObjectT::*FuncType)(AvmBox*, uint32_t);
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
+    typedef double (ScriptObject::*FuncType)(Atom*, uint32_t);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    return (*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
         (argc <= 0 ? NULL : argv + argoffV)
         , (argc <= 0 ? 0 : argc - 0)
     );
 }
 
-// native_script_function_isFinite
-// native_script_function_isNaN
-AvmBox builtin_func_b2a_od_optakAvmThunkUndefined_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
-{
-    enum {
-        argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-    };
-    typedef AvmRetType_AvmBool32 (*FuncType)(AvmObject, double);
-    const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_FUNCTION_HANDLER(env));
-    return (AvmBox)(*func)(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])
-        , (argc < 1 ? AvmThunkCoerce_AvmBox_double(kAvmThunkUndefined) : AvmThunkUnbox_double(argv[argoff1]))
-    );
-}
-
 // flash_utils_ByteArray_writeMultiByte
-AvmBox builtin_v2a_oss_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_v2a_oss_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_String
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->writeMultiByte(
-        AvmThunkUnbox_AvmString(argv[argoff1])
-        , AvmThunkUnbox_AvmString(argv[argoff2])
+        AvmThunkUnbox_String(argv[argoff1])
+        , AvmThunkUnbox_String(argv[argoff2])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
 
 // Date_UTC
-double builtin_d2d_oaaaaaaa_opti1_opti0_opti0_opti0_opti0_rest_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double builtin_d2d_oaaaaaaa_opti1_opti0_opti0_opti0_opti0_rest_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmBox
-        , argoff4 = argoff3 + AvmThunkArgSize_AvmBox
-        , argoff5 = argoff4 + AvmThunkArgSize_AvmBox
-        , argoff6 = argoff5 + AvmThunkArgSize_AvmBox
-        , argoff7 = argoff6 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_Atom
+        , argoff4 = argoff3 + AvmThunkArgSize_Atom
+        , argoff5 = argoff4 + AvmThunkArgSize_Atom
+        , argoff6 = argoff5 + AvmThunkArgSize_Atom
+        , argoff7 = argoff6 + AvmThunkArgSize_Atom
     };
-    const uint32_t argoffV = argoff7 + AvmThunkArgSize_AvmBox;
+    const uint32_t argoffV = argoff7 + AvmThunkArgSize_Atom;
     (void)env;
-    DateClass* const obj = (DateClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateClass* const obj = (DateClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->UTC(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
-        , (argc < 3 ? AvmThunkCoerce_int32_t_AvmBox(1) : AvmThunkUnbox_AvmBox(argv[argoff3]))
-        , (argc < 4 ? AvmThunkCoerce_int32_t_AvmBox(0) : AvmThunkUnbox_AvmBox(argv[argoff4]))
-        , (argc < 5 ? AvmThunkCoerce_int32_t_AvmBox(0) : AvmThunkUnbox_AvmBox(argv[argoff5]))
-        , (argc < 6 ? AvmThunkCoerce_int32_t_AvmBox(0) : AvmThunkUnbox_AvmBox(argv[argoff6]))
-        , (argc < 7 ? AvmThunkCoerce_int32_t_AvmBox(0) : AvmThunkUnbox_AvmBox(argv[argoff7]))
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
+        , (argc < 3 ? AvmThunkCoerce_int32_t_Atom(1) : AvmThunkUnbox_Atom(argv[argoff3]))
+        , (argc < 4 ? AvmThunkCoerce_int32_t_Atom(0) : AvmThunkUnbox_Atom(argv[argoff4]))
+        , (argc < 5 ? AvmThunkCoerce_int32_t_Atom(0) : AvmThunkUnbox_Atom(argv[argoff5]))
+        , (argc < 6 ? AvmThunkCoerce_int32_t_Atom(0) : AvmThunkUnbox_Atom(argv[argoff6]))
+        , (argc < 7 ? AvmThunkCoerce_int32_t_Atom(0) : AvmThunkUnbox_Atom(argv[argoff7]))
         , (argc <= 7 ? NULL : argv + argoffV)
         , (argc <= 7 ? 0 : argc - 7)
     );
@@ -5121,84 +5152,74 @@ double builtin_d2d_oaaaaaaa_opti1_opti0_opti0_opti0_opti0_rest_thunk(AvmMethodEn
 }
 
 // String_length_get
-AvmBox builtin_i2a_s_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_i2a_s_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
     int32_t const ret = obj->get_length();
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
-// String_AS3_localeCompare
-AvmBox builtin_i2a_sa_optakAvmThunkUndefined_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// Math_min
+double builtin_d2d_odd_optdMathUtils_kInfinity_optdMathUtils_kInfinity_rest_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_double
     };
+    const uint32_t argoffV = argoff2 + AvmThunkArgSize_double;
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
-    int32_t const ret = obj->AS3_localeCompare(
-        (argc < 1 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff1]))
-    );
-    return (AvmBox) ret;
-}
-
-// native_script_function_parseFloat
-double builtin_func_d2d_os_optsAvmThunkConstant_AvmString_60_____NaN_____thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
-{
-    enum {
-        argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-    };
-    (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    double const ret = Toplevel::parseFloat(obj
-        , (argc < 1 ? AvmThunkConstant_AvmString(60)/* "NaN" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    double const ret = obj->min(
+        (argc < 1 ? MathUtils::kInfinity : AvmThunkUnbox_double(argv[argoff1]))
+        , (argc < 2 ? MathUtils::kInfinity : AvmThunkUnbox_double(argv[argoff2]))
+        , (argc <= 2 ? NULL : argv + argoffV)
+        , (argc <= 2 ? 0 : argc - 2)
     );
     return ret;
 }
 
 // Object_private__isPrototypeOf
-AvmBox builtin_b2a_oaa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_b2a_oaa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = obj->_isPrototypeOf(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = obj->_isPrototypeOf(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 // Array_private__sortOn
-AvmBox builtin_a2a_oaaa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_a2a_oaaa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->_sortOn(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->_sortOn(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 // Array_length_get
@@ -5216,125 +5237,89 @@ AvmBox builtin_a2a_oaaa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
 // flash_utils_ByteArray_readUnsignedByte
 // flash_utils_ByteArray_readUnsignedInt
 // flash_utils_ByteArray_readUnsignedShort
-AvmBox builtin_u2a_o_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_u2a_o_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
-    typedef AvmRetType_uint32_t (AvmObjectT::*FuncType)();
+    typedef uint32_t (ScriptObject::*FuncType)();
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
     );
 }
 
-// String_private__slice
-// String_private__substr
-// String_private__substring
-AvmBox builtin_s2a_sii_opti0_opti2147483647_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// String_AS3_lastIndexOf
+Atom builtin_i2a_ssd_optsAvmThunkGetConstantString_58_____undefined_____opti2147483647_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
-        , argoff2 = argoff1 + AvmThunkArgSize_int32_t
+        , argoff1 = argoff0 + AvmThunkArgSize_String
+        , argoff2 = argoff1 + AvmThunkArgSize_String
     };
-    typedef AvmRetType_AvmString (AvmStringT::*FuncType)(int32_t, int32_t);
-    const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0])).*(func))(
-        (argc < 1 ? 0 : AvmThunkUnbox_int32_t(argv[argoff1]))
-        , (argc < 2 ? 2147483647 : AvmThunkUnbox_int32_t(argv[argoff2]))
-    );
-}
-
-// native_script_function_avmplus_describeTypeJSON
-AvmBox builtin_func_a2a_oau_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
-{
-    enum {
-        argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-    };
-    (void)argc;
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = DescribeTypeClass::describeTypeJSON(obj
-        , AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_uint32_t(argv[argoff2])
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
+    int32_t const ret = obj->AS3_lastIndexOf(
+        (argc < 1 ? AvmThunkGetConstantString(58)/* "undefined" */ : AvmThunkUnbox_String(argv[argoff1]))
+        , (argc < 2 ? AvmThunkCoerce_int32_t_double(2147483647) : AvmThunkUnbox_double(argv[argoff2]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
-// Function_AS3_call
-AvmBox builtin_a2a_oa_optakAvmThunkUndefined_rest_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// native_script_function_decodeURI
+// native_script_function_decodeURIComponent
+// native_script_function_encodeURI
+// native_script_function_encodeURIComponent
+// native_script_function_escape
+// native_script_function_unescape
+Atom builtin_func_s2a_os_optsAvmThunkGetConstantString_58_____undefined_____thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
-    const uint32_t argoffV = argoff1 + AvmThunkArgSize_AvmBox;
-    (void)env;
-    FunctionObject* const obj = (FunctionObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_call(
-        (argc < 1 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff1]))
-        , (argc <= 1 ? NULL : argv + argoffV)
-        , (argc <= 1 ? 0 : argc - 1)
+    typedef String* (*FuncType)(ScriptObject*, String*);
+    const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_FUNCTION_HANDLER(env));
+    return (Atom)(*func)(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])
+        , (argc < 1 ? AvmThunkGetConstantString(58)/* "undefined" */ : AvmThunkUnbox_String(argv[argoff1]))
     );
-    return (AvmBox) ret;
-}
-
-// Array_private__unshift
-AvmBox builtin_u2a_oao_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
-{
-    enum {
-        argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-    };
-    (void)argc;
-    (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    uint32_t const ret = obj->_unshift(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , (ArrayObject*)AvmThunkUnbox_AvmObject(argv[argoff2])
-    );
-    return (AvmBox) ret;
 }
 
 // String_private__replace
-AvmBox builtin_s2a_osaa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_s2a_osaa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_String
+        , argoff3 = argoff2 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->_replace(
-        AvmThunkUnbox_AvmString(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->_replace(
+        AvmThunkUnbox_String(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 // Object_private__hasOwnProperty
 // Object_private__propertyIsEnumerable
-AvmBox builtin_b2a_oas_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_b2a_oas_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
-    typedef AvmRetType_AvmBool32 (AvmObjectT::*FuncType)(AvmBox, AvmString);
+    typedef bool (ScriptObject::*FuncType)(Atom, String*);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmString(argv[argoff2])
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_String(argv[argoff2])
     );
 }
 
@@ -5349,51 +5334,42 @@ AvmBox builtin_b2a_oas_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
 // flash_utils_ByteArray_readByte
 // flash_utils_ByteArray_readInt
 // flash_utils_ByteArray_readShort
-AvmBox builtin_i2a_o_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_i2a_o_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
-    typedef AvmRetType_int32_t (AvmObjectT::*FuncType)();
+    typedef int32_t (ScriptObject::*FuncType)();
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
     );
 }
 
-// __AS3___vec_Vector_double_private__filter
-// __AS3___vec_Vector_double_private__map
-// __AS3___vec_Vector_int_private__filter
-// __AS3___vec_Vector_int_private__map
-// __AS3___vec_Vector_object_private__filter
-// __AS3___vec_Vector_object_private__map
-// __AS3___vec_Vector_uint_private__filter
-// __AS3___vec_Vector_uint_private__map
-AvmBox builtin_a2a_ooa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// native_script_function_parseFloat
+double builtin_func_d2d_os_optsAvmThunkGetConstantString_60_____NaN_____thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
-    (void)argc;
-    typedef AvmRetType_AvmBox (AvmObjectT::*FuncType)(AvmObject, AvmBox);
-    const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        AvmThunkUnbox_AvmObject(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    (void)env;
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    double const ret = Toplevel::parseFloat(obj
+        , (argc < 1 ? AvmThunkGetConstantString(60)/* "NaN" */ : AvmThunkUnbox_String(argv[argoff1]))
     );
+    return ret;
 }
 
 // String_AS3_charCodeAt
-double builtin_d2d_sd_opti0_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double builtin_d2d_sd_opti0_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
     double const ret = obj->AS3_charCodeAt(
         (argc < 1 ? AvmThunkCoerce_int32_t_double(0) : AvmThunkUnbox_double(argv[argoff1]))
     );
@@ -5401,19 +5377,19 @@ double builtin_d2d_sd_opti0_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
 }
 
 // Object_private__toString
-AvmBox builtin_s2a_oa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_s2a_oa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->_toString(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->_toString(
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 // Array_private__every
@@ -5426,21 +5402,21 @@ AvmBox builtin_s2a_oa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
 // __AS3___vec_Vector_object_private__some
 // __AS3___vec_Vector_uint_private__every
 // __AS3___vec_Vector_uint_private__some
-AvmBox builtin_b2a_oaoa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_b2a_oaoa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
-    typedef AvmRetType_AvmBool32 (AvmObjectT::*FuncType)(AvmBox, AvmObject, AvmBox);
+    typedef bool (ScriptObject::*FuncType)(Atom, ScriptObject*, Atom);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
 }
 
@@ -5449,48 +5425,48 @@ AvmBox builtin_b2a_oaoa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
 // __AS3___vec_Vector_object_private__reverse
 // __AS3___vec_Vector_uint_private__reverse
 // flash_utils_ByteArray_clear
-AvmBox builtin_v2a_o_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_v2a_o_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
-    typedef AvmRetType_void (AvmObjectT::*FuncType)();
+    typedef void (ScriptObject::*FuncType)();
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    (*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    (*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
 
 // XMLList_AS3_contains
 // XML_AS3_contains
-AvmBox builtin_b2a_oa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_b2a_oa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
-    typedef AvmRetType_AvmBool32 (AvmObjectT::*FuncType)(AvmBox);
+    typedef bool (ScriptObject::*FuncType)(Atom);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
 }
 
 // String_AS3_charAt
-AvmBox builtin_s2a_sd_opti0_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_s2a_sd_opti0_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
-    AvmString const ret = obj->AS3_charAt(
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
+    String* const ret = obj->AS3_charAt(
         (argc < 1 ? AvmThunkCoerce_int32_t_double(0) : AvmThunkUnbox_double(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 // Array_private__forEach
@@ -5498,139 +5474,170 @@ AvmBox builtin_s2a_sd_opti0_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
 // __AS3___vec_Vector_int_private__forEach
 // __AS3___vec_Vector_object_private__forEach
 // __AS3___vec_Vector_uint_private__forEach
-AvmBox builtin_v2a_oaoa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_v2a_oaoa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
-    typedef AvmRetType_void (AvmObjectT::*FuncType)(AvmBox, AvmObject, AvmBox);
+    typedef void (ScriptObject::*FuncType)(Atom, ScriptObject*, Atom);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    (*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmObject(argv[argoff2])
-        , AvmThunkUnbox_AvmBox(argv[argoff3])
+    (*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_ScriptObject(argv[argoff2])
+        , AvmThunkUnbox_Atom(argv[argoff3])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
 
 // flash_utils_ByteArray_readUTFBytes
-AvmBox builtin_s2a_ou_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_s2a_ou_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->readUTFBytes(
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->readUTFBytes(
         AvmThunkUnbox_uint32_t(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
-// String_private__lastIndexOf
-AvmBox builtin_i2a_ssi_opti2147483647_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// __AS3___vec_Vector_double_private__filter
+// __AS3___vec_Vector_double_private__map
+// __AS3___vec_Vector_int_private__filter
+// __AS3___vec_Vector_int_private__map
+// __AS3___vec_Vector_object_private__filter
+// __AS3___vec_Vector_object_private__map
+// __AS3___vec_Vector_uint_private__filter
+// __AS3___vec_Vector_uint_private__map
+Atom builtin_a2a_ooa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_ScriptObject
     };
-    (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
-    int32_t const ret = obj->_lastIndexOf(
-        AvmThunkUnbox_AvmString(argv[argoff1])
-        , (argc < 2 ? 2147483647 : AvmThunkUnbox_int32_t(argv[argoff2]))
+    (void)argc;
+    typedef Atom (ScriptObject::*FuncType)(ScriptObject*, Atom);
+    const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        AvmThunkUnbox_ScriptObject(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
 }
 
-// native_script_function_decodeURI
-// native_script_function_decodeURIComponent
-// native_script_function_encodeURI
-// native_script_function_encodeURIComponent
-// native_script_function_escape
-// native_script_function_unescape
-AvmBox builtin_func_s2a_os_optsAvmThunkConstant_AvmString_58_____undefined_____thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// Function_AS3_call
+Atom builtin_a2a_oa_optaundefinedAtom_rest_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
-    typedef AvmRetType_AvmString (*FuncType)(AvmObject, AvmString);
-    const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_FUNCTION_HANDLER(env));
-    return (AvmBox)(*func)(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])
-        , (argc < 1 ? AvmThunkConstant_AvmString(58)/* "undefined" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+    const uint32_t argoffV = argoff1 + AvmThunkArgSize_Atom;
+    (void)env;
+    FunctionObject* const obj = (FunctionObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_call(
+        (argc < 1 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff1]))
+        , (argc <= 1 ? NULL : argv + argoffV)
+        , (argc <= 1 ? 0 : argc - 1)
+    );
+    return (Atom) ret;
+}
+
+// Array_AS3_push
+// Array_AS3_unshift
+// __AS3___vec_Vector_double_AS3_push
+// __AS3___vec_Vector_double_AS3_unshift
+// __AS3___vec_Vector_int_AS3_push
+// __AS3___vec_Vector_int_AS3_unshift
+// __AS3___vec_Vector_object_AS3_push
+// __AS3___vec_Vector_object_AS3_unshift
+// __AS3___vec_Vector_uint_AS3_push
+// __AS3___vec_Vector_uint_AS3_unshift
+Atom builtin_u2a_o_rest_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
+{
+    enum {
+        argoff0 = 0
+    };
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
+    typedef uint32_t (ScriptObject::*FuncType)(Atom*, uint32_t);
+    const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        (argc <= 0 ? NULL : argv + argoffV)
+        , (argc <= 0 ? 0 : argc - 0)
     );
 }
 
 // String_AS3_toLowerCase
 // String_AS3_toUpperCase
-AvmBox builtin_s2a_s_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_s2a_s_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
-    typedef AvmRetType_AvmString (AvmStringT::*FuncType)();
+    typedef String* (String::*FuncType)();
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0])).*(func))(
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(String*, argv[argoff0])).*(func))(
     );
 }
 
-// String_AS3_lastIndexOf
-AvmBox builtin_i2a_ssd_optsAvmThunkConstant_AvmString_58_____undefined_____opti2147483647_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// String_AS3_slice
+// String_AS3_substr
+// String_AS3_substring
+Atom builtin_s2a_sdd_opti0_opti2147483647_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
+        , argoff2 = argoff1 + AvmThunkArgSize_double
     };
-    (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
-    int32_t const ret = obj->AS3_lastIndexOf(
-        (argc < 1 ? AvmThunkConstant_AvmString(58)/* "undefined" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+    typedef String* (String::*FuncType)(double, double);
+    const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(String*, argv[argoff0])).*(func))(
+        (argc < 1 ? AvmThunkCoerce_int32_t_double(0) : AvmThunkUnbox_double(argv[argoff1]))
         , (argc < 2 ? AvmThunkCoerce_int32_t_double(2147483647) : AvmThunkUnbox_double(argv[argoff2]))
     );
-    return (AvmBox) ret;
 }
 
 // Math_atan2
 // Math_pow
 // Math_private__max
 // Math_private__min
-double builtin_d2d_odd_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double builtin_d2d_odd_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_double
     };
     (void)argc;
-    typedef AvmRetType_double (AvmObjectT::*FuncType)(double, double);
+    typedef double (ScriptObject::*FuncType)(double, double);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    return (*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
         AvmThunkUnbox_double(argv[argoff1])
         , AvmThunkUnbox_double(argv[argoff2])
     );
 }
 
 // Namespace_prefix_get
-AvmBox builtin_a2a_n_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_a2a_n_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
     (void)env;
-    Namespace* const obj = (Namespace*)AvmThunkUnbox_AvmReceiver(AvmNamespace, argv[argoff0]);
-    AvmBox const ret = obj->get_prefix();
-    return (AvmBox) ret;
+    Namespace* const obj = (Namespace*)AvmThunkUnbox_AvmReceiver(Namespace*, argv[argoff0]);
+    Atom const ret = obj->get_prefix();
+    return (Atom) ret;
 }
 
 // Array_AS3_pop
@@ -5667,164 +5674,174 @@ AvmBox builtin_a2a_n_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
 // __AS3___vec_Vector_object_private_newThisType
 // __AS3___vec_Vector_uint_private_newThisType
 // flash_utils_ByteArray_readObject
-AvmBox builtin_a2a_o_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_a2a_o_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
-    typedef AvmRetType_AvmBox (AvmObjectT::*FuncType)();
+    typedef Atom (ScriptObject::*FuncType)();
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
     );
 }
 
-// String_private__split
-AvmBox builtin_a2a_osau_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// String_AS3_localeCompare
+Atom builtin_i2a_sa_optaundefinedAtom_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_String
     };
-    (void)argc;
     (void)env;
-    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    ArrayObject* const ret = obj->_split(
-        AvmThunkUnbox_AvmString(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
-        , AvmThunkUnbox_uint32_t(argv[argoff3])
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
+    int32_t const ret = obj->AS3_localeCompare(
+        (argc < 1 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff1]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 // Object_protected__setPropertyIsEnumerable
-AvmBox builtin_v2a_oasb_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_v2a_oasb_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_String
     };
     (void)argc;
     (void)env;
-    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ObjectClass* const obj = (ObjectClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     obj->_setPropertyIsEnumerable(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmString(argv[argoff2])
-        , AvmThunkUnbox_AvmBool32(argv[argoff3])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_String(argv[argoff2])
+        , AvmThunkUnbox_bool32(argv[argoff3])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
 
-// RegExp_AS3_exec
-AvmBox builtin_a2a_os_optsAvmThunkConstant_AvmString_0__________thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// Function_AS3_apply
+Atom builtin_a2a_oaa_optaundefinedAtom_optaundefinedAtom_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)env;
-    RegExpObject* const obj = (RegExpObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_exec(
-        (argc < 1 ? AvmThunkConstant_AvmString(0)/* "" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
+    FunctionObject* const obj = (FunctionObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    Atom const ret = obj->AS3_apply(
+        (argc < 1 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff1]))
+        , (argc < 2 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff2]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
-// Array_AS3_push
-// Array_AS3_unshift
-// __AS3___vec_Vector_double_AS3_push
-// __AS3___vec_Vector_double_AS3_unshift
-// __AS3___vec_Vector_int_AS3_push
-// __AS3___vec_Vector_int_AS3_unshift
-// __AS3___vec_Vector_object_AS3_push
-// __AS3___vec_Vector_object_AS3_unshift
-// __AS3___vec_Vector_uint_AS3_push
-// __AS3___vec_Vector_uint_AS3_unshift
-AvmBox builtin_u2a_o_rest_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// String_private__split
+Atom builtin_a2a_osau_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_String
+        , argoff3 = argoff2 + AvmThunkArgSize_Atom
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
-    typedef AvmRetType_uint32_t (AvmObjectT::*FuncType)(AvmBox*, uint32_t);
+    (void)argc;
+    (void)env;
+    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    ArrayObject* const ret = obj->_split(
+        AvmThunkUnbox_String(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
+        , AvmThunkUnbox_uint32_t(argv[argoff3])
+    );
+    return (Atom) ret;
+}
+
+// XMLList_private__namespace
+// XML_private__namespace
+Atom builtin_a2a_oai_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
+{
+    enum {
+        argoff0 = 0
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+    };
+    (void)argc;
+    typedef Atom (ScriptObject::*FuncType)(Atom, int32_t);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        (argc <= 0 ? NULL : argv + argoffV)
-        , (argc <= 0 ? 0 : argc - 0)
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_int32_t(argv[argoff2])
     );
 }
 
 // Date_private__toString
 // Error_getErrorMessage
-AvmBox builtin_s2a_oi_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_s2a_oi_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
-    typedef AvmRetType_AvmString (AvmObjectT::*FuncType)(int32_t);
+    typedef String* (ScriptObject::*FuncType)(int32_t);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
         AvmThunkUnbox_int32_t(argv[argoff1])
     );
 }
 
 // String_private__indexOf
-AvmBox builtin_i2a_ssi_opti0_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_i2a_ssi_opti0_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmString
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_String
+        , argoff2 = argoff1 + AvmThunkArgSize_String
     };
     (void)env;
-    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(AvmString, argv[argoff0]);
+    String* const obj = (String*)AvmThunkUnbox_AvmReceiver(String*, argv[argoff0]);
     int32_t const ret = obj->_indexOf(
-        AvmThunkUnbox_AvmString(argv[argoff1])
+        AvmThunkUnbox_String(argv[argoff1])
         , (argc < 2 ? 0 : AvmThunkUnbox_int32_t(argv[argoff2]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
-// Function_AS3_apply
-AvmBox builtin_a2a_oaa_optakAvmThunkUndefined_optakAvmThunkUndefined_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// String_AS3_fromCharCode
+Atom builtin_s2a_o_rest_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
     };
+    const uint32_t argoffV = argoff0 + AvmThunkArgSize_ScriptObject;
     (void)env;
-    FunctionObject* const obj = (FunctionObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBox const ret = obj->AS3_apply(
-        (argc < 1 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff1]))
-        , (argc < 2 ? kAvmThunkUndefined : AvmThunkUnbox_AvmBox(argv[argoff2]))
+    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->AS3_fromCharCode(
+        (argc <= 0 ? NULL : argv + argoffV)
+        , (argc <= 0 ? 0 : argc - 0)
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 // Array_private__lastIndexOf
-AvmBox builtin_i2a_oaai_opti0_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_i2a_oaai_opti0_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_Atom
     };
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->_lastIndexOf(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
         , (argc < 3 ? 0 : AvmThunkUnbox_int32_t(argv[argoff3]))
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 // Date_private__setTime
@@ -5841,53 +5858,52 @@ AvmBox builtin_i2a_oaai_opti0_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* arg
 // Math_sin
 // Math_sqrt
 // Math_tan
-double builtin_d2d_od_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double builtin_d2d_od_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
-    typedef AvmRetType_double (AvmObjectT::*FuncType)(double);
+    typedef double (ScriptObject::*FuncType)(double);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    return (*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
         AvmThunkUnbox_double(argv[argoff1])
     );
 }
 
 // flash_utils_ByteArray_writeDouble
 // flash_utils_ByteArray_writeFloat
-AvmBox builtin_v2a_od_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_v2a_od_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
-    typedef AvmRetType_void (AvmObjectT::*FuncType)(double);
+    typedef void (ScriptObject::*FuncType)(double);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    (*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    (*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
         AvmThunkUnbox_double(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
 
-// XMLList_AS3_descendants
-// XMLList_AS3_elements
-// XMLList_AS3_processingInstructions
-// XML_AS3_descendants
-// XML_AS3_elements
-// XML_AS3_processingInstructions
-AvmBox builtin_a2a_oa_optsAvmThunkConstant_AvmString_516___________thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// String_private__slice
+// String_private__substr
+// String_private__substring
+Atom builtin_s2a_sii_opti0_opti2147483647_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_String
+        , argoff2 = argoff1 + AvmThunkArgSize_int32_t
     };
-    typedef AvmRetType_AvmBox (AvmObjectT::*FuncType)(AvmBox);
+    typedef String* (String::*FuncType)(int32_t, int32_t);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        (argc < 1 ? AvmThunkCoerce_AvmString_AvmBox(AvmThunkConstant_AvmString(516)/* "*" */) : AvmThunkUnbox_AvmBox(argv[argoff1]))
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(String*, argv[argoff0])).*(func))(
+        (argc < 1 ? 0 : AvmThunkUnbox_int32_t(argv[argoff1]))
+        , (argc < 2 ? 2147483647 : AvmThunkUnbox_int32_t(argv[argoff2]))
     );
 }
 
@@ -5900,19 +5916,19 @@ AvmBox builtin_a2a_oa_optsAvmThunkConstant_AvmString_516___________thunk(AvmMeth
 // __AS3___vec_Vector_object_fixed_set
 // __AS3___vec_Vector_uint_fixed_set
 // flash_utils_ByteArray_writeBoolean
-AvmBox builtin_v2a_ob_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_v2a_ob_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
-    typedef AvmRetType_void (AvmObjectT::*FuncType)(AvmBool32);
+    typedef void (ScriptObject::*FuncType)(bool32);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    (*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        AvmThunkUnbox_AvmBool32(argv[argoff1])
+    (*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        AvmThunkUnbox_bool32(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
 
 // Function_prototype_set
@@ -5923,51 +5939,51 @@ AvmBox builtin_v2a_ob_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
 // XML_AS3_setName
 // XML_AS3_setNamespace
 // flash_utils_ByteArray_writeObject
-AvmBox builtin_v2a_oa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_v2a_oa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
-    typedef AvmRetType_void (AvmObjectT::*FuncType)(AvmBox);
+    typedef void (ScriptObject::*FuncType)(Atom);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    (*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+    (*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
 
 // Date_parse
-double builtin_d2d_oa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double builtin_d2d_oa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    DateClass* const obj = (DateClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateClass* const obj = (DateClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->parse(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
     );
     return ret;
 }
 
 // native_script_function_bugzilla
-AvmBox builtin_func_b2a_oi_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_func_b2a_oi_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmBool32 const ret = Toplevel::bugzilla(obj
+    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    bool const ret = Toplevel::bugzilla(obj
         , AvmThunkUnbox_int32_t(argv[argoff1])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 // RegExp_lastIndex_set
@@ -5975,50 +5991,33 @@ AvmBox builtin_func_b2a_oi_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
 // flash_utils_ByteArray_writeByte
 // flash_utils_ByteArray_writeInt
 // flash_utils_ByteArray_writeShort
-AvmBox builtin_v2a_oi_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_v2a_oi_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
-    typedef AvmRetType_void (AvmObjectT::*FuncType)(int32_t);
+    typedef void (ScriptObject::*FuncType)(int32_t);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    (*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    (*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
         AvmThunkUnbox_int32_t(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
 
 // Date_private__get
-double builtin_d2d_oi_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+double builtin_d2d_oi_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
     (void)env;
-    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    DateObject* const obj = (DateObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     double const ret = obj->_get(
         AvmThunkUnbox_int32_t(argv[argoff1])
-    );
-    return ret;
-}
-
-// native_script_function_parseInt
-double builtin_func_d2d_osi_optsAvmThunkConstant_AvmString_60_____NaN_____opti0_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
-{
-    enum {
-        argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
-    };
-    (void)env;
-    ScriptObject* const obj = AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    double const ret = Toplevel::parseInt(obj
-        , (argc < 1 ? AvmThunkConstant_AvmString(60)/* "NaN" */ : AvmThunkUnbox_AvmString(argv[argoff1]))
-        , (argc < 2 ? 0 : AvmThunkUnbox_int32_t(argv[argoff2]))
     );
     return ret;
 }
@@ -6029,19 +6028,19 @@ double builtin_func_d2d_osi_optsAvmThunkConstant_AvmString_60_____NaN_____opti0_
 // XML_AS3_insertChildAfter
 // XML_AS3_insertChildBefore
 // XML_AS3_replace
-AvmBox builtin_a2a_oaa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_a2a_oaa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
-    typedef AvmRetType_AvmBox (AvmObjectT::*FuncType)(AvmBox, AvmBox);
+    typedef XMLObject* (ScriptObject::*FuncType)(Atom, Atom);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
 }
 
@@ -6063,34 +6062,34 @@ AvmBox builtin_a2a_oaa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
 // __AS3___vec_Vector_object_fixed_get
 // __AS3___vec_Vector_uint_fixed_get
 // flash_utils_ByteArray_readBoolean
-AvmBox builtin_b2a_o_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_b2a_o_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
     };
     (void)argc;
-    typedef AvmRetType_AvmBool32 (AvmObjectT::*FuncType)();
+    typedef bool (ScriptObject::*FuncType)();
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
     );
 }
 
 // String_private__search
-AvmBox builtin_i2a_osa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_i2a_osa_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmString
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_String
     };
     (void)argc;
     (void)env;
-    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->_search(
-        AvmThunkUnbox_AvmString(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+        AvmThunkUnbox_String(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 // flash_utils_ByteArray_endian_set
@@ -6098,133 +6097,134 @@ AvmBox builtin_i2a_osa_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
 // flash_utils_ByteArray_private__uncompress
 // flash_utils_ByteArray_writeUTF
 // flash_utils_ByteArray_writeUTFBytes
-AvmBox builtin_v2a_os_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_v2a_os_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
     (void)argc;
-    typedef AvmRetType_void (AvmObjectT::*FuncType)(AvmString);
+    typedef void (ScriptObject::*FuncType)(String*);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    (*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        AvmThunkUnbox_AvmString(argv[argoff1])
+    (*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        AvmThunkUnbox_String(argv[argoff1])
     );
-    return kAvmThunkUndefined;
+    return undefinedAtom;
 }
 
 // Array_private__slice
-AvmBox builtin_a2a_oadd_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_a2a_oadd_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
         , argoff3 = argoff2 + AvmThunkArgSize_double
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     ArrayObject* const ret = obj->_slice(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
+        AvmThunkUnbox_Atom(argv[argoff1])
         , AvmThunkUnbox_double(argv[argoff2])
         , AvmThunkUnbox_double(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
-// String_AS3_fromCharCode
-AvmBox builtin_s2a_o_rest_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// XMLList_AS3_hasOwnProperty
+// XMLList_AS3_propertyIsEnumerable
+// XML_AS3_hasOwnProperty
+// XML_AS3_propertyIsEnumerable
+Atom builtin_b2a_oa_optaundefinedAtom_u_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
     };
-    const uint32_t argoffV = argoff0 + AvmThunkArgSize_AvmObject;
-    (void)env;
-    StringClass* const obj = (StringClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->AS3_fromCharCode(
-        (argc <= 0 ? NULL : argv + argoffV)
-        , (argc <= 0 ? 0 : argc - 0)
-    );
-    return (AvmBox) ret;
-}
-
-// XMLList_private__namespace
-// XML_private__namespace
-AvmBox builtin_a2a_oai_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
-{
-    enum {
-        argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-    };
-    (void)argc;
-    typedef AvmRetType_AvmBox (AvmObjectT::*FuncType)(AvmBox, int32_t);
+    typedef bool (ScriptObject::*FuncType)(Atom);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_int32_t(argv[argoff2])
+    return (Atom)(*(AvmThunkUnbox_AvmAtomReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        (argc < 1 ? undefinedAtom : AvmThunkUnbox_Atom(argv[argoff1]))
     );
+}
+
+// Math_max
+double builtin_d2d_odd_optdMathUtils_kNegInfinity_optdMathUtils_kNegInfinity_rest_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
+{
+    enum {
+        argoff0 = 0
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_double
+    };
+    const uint32_t argoffV = argoff2 + AvmThunkArgSize_double;
+    (void)env;
+    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    double const ret = obj->max(
+        (argc < 1 ? MathUtils::kNegInfinity : AvmThunkUnbox_double(argv[argoff1]))
+        , (argc < 2 ? MathUtils::kNegInfinity : AvmThunkUnbox_double(argv[argoff2]))
+        , (argc <= 2 ? NULL : argv + argoffV)
+        , (argc <= 2 ? 0 : argc - 2)
+    );
+    return ret;
 }
 
 // Array_private__indexOf
-AvmBox builtin_i2a_oaai_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_i2a_oaai_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
-        , argoff3 = argoff2 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
+        , argoff3 = argoff2 + AvmThunkArgSize_Atom
     };
     (void)argc;
     (void)env;
-    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
+    ArrayClass* const obj = (ArrayClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
     int32_t const ret = obj->_indexOf(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmBox(argv[argoff2])
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_Atom(argv[argoff2])
         , AvmThunkUnbox_int32_t(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
 // Number_private__convert
-AvmBox builtin_s2a_odii_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_s2a_odii_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
         , argoff2 = argoff1 + AvmThunkArgSize_double
         , argoff3 = argoff2 + AvmThunkArgSize_int32_t
     };
     (void)argc;
     (void)env;
-    NumberClass* const obj = (NumberClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    AvmString const ret = obj->_convert(
+    NumberClass* const obj = (NumberClass*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->_convert(
         AvmThunkUnbox_double(argv[argoff1])
         , AvmThunkUnbox_int32_t(argv[argoff2])
         , AvmThunkUnbox_int32_t(argv[argoff3])
     );
-    return (AvmBox) ret;
+    return (Atom) ret;
 }
 
-// Math_min
-double builtin_d2d_odd_optdkAvmThunkInfinity_optdkAvmThunkInfinity_rest_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+// flash_utils_ByteArray_readMultiByte
+Atom builtin_s2a_ous_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_double
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_uint32_t
     };
-    const uint32_t argoffV = argoff2 + AvmThunkArgSize_double;
+    (void)argc;
     (void)env;
-    MathClass* const obj = (MathClass*)AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0]);
-    double const ret = obj->min(
-        (argc < 1 ? kAvmThunkInfinity : AvmThunkUnbox_double(argv[argoff1]))
-        , (argc < 2 ? kAvmThunkInfinity : AvmThunkUnbox_double(argv[argoff2]))
-        , (argc <= 2 ? NULL : argv + argoffV)
-        , (argc <= 2 ? 0 : argc - 2)
+    ByteArrayObject* const obj = (ByteArrayObject*)AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0]);
+    String* const ret = obj->readMultiByte(
+        AvmThunkUnbox_uint32_t(argv[argoff1])
+        , AvmThunkUnbox_String(argv[argoff2])
     );
-    return ret;
+    return (Atom) ret;
 }
 
 // Array_private__concat
@@ -6234,19 +6234,19 @@ double builtin_d2d_odd_optdkAvmThunkInfinity_optdkAvmThunkInfinity_rest_thunk(Av
 // __AS3___vec_Vector_int_private__sort
 // __AS3___vec_Vector_object_private__sort
 // __AS3___vec_Vector_uint_private__sort
-AvmBox builtin_a2a_oao_thunk(AvmMethodEnv env, uint32_t argc, AvmBox* argv)
+Atom builtin_a2a_oao_thunk(MethodEnv* env, uint32_t argc, Atom* argv)
 {
     enum {
         argoff0 = 0
-        , argoff1 = argoff0 + AvmThunkArgSize_AvmObject
-        , argoff2 = argoff1 + AvmThunkArgSize_AvmBox
+        , argoff1 = argoff0 + AvmThunkArgSize_ScriptObject
+        , argoff2 = argoff1 + AvmThunkArgSize_Atom
     };
     (void)argc;
-    typedef AvmRetType_AvmBox (AvmObjectT::*FuncType)(AvmBox, AvmObject);
+    typedef Atom (ScriptObject::*FuncType)(Atom, ScriptObject*);
     const FuncType func = reinterpret_cast<FuncType>(AVMTHUNK_GET_METHOD_HANDLER(env));
-    return (AvmBox)(*(AvmThunkUnbox_AvmReceiver(AvmObject, argv[argoff0])).*(func))(
-        AvmThunkUnbox_AvmBox(argv[argoff1])
-        , AvmThunkUnbox_AvmObject(argv[argoff2])
+    return (Atom)(*(AvmThunkUnbox_AvmReceiver(ScriptObject*, argv[argoff0])).*(func))(
+        AvmThunkUnbox_Atom(argv[argoff1])
+        , AvmThunkUnbox_ScriptObject(argv[argoff2])
     );
 }
 
@@ -8475,7 +8475,7 @@ const uint8_t builtin_abc_data[48036] = {
    6,   8,  91,   0, 247,   3,   0, 225,   6, 187,   6,   8,  94,   0, 249,   3,
    0, 228,   6, 187,   6,   8,  97,   0, 251,   3,   0, 229,   6, 187,   6,   8,
  101,   0, 253,   3,   0, 230,   6, 187,   6,   8, 103,   0, 255,   3,   0, 231,
-   6, 229,   6,   8, 105,   0, 129,   4,   0, 185,   7,   4,  10, 110,   0, 138,
+   6, 229,   6,   8, 105,   0, 129,   4,   0, 185,   7,   4,   8, 110,   0, 138,
    5,  91, 121,   1,   5, 175,   4, 243,   7,   1,   6, 176,   4, 244,   7,   1,
    7, 177,   4, 245,   7,   1,   8, 178,   4, 246,   7,   1,   9, 179,   4, 122,
    1,  10, 180,   4, 247,   7,   1,  11, 181,   4, 248,   7,   1,  12, 182,   4,

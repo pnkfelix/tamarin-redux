@@ -264,7 +264,7 @@ const int kBufferPadding = 16;
             kSWF9,              // SWF9  (Flash Player 9.x)
             kSWF10,             // SWF10 (Flash Player 10.0 & 10.1)
             kSWF11,             // SWF11 (Flash Player 10.2 Spicy)
-            kSWF12,             // SWF12 (Flash Player TBD Serrano)
+            kSWF12,             // SWF12 (Flash Player TBD)
 
             VersionCount,
 
@@ -330,6 +330,7 @@ const int kBufferPadding = 16;
         // ever use this antipattern for new bugs.
         unsigned bugzilla444630:1;
 
+        unsigned bugzilla456852:1;      // Different runtime errors when -Ojit set in acceptance test run
         unsigned bugzilla504525:1;      // Vector.concat processes arguments in reverse order
         unsigned bugzilla513018:1;      // parseFloat accepts illegal number syntax
         unsigned bugzilla524122:1;      // Incorrect optimization for integers in numeric sort

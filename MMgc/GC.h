@@ -219,12 +219,15 @@ namespace MMgc
                 }
                 this->t = tNew;
             }
-            
-            // Don't allow members to be copied, don't think we'll need it.
-            GCMember<T>(const GCMember<T> &other);
-            
+
         public:
             GCMember() : GCRef<T>(){}
+
+            explicit REALLY_INLINE GCMember(const GCMember &other)
+                : GCRef<T>()
+            {
+                set(ProtectedGetOtherRawPtr(other));
+            }
 
             //  This constructor takes any other GCRef<T2>
 
@@ -233,6 +236,11 @@ namespace MMgc
                 : GCRef<T>()
             {
                 set(ProtectedGetOtherRawPtr(other));
+            }
+            
+            REALLY_INLINE GCMember(T* valuePtr)
+            {
+                set(valuePtr);
             }
             
             //  Make sure to decrement the refcount on RCObjects when this GCMember is destroyed
@@ -353,7 +361,7 @@ namespace MMgc
     private:
         // private to prevent its use and someone adding it, GCC creates
         // WriteBarrier's on the stack with it
-        GCHiddenPointer(const GCHiddenPointer<T>& toCopy) { GCAssert(false); }
+        GCHiddenPointer(const GCHiddenPointer<T>&) { GCAssert(false); }
 
         void set(T obj)
         {
