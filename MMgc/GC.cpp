@@ -133,6 +133,7 @@ namespace MMgc
         greedy(mode == kGreedyGC),
         nogc(mode == kDisableGC),
         incremental(mode == kIncrementalGC),
+        drcEnabled(mode != kDisableGC && (config == NULL || config->drc)),
         findUnmarkedPointers(false),
         validateDefRef(false),
         keepDRCHistory(false),
@@ -3934,14 +3935,16 @@ namespace MMgc
         }
 
         const void* object;
-        GCObjectLock* prev;
-        GCObjectLock* next;
+        GCMember<GCObjectLock> prev;
+        GCMember<GCObjectLock> next;
     };
 
     GCObjectLock* GC::LockObject(const void* userptr)
     {
         GCAssertMsg(userptr != NULL, "LockObject should never be called on a NULL pointer.");
         GCObjectLock* lock = new (this, kExact) GCObjectLock(userptr);
+        if (userptr != NULL && IsRCObject(userptr))
+            ((RCObject*)userptr)->IncrementRef();
         if (lockedObjects != NULL)
             lockedObjects->prev = lock;
         lock->next = lockedObjects;
@@ -3961,6 +3964,8 @@ namespace MMgc
             GCAssert(!"UnlockObject should never be called on an unlocked lock.");
             return;
         }
+        if (IsRCObject(lock->object))
+            ((RCObject*)(lock->object))->DecrementRef();
         if (lock->prev != NULL)
             lock->prev->next = lock->next;
         else 
