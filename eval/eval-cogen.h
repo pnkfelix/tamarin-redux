@@ -63,6 +63,7 @@ enum CtxType {
     CTX_Break,
     CTX_Catch,
     CTX_Continue,
+    CTX_Goto,
     CTX_Finally,
     CTX_Function,
     CTX_ClassMethod,
@@ -117,6 +118,31 @@ public:
     Seq<Str*>* const label_names;
 };
 
+struct GotoLabel {
+    GotoLabel(Str* label_name, Label* address, bool ambiguous)
+        : label_name(label_name)
+        , address(address)
+        , ambiguous(ambiguous)
+    {
+    }
+    Str* label_name;
+    Label* address;
+    const bool ambiguous;
+};
+
+class GotoCtx : public Ctx {
+public:
+    GotoCtx(Ctx* ctx0)
+        : Ctx(CTX_Goto, ctx0)
+        , next_goto(NULL)
+        , label_names(NULL)
+    {
+    }
+    
+    GotoCtx* next_goto;            // Populated
+    Seq<GotoLabel*>* label_names;  //   during analysis
+};
+    
 // Represents a scope to restore to the scope chain, pushed by 'with'
 // or 'catch' or reified activation objects, see subclasses.
 
@@ -224,6 +250,7 @@ public:
      */
     void I_add();
     void I_add_i();
+    void I_applytype(uint32_t nargs);
     void I_astype(uint32_t index);
     void I_astypelate();
     void I_bitand();
@@ -365,14 +392,17 @@ public:
     uint32_t emitInt(int32_t value);    // cpool index
     uint32_t emitUInt(uint32_t value);  // cpool index
     uint32_t emitDouble(double value);  // cpool index
+    uint32_t emitNamespace(NameComponent* ns);
     uint32_t emitNamespace(uint32_t name);
     uint32_t emitSlotTrait(uint32_t name, uint32_t type);
     uint32_t emitConstTrait(uint32_t name, uint32_t type);
     uint32_t emitMethodTrait(uint32_t name, uint32_t method);
     uint32_t emitException(uint32_t from, uint32_t to, uint32_t target, uint32_t type, uint32_t name_index);
 
-    static uint32_t emitTypeName(Compiler* abc, QualifiedName* t);
-
+    static uint32_t emitTypeName(Compiler* compiler, Type* t);
+    static void checkVectorType(Compiler* compiler, Type * t);
+    static void checkVectorType(Compiler* compiler, QualifiedName * t);
+    
     Label*   newLabel();
     uint32_t getTemp();
     void unstructuredControlFlow(Ctx* ctx, bool (hit)(Ctx*,void*), void* package, bool jump, SyntaxError msg, uint32_t pos=0);

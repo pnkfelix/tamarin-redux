@@ -200,6 +200,12 @@ namespace avmplus
             return T_GreaterThan;
         }
         
+        Token Lexer::leftAngleImpl()
+        {
+            AvmAssert(last_token == T_BreakLeftAngle);
+            return T_LessThan;
+        }
+        
         Token Lexer::rightShiftOrRelationalOperatorImpl()
         {
             AvmAssert(last_token == T_BreakRightAngle);
@@ -699,6 +705,16 @@ namespace avmplus
                             default:
                                 goto bigswitch_end;
                         }
+                    case 'g':
+                        if (idx[0] == 'o' &&
+                            idx[1] == 't' &&
+                            idx[2] == 'o' &&
+                            !compiler->es3_keywords &&
+                            notPartOfIdent(idx[3])) {
+                            idx += 3;
+                            return T_Goto;
+                        }
+                        goto bigswitch_end;
                     case 'i':
                         switch(idx[0]) {
                             case 'f':

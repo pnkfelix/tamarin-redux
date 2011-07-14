@@ -159,8 +159,7 @@ print(typeof typeof typeof x);
 // Object construction, trickier initializer
 
 print(new String("fnord"));
-// FIXME: does not work
-//print(new <int>[1,2,3]);
+
 
 // FIXME - non-basic "property references" and qualifiers
 //
@@ -184,6 +183,33 @@ x1 =
 </alpha>;
 
 print(x1..*);
+
+// Vector syntax
+
+var x = new <Vector.<int>> [new <int>[], null,null];
+print(x);
+print(x.length);
+print(x[0]);
+print(x[1]);
+print(x[2]);
+x[1] = new <int> [1,2,3];
+print(x[1]);
+x[2] = new <int> [4,5,6];
+print(x[2]);
+print(Vector.<int>);
+print(Object);
+print(new Vector.<int>(10));
+var y : Vector.<int> = new <int> [1,2,3];
+print(y);
+var failed = false;
+try {
+    y = new <Number> [1,2,3]; // not compatible
+}
+catch (e) {
+    failed = true;
+}
+if (!failed)
+    print("Failed to perform type check");
 
 // Global function definition; if statement; return statement.
 
@@ -333,16 +359,26 @@ var x=5;
 with ({x: 10})
     print(x);
 
-// FIXME: super expression
-// FIXME: super statement
+// goto statement
 
-// FIXME: import directive
-// FIXME: use directive
+function gotoTest()
+{
+    goto L1;
+    throw "Should not happen: goto failed";
+    L1: print("goto!");
+}
+gotoTest();
+ 
+ // FIXME: super expression
+ // FIXME: super statement
+ 
+ // FIXME: import directive
+ // FIXME: use directive
+ 
+// include directive
 
-// FIXME: include directive
-
-//include "smoketest2.as";
-//include "smoketest2.as"
+include "smoketest2.as";
+include "smoketest2.as"
 
 // attributed definitions
 //
