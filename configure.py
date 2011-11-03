@@ -133,7 +133,6 @@ if buildAot:
     config.subst("ENABLE_AOT", 1)
 
 the_os, cpu = config.getTarget()
-
 APP_CPPFLAGS = "-DAVMSHELL_BUILD "
 APP_CXXFLAGS = ""
 APP_CFLAGS = ""
@@ -246,18 +245,21 @@ if config.getCompiler() == 'GCC':
 
     if the_os == 'android':
         try:
-            ANDROID_BUILD_TOP = os.environ['ANDROID_BUILD_TOP']
+            ANDROID_TOOLCHAIN = os.environ['ANDROID_TOOLCHAIN']
+            ANDROID_NDK = os.environ['ANDROID_NDK']
+            ANDROID_NDK_BIN = os.environ['ANDROID_NDK_BIN']
+            ANDROID_SDK = os.environ['ANDROID_SDK']
         except:
-            print('\nANDROID_BUILD_TOP not found in environment\nPlease run /android-public/android-vars.sh')
+            print('\nANDROID_ variables not found in environment\nPlease run /android-public/android-vars.sh')
             exit(0)
 
         ANDROID_INCLUDES = "-I$(topsrcdir)/other-licenses/zlib "\
-                           "-I$(ANDROID_BUILD_TOP)/android-ndk/platforms/%s/arch-arm/usr/include "\
-                           "-I$(ANDROID_BUILD_TOP)/android-ndk/toolchains/%s-%s/prebuilt/darwin-x86/bin "\
-                           "-I$(ANDROID_BUILD_TOP)/android-sdk-mac_86 "\
-                           "-I$(ANDROID_BUILD_TOP)/android-ndk/sources/cxx-stl/stlport/stlport "\
-                           "-I$(ANDROID_BUILD_TOP)/openssl/include "\
-                           "-I$(ANDROID_BUILD_TOP)/frameworks/base/opengl/include " % (ANDROIDPLATFORMVER,ARM_EABI,ARM_EABI_VER)
+                           "-I$(ANDROID_NDK)/platforms/%s/arch-arm/usr/include "\
+                           "-I$(ANDROID_NDK_BIN) "\
+                           "-I$(ANDROID_SDK) "\
+                           "-I$(ANDROID_NDK)/sources/cxx-stl/stlport/stlport "\
+                           "-I$(ANDROID_TOOLCHAIN)/openssl/include "\
+                           "-I$(ANDROID_TOOLCHAIN)/frameworks/base/opengl/include " % (ANDROIDPLATFORMVER)
 
         # These flags are shared with some of the other builds such as ARM, but better to keep them separate here for flexibility
         COMMON_CXX_FLAGS = "-Wall -Wdisabled-optimization -Wextra -Wformat=2 -Winit-self -Winvalid-pch -Wno-invalid-offsetof " \
@@ -274,16 +276,16 @@ if config.getCompiler() == 'GCC':
 
         # LFLAGS_HEADLESS gets picked up in configuration.py by MKPROGRAM
         LFLAGS_HEADLESS = "-nostdlib -Bdynamic -Wl,-T,"\
-                          "$(ANDROID_BUILD_TOP)/android-ndk/toolchains/%s-%s/prebuilt/darwin-x86/%s/lib/ldscripts/armelf_linux_eabi.x "\
+                          "$(ANDROID_NDK_BIN)/../%s/lib/ldscripts/armelf_linux_eabi.x "\
                           "-Wl,-dynamic-linker,/system/bin/linker "\
                           "-Wl,-z,nocopyreloc "\
-                          "-L$(ANDROID_BUILD_TOP)/android-ndk/platforms/%s/arch-arm/usr/lib "\
-                          "-L$(ANDROID_BUILD_TOP)/android-ndk/sources/cxx-stl/stlport/libs/armeabi "\
-                          "-Wl,-rpath-link=$(ANDROID_BUILD_TOP)/android-ndk/platforms/%s/arch-arm/usr/lib "\
-                          "$(ANDROID_BUILD_TOP)/android-ndk/platforms/%s/arch-arm/usr/lib/crtbegin_dynamic.o "\
-                          "$(ANDROID_BUILD_TOP)/android-ndk/platforms/%s/arch-arm/usr/lib/crtend_android.o " % (ARM_EABI,ARM_EABI_VER,ARM_EABI,ANDROIDPLATFORMVER,ANDROIDPLATFORMVER,ANDROIDPLATFORMVER,ANDROIDPLATFORMVER)
+                          "-L$(ANDROID_NDK)/platforms/%s/arch-arm/usr/lib "\
+                          "-L$(ANDROID_NDK)/sources/cxx-stl/stlport/libs/armeabi "\
+                          "-Wl,-rpath-link=$(ANDROID_NDK)/platforms/%s/arch-arm/usr/lib "\
+                          "$(ANDROID_NDK)/platforms/%s/arch-arm/usr/lib/crtbegin_dynamic.o "\
+                          "$(ANDROID_NDK)/platforms/%s/arch-arm/usr/lib/crtend_android.o " % (ARM_EABI,ANDROIDPLATFORMVER,ANDROIDPLATFORMVER,ANDROIDPLATFORMVER,ANDROIDPLATFORMVER)
 
-        LDFLAGS += "$(ANDROID_BUILD_TOP)/openssl/libcrypto.a $(ANDROID_BUILD_TOP)/openssl/libssl.a"
+        LDFLAGS += "$(ANDROID_TOOLCHAIN)/openssl/libcrypto.a $(ANDROID_TOOLCHAIN)/openssl/libssl.a"
         
         # SEARCH_DIRS gets picked up in configuration.py by MKPROGRAM
         SEARCH_DIRS = "-L."
@@ -365,8 +367,13 @@ elif config.getCompiler() == 'VS':
             DEBUG_CXXFLAGS = "-Od "
             DEBUG_CFLAGS = "-Od "
         else:
-            OPT_CXXFLAGS = "-O2 -Ob1 -GR- "
-            OPT_CFLAGS = "-O2 -Ob1 -GR- "
+            # BZ: 697097 disable optimization on windows64 for float until resolved
+            if cpu == 'x86_64':
+                OPT_CXXFLAGS = "-Od -Ob1 -GR- "
+                OPT_CFLAGS = "-Od -Ob1 -GR- "
+            else:
+                OPT_CXXFLAGS = "-O2 -Ob1 -GR- "
+                OPT_CFLAGS = "-O2 -Ob1 -GR- "
 
         if memoryProfiler:
             OPT_CXXFLAGS += "-Oy- -Zi "
@@ -449,6 +456,9 @@ elif the_os == "linux":
     MMGC_DEFINES.update({'UNIX': None,
                          'AVMPLUS_UNIX': None})
     OS_LIBS.append('pthread')
+    if cpu == "i686":
+        APP_CPPFLAGS += "-m32 -march=i686 "
+        OS_LDFLAGS += "-m32 "
 #    if cpu == "x86_64":
 #        # workaround https://bugzilla.mozilla.org/show_bug.cgi?id=467776
 #        OPT_CXXFLAGS += '-fno-schedule-insns2 '
@@ -483,8 +493,8 @@ else:
     raise Exception("Unsupported OS")
 
 if cpu == "i686":
-    if config.getCompiler() == 'GCC' and the_os == 'darwin':
-        #only mactel always has sse2
+    if config.getCompiler() == 'GCC' :
+        # we require sse2
         APP_CPPFLAGS += "-msse2 "
 elif cpu == "powerpc":
     # we detect this in core/avmbuild.h and MMgc/*build.h

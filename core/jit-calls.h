@@ -40,9 +40,17 @@
     FUNCTION(CALL_INDIRECT, SIG4(U,P,P,I,P), icalli)
     FUNCTION(CALL_INDIRECT, SIG4(A,P,P,I,P), acalli)
     FUNCTION(CALL_INDIRECT, SIG4(D,P,P,I,P), dcalli)
+#ifdef VMCFG_FLOAT
+    FUNCTION(CALL_INDIRECT, SIG4(F,P,P,I,P), fcalli)
+    FUNCTION(CALL_INDIRECT, SIG4(F4,P,P,I,P), vfcalli)
+#endif // VMCFG_FLOAT
     FUNCTION(CALL_INDIRECT, SIG5(I,P,P,I,P,P), icallimt)
     FUNCTION(CALL_INDIRECT, SIG5(A,P,P,I,P,P), acallimt)
     FUNCTION(CALL_INDIRECT, SIG5(D,P,P,I,P,P), dcallimt)
+#ifdef VMCFG_FLOAT
+    FUNCTION(CALL_INDIRECT, SIG5(F,P,P,I,P,P), fcallimt)
+    FUNCTION(CALL_INDIRECT, SIG5(F4,P,P,I,P,P),vfcallimt)
+#endif // VMCFG_FLOAT
 
     METHOD(ENVADDR(MethodEnv::newActivation), SIG1(P,P), newActivation)
     METHOD(ENVADDR(MethodEnv::newcatch), SIG2(P,P,P), newcatch)
@@ -158,7 +166,11 @@
         &callprop_generic,                  // SST_int32
         &callprop_generic,                  // SST_uint32
         &callprop_generic,                  // SST_bool32
-        &callprop_generic                   // SST_double
+        &callprop_generic,                  // SST_double
+#ifdef VMCFG_FLOAT
+        &callprop_generic,                  // SST_float
+        &callprop_generic                   // SST_float4
+#endif // VMCFG_FLOAT
     };
 
     static const CallCache::Handler callprop_prim_handlers[8] = {
@@ -248,6 +260,10 @@
     REALLY_INLINE Atom boxslot(AvmCore* core, uint32_t u) { return core->uintToAtom(u); }
     REALLY_INLINE Atom boxslot(AvmCore*, Bool32 b) { return ((b != 0)<<3)|kBooleanType; }
     REALLY_INLINE Atom boxslot(AvmCore* core, double d) { return core->doubleToAtom(d); }
+#ifdef VMCFG_FLOAT
+    REALLY_INLINE Atom boxslot(AvmCore* core, float f) { return core->floatToAtom(f); }
+    REALLY_INLINE Atom boxslot(AvmCore* core, float4_t f4) { return core->float4ToAtom(f4); }
+#endif
 
     // getting a slot on an object, specialized on slot type to streamline boxing
     template <class T>
@@ -334,7 +350,11 @@
         &getprop_obj_slot<int32_t>,         // SST_int32
         &getprop_obj_slot<uint32_t>,        // SST_uint32
         &getprop_obj_slot<Bool32>,          // SST_bool32
-        &getprop_obj_slot<double>           // SST_double
+        &getprop_obj_slot<double>,          // SST_double
+#ifdef VMCFG_FLOAT
+        &getprop_obj_slot<float>,           // SST_float
+        &getprop_obj_slot<float4_t>         // SST_float4
+#endif
     };
 
     // handlers when object is primitive, indexed by bindingKind(Binding)
@@ -416,9 +436,19 @@
     METHOD(COREADDR(AvmCore::coerce_s), SIG2(P,P,A), coerce_s)
     METHOD(COREADDR(AvmCore::string), SIG2(P,P,A), string)
     PUREMETHOD(COREADDR(AvmCore::doubleToString), SIG2(P,P,D), doubleToString)
+#ifdef VMCFG_FLOAT
+    PUREMETHOD(COREADDR(AvmCore::floatToString), SIG2(P,P,F), floatToString)
+    PUREMETHOD(COREADDR(AvmCore::float4ToString), SIG2(P,P,F4), float4ToString)
+#endif
     PUREMETHOD(COREADDR(AvmCore::uintToString), SIG2(P,P,U), uintToString)
     PUREMETHOD(COREADDR(AvmCore::intToString), SIG2(P,P,I), intToString)
     PUREMETHOD(COREADDR(AvmCore::doubleToAtom), SIG2(A,P,D), doubleToAtom)
+#ifdef VMCFG_FLOAT
+    PUREMETHOD(COREADDR(AvmCore::floatToAtom), SIG2(A,P,F), floatToAtom)
+    PUREMETHOD(COREADDR(AvmCore::float4ToAtom), SIG2(A,P,F4), float4ToAtom)
+    PUREMETHOD(COREADDR(AvmCore::numericAtom), SIG2(A,P,A), numericAtom)
+    PUREMETHOD(COREADDR(AvmCore::numberAtom), SIG2(A,P,A), numberAtom)
+#endif
     PUREFUNCTION(FUNCADDR(AvmCore::doubleToInt32), SIG1(I,D), doubleToInt32)
     PUREFUNCTION(FUNCADDR(AvmCore::boolean), SIG1(I,A), boolean)
     PUREFUNCTION(FUNCADDR(AvmCore::toUInt32), SIG1(U,A), toUInt32)
@@ -428,6 +458,11 @@
     PUREFUNCTION(FUNCADDR(AvmCore::integer_u), SIG1(U,A), integer_u)
     PUREFUNCTION(FUNCADDR(AvmCore::integer), SIG1(I,A), integer)
     PUREFUNCTION(FUNCADDR(AvmCore::number), SIG1(D,A), number)
+#ifdef VMCFG_FLOAT
+    PUREFUNCTION(FUNCADDR(AvmCore::singlePrecisionFloat), SIG1(F,A), singlePrecisionFloat)
+    PUREFUNCTION(FUNCADDR(AvmCore::float4), SIG1(F4,A), float4)
+    PUREFUNCTION(FUNCADDR(Float4Class::fromComponents), SIG4(F4,F,F,F,F), float4FromComponents)
+#endif
     METHOD(ENVADDR(MethodEnv::hasnextproto), SIG3(I,P,P,P), hasnextproto)
 
     PUREMETHOD(STRINGADDR(String::_charCodeAtDI),  SIG2(D,P,I), String_charCodeAtDI)
@@ -474,6 +509,10 @@
         uint32_t u;             // SST_uint32
         int32_t b;              // SST_bool32
         double d;               // SST_double
+#ifdef VMCFG_FLOAT
+        float  f;               // SST_float
+        float4_t f4;            // SST_float4
+#endif // VMCFG_FLOAT
     };
 
     // Note that CodgegenLIR::analyze_call(), part of live variable
@@ -508,9 +547,29 @@
             return native->b ? trueAtom : falseAtom;
         case SST_double:
             return core->doubleToAtom(native->d);
+#ifdef VMCFG_FLOAT
+        case SST_float:
+            return core->floatToAtom(native->f);
+        case SST_float4:
+            return core->float4ToAtom(AvmThunkUnbox_FLOAT4(float4_t, native->atom));
+#endif // VMCFG_FLOAT
         }
     }
+
+    // TODO/FIXME: makeatom cannot be a PUREFUNCTION, because if it is, CSE assumes that if it is called 
+    // twice with identical parameters, the return value may be reused (which would make sense for a pure function).
+    // Problem is that given the same parameters (i.e. core, native, sst), it may still return a different 
+    // value second time, since "native" is a pointer, and the value it points to may have changed meanwhile.
+    // In other words, it is pure in the programming sense, but not the mathematical sense.
+    //
+    // We should benchmark the impact of this change (from PUREFUNCTION to FUNCTION), and if it is significant, we can try to:
+    // A. leave it as PURE, but disable CSE (questionable whether this will improve performance)
+    // B. Pass the value  rather than the pointer (we'd need to always pass 128 bits, though...)
+#ifdef VMCFG_FLOAT
+    FUNCTION(FUNCADDR(makeatom), SIG3(A,P,P,I), makeatom)
+#else
     PUREFUNCTION(FUNCADDR(makeatom), SIG3(A,P,P,I), makeatom)
+#endif
 
     void set_slot_from_atom(Atom atom, Traits* traits, AnyVal* slotPtr, uint8_t* tagPtr)
     {
@@ -547,9 +606,19 @@
             slotPtr->b = (int32_t)atomGetBoolean(atom);
             break;
         case SST_double:
-            AvmAssert(atomKind(atom) == kIntptrType || atomKind(atom) == kDoubleType);
+            AvmAssert(AvmCore::isNumber(atom));
             slotPtr->d = AvmCore::number_d(atom);
             break;
+#ifdef VMCFG_FLOAT
+        case SST_float:
+            AvmAssert(AvmCore::isNumber(atom));
+            slotPtr->f = AvmCore::singlePrecisionFloat(atom);
+            break;
+        case SST_float4:
+            AvmAssert(AvmCore::isFloat4(atom));
+            slotPtr->f4 = AvmCore::float4(atom);
+            break;
+#endif // VMCFG_FLOAT
         default:
             AvmAssert(false);
         }
@@ -656,6 +725,32 @@
         *slot_ptr = AvmCore::number(val);
     }
 
+#ifdef VMCFG_FLOAT
+    // coerce & store into Float slot
+    REALLY_INLINE void store_cached_slot(SetCache&, ScriptObject*, float* slot_ptr, Atom val)
+    {
+        *slot_ptr = AvmCore::singlePrecisionFloat(val);
+    }
+
+    // coerce & store into Float4 slot
+    REALLY_INLINE void store_cached_slot(SetCache&, ScriptObject*, float4_t* slot_ptr, Atom val)
+    {
+        if( (((uintptr_t)slot_ptr) & 0xf) == 0)
+            *slot_ptr = AvmCore::float4(val);
+        else
+        {
+            float4_t f4 = AvmCore::float4(val);
+#ifdef ANDROID // Work around an ANDROID NDK compiler bug.
+            float* fp = (float*) &f4;
+            float* dp = (float*) slot_ptr;
+            dp[0]=fp[0];dp[1]=fp[1];dp[2]=fp[2];dp[3]=fp[3];
+#else               
+            VMPI_memcpy(slot_ptr, &f4, sizeof(float4_t));
+#endif
+        }
+    }
+#endif // VMCFG_FLOAT
+
     // set slot on an object, sst_scriptobject, sst_int32, sst_uint32
     template <class T>
     void setprop_slot(SetCache& c, Atom obj, Atom val, MethodEnv* env)
@@ -714,6 +809,10 @@
         &setprop_slot<uint32_t>,            // SST_uint32
         &setprop_slot<Bool32>,              // SST_bool32
         &setprop_slot<double>,              // SST_double
+#ifdef VMCFG_FLOAT
+        &setprop_slot<float>,               // SST_float
+        &setprop_slot<float4_t>,            // SST_float4
+#endif // VMCFG_FLOAT
     };
 
     void setprop_miss(SetCache& c, Atom obj, Atom val, MethodEnv* env)
@@ -949,6 +1048,16 @@
             if (!(d >= 0 && d <= 0xFFFFFFFFU && MathUtils::floor(d) == d && (index = (uint32_t)d) < argc))
                 goto exception;
         }
+#ifdef VMCFG_FLOAT
+        else if (AvmCore::isFloat(val)) { 
+            // Non-int index, check for float values that are in the int range and nonnegative
+            float f = AvmCore::atomToFloat(val);
+            if (f >= 0 && f <= 0xFFFFFFFFU && MathUtils::floor(f) == f)
+                index = (uint32_t)f;
+            else
+                goto exception;
+        }
+#endif // VMCFG_FLOAT
         else
             goto exception;
 
@@ -982,8 +1091,23 @@
     FUNCTION(FUNCADDR(op_add_a_ia), SIG3(A,P,I,A), op_add_a_ia)
     FUNCTION(FUNCADDR(op_add_a_ad), SIG3(A,P,A,D), op_add_a_ad)
     FUNCTION(FUNCADDR(op_add_a_da), SIG3(A,P,D,A), op_add_a_da)
-#else
+#endif
     FUNCTION(FUNCADDR(op_add), SIG3(A,P,A,A), op_add)
+#ifdef VMCFG_FLOAT
+    FUNCTION(FUNCADDR(op_add_legacy), SIG3(A,P,A,A), op_add_legacy)
+    FUNCTION(FUNCADDR(op_add_a_aa_legacy), SIG3(A,P,A,A), op_add_a_aa_legacy)
+    FUNCTION(FUNCADDR(op_add_a_ai_legacy), SIG3(A,P,A,I), op_add_a_ai_legacy)
+    FUNCTION(FUNCADDR(op_add_a_ia_legacy), SIG3(A,P,I,A), op_add_a_ia_legacy)
+    FUNCTION(FUNCADDR(op_add_a_ad_legacy), SIG3(A,P,A,D), op_add_a_ad_legacy)
+    FUNCTION(FUNCADDR(op_add_a_da_legacy), SIG3(A,P,D,A), op_add_a_da_legacy)
+#endif
+
+#ifdef VMCFG_FLOAT
+    FUNCTION(FUNCADDR(op_multiply), SIG3(A,P,A,A), op_multiply)
+    FUNCTION(FUNCADDR(op_subtract), SIG3(A,P,A,A), op_subtract)
+    FUNCTION(FUNCADDR(op_divide), SIG3(A,P,A,A), op_divide)
+    FUNCTION(FUNCADDR(op_modulo), SIG3(A,P,A,A), op_modulo)
+    FUNCTION(FUNCADDR(op_negate), SIG2(A,P,A), op_negate)
 #endif
 
     PUREMETHOD(COREADDR(AvmCore::EscapeAttributeValue), SIG2(P,P,A), EscapeAttributeValue)
@@ -1003,6 +1127,10 @@
     METHOD(VECTORINTADDR(IntVectorObject::_setNativeUintProperty), SIG3(V,P,U,I), IntVectorObject_setNativeUintProperty)
     METHOD(VECTORDOUBLEADDR(DoubleVectorObject::_setUintProperty), SIG3(V,P,U,A), DoubleVectorObject_setUintProperty)
     METHOD(VECTORDOUBLEADDR(DoubleVectorObject::_setNativeUintProperty), SIG3(V,P,U,D), DoubleVectorObject_setNativeUintProperty)
+#ifdef VMCFG_FLOAT
+    METHOD(VECTORFLOATADDR(FloatVectorObject::_setUintProperty), SIG3(V,P,U,A), FloatVectorObject_setUintProperty)
+    METHOD(VECTORFLOATADDR(FloatVectorObject::_setNativeUintProperty), SIG3(V,P,U,F), FloatVectorObject_setNativeUintProperty)
+#endif
 
     METHOD(ENVADDR(MethodEnv::setpropertylate_i), SIG4(V,P,A,I,A), setpropertylate_i)
     METHOD(ARRAYADDR(ArrayObject::_setIntProperty), SIG3(V,P,I,A), ArrayObject_setIntProperty)
@@ -1015,6 +1143,10 @@
     METHOD(VECTORINTADDR(IntVectorObject::_setNativeIntProperty), SIG3(V,P,I,I), IntVectorObject_setNativeIntProperty)
     METHOD(VECTORDOUBLEADDR(DoubleVectorObject::_setIntProperty), SIG3(V,P,I,A), DoubleVectorObject_setIntProperty)
     METHOD(VECTORDOUBLEADDR(DoubleVectorObject::_setNativeIntProperty), SIG3(V,P,I,D), DoubleVectorObject_setNativeIntProperty)
+#ifdef VMCFG_FLOAT
+    METHOD(VECTORFLOATADDR(FloatVectorObject::_setIntProperty), SIG3(V,P,I,A), FloatVectorObject_setIntProperty)
+    METHOD(VECTORFLOATADDR(FloatVectorObject::_setNativeIntProperty), SIG3(V,P,I,F), FloatVectorObject_setNativeIntProperty)
+#endif
 
     METHOD(ENVADDR(MethodEnv::setpropertylate_d), SIG4(V,P,A,D,A), setpropertylate_d)
     METHOD(ARRAYADDR(ArrayObject::_setDoubleProperty), SIG3(V,P,D,A), ArrayObject_setDoubleProperty)
@@ -1027,6 +1159,26 @@
     METHOD(VECTORINTADDR(IntVectorObject::_setNativeDoubleProperty), SIG3(V,P,D,I), IntVectorObject_setNativeDoubleProperty)
     METHOD(VECTORDOUBLEADDR(DoubleVectorObject::_setDoubleProperty), SIG3(V,P,D,A), DoubleVectorObject_setDoubleProperty)
     METHOD(VECTORDOUBLEADDR(DoubleVectorObject::_setNativeDoubleProperty), SIG3(V,P,D,D), DoubleVectorObject_setNativeDoubleProperty)
+#ifdef VMCFG_FLOAT
+    METHOD(VECTORFLOATADDR(FloatVectorObject::_setDoubleProperty), SIG3(V,P,D,A), FloatVectorObject_setDoubleProperty)
+    METHOD(VECTORFLOATADDR(FloatVectorObject::_setNativeDoubleProperty), SIG3(V,P,D,F), FloatVectorObject_setNativeDoubleProperty)
+#endif
+
+#ifdef VMCFG_FLOAT
+    METHOD(ENVADDR(MethodEnv::setpropertylate_f), SIG4(V,P,A,F,A), setpropertylate_f)
+    METHOD(ARRAYADDR(ArrayObject::_setFloatProperty), SIG3(V,P,F,A), ArrayObject_setFloatProperty)
+    METHOD(VECTOROBJADDR(ObjectVectorObject::_setFloatProperty), SIG3(V,P,F,A), ObjectVectorObject_setFloatProperty)
+    METHOD(VECTOROBJADDR(ObjectVectorObject::_setKnownFloatProperty), SIG3(V,P,F,A), ObjectVectorObject_setKnownFloatProperty)
+    METHOD(VECTOROBJADDR(ObjectVectorObject::_setKnownFloatPropertyWithPointer), SIG3(V,P,F,A), ObjectVectorObject_setKnownFloatPropertyWithPointer)
+    METHOD(VECTORUINTADDR(UIntVectorObject::_setFloatProperty), SIG3(V,P,F,A), UIntVectorObject_setFloatProperty)
+    METHOD(VECTORUINTADDR(UIntVectorObject::_setNativeFloatProperty), SIG3(V,P,F,U), UIntVectorObject_setNativeFloatProperty)
+    METHOD(VECTORINTADDR(IntVectorObject::_setFloatProperty), SIG3(V,P,F,A), IntVectorObject_setFloatProperty)
+    METHOD(VECTORINTADDR(IntVectorObject::_setNativeFloatProperty), SIG3(V,P,F,I), IntVectorObject_setNativeFloatProperty)
+    METHOD(VECTORDOUBLEADDR(DoubleVectorObject::_setFloatProperty), SIG3(V,P,F,A), DoubleVectorObject_setFloatProperty)
+    METHOD(VECTORDOUBLEADDR(DoubleVectorObject::_setNativeFloatProperty), SIG3(V,P,F,D), DoubleVectorObject_setNativeFloatProperty)
+    METHOD(VECTORFLOATADDR(FloatVectorObject::_setFloatProperty), SIG3(V,P,F,A), FloatVectorObject_setFloatProperty)
+    METHOD(VECTORFLOATADDR(FloatVectorObject::_setNativeFloatProperty), SIG3(V,P,F,F), FloatVectorObject_setNativeFloatProperty)
+#endif
 
     METHOD(ENVADDR(MethodEnv::getpropertylate_u), SIG3(A,P,A,U), getpropertylate_u)
     METHOD(ARRAYADDR(ArrayObject::_getUintProperty), SIG2(A,P,U), ArrayObject_getUintProperty)
@@ -1037,6 +1189,10 @@
     METHOD(VECTORINTADDR(IntVectorObject::_getNativeUintProperty), SIG2(I,P,U), IntVectorObject_getNativeUintProperty)
     METHOD(VECTORDOUBLEADDR(DoubleVectorObject::_getUintProperty), SIG2(A,P,U), DoubleVectorObject_getUintProperty)
     METHOD(VECTORDOUBLEADDR(DoubleVectorObject::_getNativeUintProperty), SIG2(D,P,U), DoubleVectorObject_getNativeUintProperty)
+#ifdef VMCFG_FLOAT
+    METHOD(VECTORFLOATADDR(FloatVectorObject::_getUintProperty), SIG2(A,P,U), FloatVectorObject_getUintProperty)
+    METHOD(VECTORFLOATADDR(FloatVectorObject::_getNativeUintProperty), SIG2(F,P,U), FloatVectorObject_getNativeUintProperty)
+#endif
 
     METHOD(ENVADDR(MethodEnv::getpropertylate_i), SIG3(A,P,A,I), getpropertylate_i)
     METHOD(ARRAYADDR(ArrayObject::_getIntProperty), SIG2(A,P,I), ArrayObject_getIntProperty)
@@ -1047,6 +1203,10 @@
     METHOD(VECTORINTADDR(IntVectorObject::_getNativeIntProperty), SIG2(I,P,I), IntVectorObject_getNativeIntProperty)
     METHOD(VECTORDOUBLEADDR(DoubleVectorObject::_getIntProperty), SIG2(A,P,I), DoubleVectorObject_getIntProperty)
     METHOD(VECTORDOUBLEADDR(DoubleVectorObject::_getNativeIntProperty), SIG2(D,P,I), DoubleVectorObject_getNativeIntProperty)
+#ifdef VMCFG_FLOAT
+    METHOD(VECTORFLOATADDR(FloatVectorObject::_getIntProperty), SIG2(A,P,I), FloatVectorObject_getIntProperty)
+    METHOD(VECTORFLOATADDR(FloatVectorObject::_getNativeIntProperty), SIG2(F,P,I), FloatVectorObject_getNativeIntProperty)
+#endif
 
     METHOD(ENVADDR(MethodEnv::getpropertylate_d), SIG3(A,P,A,D), getpropertylate_d)
     METHOD(ARRAYADDR(ArrayObject::_getDoubleProperty), SIG2(A,P,D), ArrayObject_getDoubleProperty)
@@ -1057,6 +1217,24 @@
     METHOD(VECTORUINTADDR(UIntVectorObject::_getNativeDoubleProperty), SIG2(U,P,D), UIntVectorObject_getNativeDoubleProperty)
     METHOD(VECTORDOUBLEADDR(DoubleVectorObject::_getDoubleProperty), SIG2(D,P,D), DoubleVectorObject_getDoubleProperty)
     METHOD(VECTORDOUBLEADDRD(DoubleVectorObject::_getNativeDoubleProperty), SIG2(D,P,D), DoubleVectorObject_getNativeDoubleProperty)
+#ifdef VMCFG_FLOAT
+    METHOD(VECTORFLOATADDR(FloatVectorObject::_getDoubleProperty), SIG2(F,P,D), FloatVectorObject_getDoubleProperty)
+    METHOD(VECTORFLOATADDRF(FloatVectorObject::_getNativeDoubleProperty), SIG2(F,P,D), FloatVectorObject_getNativeDoubleProperty)
+#endif
+
+#ifdef VMCFG_FLOAT
+    METHOD(ENVADDR(MethodEnv::getpropertylate_f), SIG3(A,P,A,F), getpropertylate_f)
+    METHOD(ARRAYADDR(ArrayObject::_getFloatProperty), SIG2(A,P,F), ArrayObject_getFloatProperty)
+    METHOD(VECTOROBJADDR(ObjectVectorObject::_getFloatProperty), SIG2(A,P,F), ObjectVectorObject_getFloatProperty)
+    METHOD(VECTORINTADDR(IntVectorObject::_getFloatProperty), SIG2(I,P,F), IntVectorObject_getFloatProperty)
+    METHOD(VECTORINTADDR(IntVectorObject::_getNativeFloatProperty), SIG2(I,P,F), IntVectorObject_getNativeFloatProperty)
+    METHOD(VECTORUINTADDR(UIntVectorObject::_getFloatProperty), SIG2(U,P,F), UIntVectorObject_getFloatProperty)
+    METHOD(VECTORUINTADDR(UIntVectorObject::_getNativeFloatProperty), SIG2(U,P,F), UIntVectorObject_getNativeFloatProperty)
+    METHOD(VECTORDOUBLEADDR(DoubleVectorObject::_getFloatProperty), SIG2(D,P,F), DoubleVectorObject_getFloatProperty)
+    METHOD(VECTORDOUBLEADDRD(DoubleVectorObject::_getNativeFloatProperty), SIG2(D,P,F), DoubleVectorObject_getNativeFloatProperty)
+    METHOD(VECTORFLOATADDR(FloatVectorObject::_getFloatProperty), SIG2(F,P,F), FloatVectorObject_getFloatProperty)
+    METHOD(VECTORFLOATADDRF(FloatVectorObject::_getNativeFloatProperty), SIG2(F,P,F), FloatVectorObject_getNativeFloatProperty)
+#endif
 
     METHOD(ENVADDR(MethodEnv::haspropertylate_u), SIG3(I,P,A,U), haspropertylate_u)
     METHOD(ENVADDR(MethodEnv::haspropertylate_i), SIG3(I,P,A,I), haspropertylate_i)
@@ -1123,6 +1301,9 @@
     METHOD(ENVADDR(MethodEnv::initMultinameLateForDelete), SIG3(V,P,P,A), initMultinameLateForDelete)
     PUREFUNCTION(FUNCADDR(MathUtils::doubleToBool), SIG1(I,D), doubleToBool)
 
+FLOAT_ONLY(
+    PUREMETHOD(COREADDR(AvmCore::allocFloat),  SIG2(A,P,F), allocFloat)
+)
 SSE2_ONLY(
     PUREMETHOD(COREADDR(AvmCore::doubleToAtom_sse2), SIG2(A,P,D), doubleToAtom_sse2)
     PUREFUNCTION(FUNCADDR(AvmCore::integer_d_sse2), SIG1(I,D), integer_d_sse2)

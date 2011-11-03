@@ -45,10 +45,10 @@
 
 namespace nanojit
 {
-    const Register Assembler::retRegs[] = { R3, R4 }; // high=R3, low=R4
-    const Register Assembler::argRegs[] = { R3, R4, R5, R6, R7, R8, R9, R10 };
+    const Register RegAlloc::retRegs[] = { R3, R4 }; // high=R3, low=R4
+    const Register RegAlloc::argRegs[] = { R3, R4, R5, R6, R7, R8, R9, R10 };
 
-    const Register Assembler::savedRegs[] = {
+    const Register RegAlloc::savedRegs[] = {
     #if !defined NANOJIT_64BIT
         R13,
     #endif
@@ -610,6 +610,7 @@ namespace nanojit
     }
 
     NIns* Assembler::asm_branch_ov(LOpcode op, NIns* targ) {
+        (void) op;
         // This only works for our overflow-enabled instructions (see
         // asm_arith). We want overflow, not summary overflow, so that
         // we aren't carrying overflow forward from something else.
@@ -741,13 +742,23 @@ namespace nanojit
         SwapEnable();
     }
 
+    RegisterMask RegAlloc::nRegCopyCandidates(Register r, RegisterMask allow) {
+        // PPC doesn't support any GPR<->FPR moves
+        if(rmask(r) & GpRegs)
+            return allow & GpRegs;
+        if(rmask(r) & FpRegs)
+            return allow & FpRegs;
+        NanoAssert(false); // How did we get here?
+        return 0;
+    }
+
     void Assembler::asm_nongp_copy(Register r, Register s) {
         // PPC doesn't support any GPR<->FPR moves
         NanoAssert((rmask(r) & FpRegs) && (rmask(s) & FpRegs));
         FMR(r, s);
     }
 
-    bool Assembler::canRemat(LIns* ins)
+    bool RegAlloc::canRemat(LIns* ins)
     {
         return ins->isImmI() || ins->isop(LIR_allocp);
     }
@@ -801,7 +812,7 @@ namespace nanojit
             // first eight args always in R3..R10 for PPC
             if (a < 8) {
                 // incoming arg in register
-                deprecated_prepResultReg(ins, rmask(argRegs[a]));
+                deprecated_prepResultReg(ins, rmask(RegAlloc::argRegs[a]));
             } else {
                 // todo: support stack based args, arg 0 is at [FP+off] where off
                 // is the # of regs to be pushed in genProlog()
@@ -810,13 +821,13 @@ namespace nanojit
         }
         else {
             // saved param
-            deprecated_prepResultReg(ins, rmask(savedRegs[a]));
+            deprecated_prepResultReg(ins, rmask(RegAlloc::savedRegs[a]));
         }
     }
 
     void Assembler::asm_call(LIns *ins) {
         if (!ins->isop(LIR_callv)) {
-            Register retReg = ( ins->isop(LIR_calld) ? F1 : retRegs[0] );
+            Register retReg = ( ins->isop(LIR_calld) ? F1 : RegAlloc::retRegs[0] );
             deprecated_prepResultReg(ins, rmask(retReg));
         }
 
@@ -950,7 +961,8 @@ namespace nanojit
         }
     }
 
-    void Assembler::asm_spill(Register rr, int d, bool quad) {
+    void Assembler::asm_spill(Register rr, int d, int8_t nWords) {
+        bool quad = nWords >=2;
         (void)quad;
         NanoAssert(d);
         if (IsFpReg(rr)) {
@@ -1251,9 +1263,66 @@ namespace nanojit
     #endif
     }
 
+#ifdef VMCFG_FLOAT
+    void Assembler::asm_ui2f(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_ui2f not yet supported for this architecture");
+    }
+    void Assembler::asm_i2f(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_i2f not yet supported for this architecture");
+    }
+    void Assembler::asm_f2i(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_f2i not yet supported for this architecture");
+    }
+    void Assembler::asm_f2d(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_f2d not yet supported for this architecture");
+    }
+    void Assembler::asm_d2f(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_d2f not yet supported for this architecture");
+    }
+    void Assembler::asm_immf(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_immf not yet supported for this architecture");
+    }
+    void Assembler::asm_immf4(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_immf4 not yet supported for this architecture");
+    }
+    void Assembler::asm_f2f4(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_f2f4 not yet supported for this architecture");
+    }
+    void Assembler::asm_f4comp(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_f4comp not yet supported for this architecture");
+    }
+    void Assembler::asm_condf4(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "asm_condf4 not yet supported for this architecture");
+    }
+    void
+    Assembler::asm_load128(LIns* ins)
+    {
+        (void)ins;
+        NanoAssertMsg(0, "asm_load128 not yet supported for this architecture");
+    }
+
+    void
+    Assembler::asm_store128(LOpcode op, LIns* value, int dr, LIns* base)
+    {
+        (void)op; (void)value;(void)dr;(void)base;
+        NanoAssertMsg(0, "asm_store128 not yet supported for this architecture");
+    }
+#endif // VMCFG_FLOAT
+    
     void Assembler::asm_d2i(LIns* ins) {
     // Like SPARC, PPC fctid/fctiw only handles fpr->mem->gpr ultimately.
     #if defined NANOJIT_64BIT
+        (void)ins;
         TODO(d2i_64bit);
     #else
         LIns *lhs = ins->oprnd1();
@@ -1555,9 +1624,31 @@ namespace nanojit
         asm_cmp(condval->opcode(), condval->oprnd1(), condval->oprnd2(), CR0);
     }
 
-    RegisterMask Assembler::nHint(LIns* ins) {
+    const RegisterMask PREFER_SPECIAL = ~ ((RegisterMask)0);
+    // Init per-opcode register hint table.  Defaults to no hints for all instructions 
+    // (initialized to 0 )
+    static bool nHintsInit(RegisterMask Hints[])
+    {
+        VMPI_memset(Hints,0,sizeof(RegisterMask)*LIR_sentinel );
+        Hints[LIR_calli]  = rmask(R3);
+#ifdef NANOJIT_64BIT
+        Hints[LIR_callq]  = rmask(R3);
+#endif
+        Hints[LIR_calld]  = rmask(F1);
+        Hints[LIR_paramp] = PREFER_SPECIAL;
+        return true;
+    }
+
+    RegisterMask RegAlloc::nHint(LIns* ins)
+    {
+        static RegisterMask  Hints[LIR_sentinel+1]; // effectively const, save for the initialization
+        static bool initialized = nHintsInit(Hints); (void)initialized; 
+        
+        RegisterMask prefer = Hints[ins->opcode()];
+        
+        if(prefer != PREFER_SPECIAL) return prefer;
+        
         NanoAssert(ins->isop(LIR_paramp));
-        RegisterMask prefer = 0;
         if (ins->paramKind() == 0)
             if (ins->paramArg() < 8)
                 prefer = rmask(argRegs[ins->paramArg()]);
@@ -1577,15 +1668,6 @@ namespace nanojit
         } else {
             NOT(rr, ra);
         }
-    }
-
-    void Assembler::nInit() {
-        nHints[LIR_calli]  = rmask(R3);
-    #ifdef NANOJIT_64BIT
-        nHints[LIR_callq]  = rmask(R3);
-    #endif
-        nHints[LIR_calld]  = rmask(F1);
-        nHints[LIR_paramp] = PREFER_SPECIAL;
     }
 
     void Assembler::nBeginAssembly() {
@@ -1662,6 +1744,9 @@ namespace nanojit
 #endif // FAST_FLUSH_ICACHE
 
     static void demote_to_far_branch(NIns *branch, NIns *target) {
+#ifdef NANOJIT_64BIT
+        TODO(demote_to_far_branch);(void) branch; (void) target;
+#else
         // Our branch has exceeded its range, so now we have to fall back
         // on a far branch. Hope we have NOPs to overwrite ...
         uint32_t imm = uint32_t(target);
@@ -1679,6 +1764,7 @@ namespace nanojit
     #ifdef FAST_FLUSH_ICACHE
         fast_flush_icache4(branch);
     #endif
+#endif        
     }
 
     void Assembler::nPatchBranch(NIns *branch, NIns *target) {
@@ -1720,6 +1806,8 @@ namespace nanojit
         // patch 64bit branch
         // XXX this probably needs to be patched in the same way for 32bit
         TODO(64bit_bitmask_patch_far);
+        const bool WTF=true;
+        if(WTF) /*nothing*/;
         else if ((branch[0] & ~(31<<21)) == PPC_addis) { // XXX?
             // general branch, using lis,ori,sldi,oris,ori to load the const 64bit addr.
             Register rd = { (branch[0] >> 21) & 31 };
@@ -1770,8 +1858,8 @@ namespace nanojit
         }
     #endif // !NANOJIT_64BIT
         else {
-            fprintf(stderr, "ASSERTION: can't patch opcode @ %08x : %08x\n",
-                (uint32_t)branch, (uint32_t)branch[0]);
+            fprintf(stderr, "ASSERTION: can't patch opcode @ %p : %08x\n",
+                branch, branch[0]);
             TODO(unknown_patch);
         }
     }
@@ -1788,7 +1876,7 @@ namespace nanojit
         return 31-i;
     }
 
-    Register Assembler::nRegisterAllocFromSet(RegisterMask set) {
+    Register RegAlloc::nRegisterAllocFromSet(RegisterMask set) {
         uint32_t i;
         // note, deliberate truncation of 64->32 bits
         if (set & 0xffffffff) {
@@ -1797,13 +1885,11 @@ namespace nanojit
             i = 32 + cntzlw(int(set>>32)); // fp reg
         }
         Register r = { i };
-        _allocator.free &= ~rmask(r);
         return r;
     }
 
-    void Assembler::nRegisterResetAll(RegAlloc &regs) {
-        regs.clear();
-        regs.free = SavedRegs | 0x1ff8 /* R3-12 */ | 0x3ffe00000000LL /* F1-13 */;
+    RegisterMask RegAlloc::nInitManagedRegisters() {
+        return SavedRegs | 0x1ff8 /* R3-12 */ | 0x3ffe00000000LL /* F1-13 */;
     }
 
 #ifdef NANOJIT_64BIT
@@ -1851,7 +1937,11 @@ namespace nanojit
             // Save our guard record in a scratch register that
             // the epilogue will later move to R3 (see asm_ret and
             // genEpilogue), leaving R3 with the interpreter state.
+#ifdef NANOJIT_64BIT
+            TODO(asm_li(R12,gr));
+#else            
             asm_li(R12, (int)gr);
+#endif // NANOJIT_64BIT
         }
         SwapEnable();
 

@@ -158,10 +158,14 @@ namespace nanojit
         } else {
             switch (ins->retType()) {
             case LTy_I:   n = 1;          break;
+#ifdef VMCFG_FLOAT
+            case LTy_F:   n = 1;          break; 
+            case LTy_F4:  n = 4;          break; 
+#endif
             CASE64(LTy_Q:)
             case LTy_D:   n = 2;          break;
-            case LTy_V:  NanoAssert(0);  break;
-            default:        NanoAssert(0);  break;
+            case LTy_V:   NanoAssert(0);  break;
+            default:      NanoAssert(0);  break;
             }
         }
         return n;
@@ -204,6 +208,30 @@ namespace nanojit
 #if NJ_USES_IMMD_POOL
     typedef HashMap<uint64_t, uint64_t*> ImmDPoolMap;
 #endif
+#if NJ_USES_IMMF4_POOL
+    #if defined(_WIN32) && !defined(NANOJIT_X64) //AVMSYSTEM_32BIT
+        class float4_ref{
+        private: 
+           float _val[4];
+        public:
+            float4_ref(float4_t& p) { _val[0]=f4_x(p); _val[1]=f4_y(p); _val[2]=f4_z(p); _val[3]=f4_w(p); }
+            operator float4_t() const { float4_t ret = { _val[0],_val[1],_val[2],_val[3]}; return ret;}
+            const void* operator&() { return &_val[0]; }
+        };
+        NanoStaticAssert(sizeof(float4_ref) == sizeof(float4_t));
+        template<> inline bool keysEqual<float4_ref>(float4_ref x,float4_ref y){return VMPI_memcmp(&x,&y,sizeof(float4_t)) == 0;}
+        template<> struct DefaultHash<float4_ref> {
+            static size_t hash(const float4_ref k) {
+                // (const void*) cast is required by ARM RVCT 2.2
+                return murmurhash((const void*) &k, sizeof(float4_t));
+            }
+        };
+
+        typedef HashMap<float4_ref, float4_t*> ImmF4PoolMap;
+    #else // other compilers will hopefully support a direct hashmap
+        typedef HashMap<float4_t, float4_t*> ImmF4PoolMap;
+    #endif
+#endif //NJ_USES_IMMF4_POOL
 
 #ifdef VMCFG_VTUNE
     class avmplus::CodegenLIR;
@@ -261,6 +289,7 @@ namespace nanojit
      */
     class Assembler
     {
+        friend class RegAlloc; // allow allocReg to evict instructions; allow init functions to access config settings
         friend class VerboseBlockReader;
             #ifdef NJ_VERBOSE
         public:
@@ -336,9 +365,6 @@ namespace nanojit
             void        arFree(LIns* ins);
             void        arReset();
 
-            Register    registerAlloc(LIns* ins, RegisterMask allow, RegisterMask prefer);
-            Register    registerAllocTmp(RegisterMask allow);
-            void        registerResetAll();
             void        evictAllActiveRegs() {
                 // The evicted set will be be intersected with activeSet(),
                 // so use an all-1s mask to avoid an extra load or call.
@@ -349,7 +375,6 @@ namespace nanojit
             void        intersectRegisterState(RegAlloc& saved);
             void        unionRegisterState(RegAlloc& saved);
             void        assignSaved(RegAlloc &saved, RegisterMask skip);
-            LIns*       findVictim(RegisterMask allow);
 
             Register    getBaseReg(LIns *ins, int &d, RegisterMask allow);
             void        getBaseReg2(RegisterMask allowValue, LIns* value, Register& rv,
@@ -358,6 +383,11 @@ namespace nanojit
             const uint64_t*
                         findImmDFromPool(uint64_t q);
 #endif
+#if NJ_USES_IMMF4_POOL
+            const float4_t*
+                        findImmF4FromPool(float4_t q);
+#endif
+
             int         findMemFor(LIns* ins);
             Register    findRegFor(LIns* ins, RegisterMask allow);
             void        findRegFor2(RegisterMask allowa, LIns* ia, Register &ra,
@@ -370,7 +400,6 @@ namespace nanojit
             void        freeResourcesOf(LIns *ins);
             void        evictIfActive(Register r);
             void        evict(LIns* vic);
-            RegisterMask hint(LIns* ins);
 
             void        getBaseIndexScale(LIns* addp, LIns** base, LIns** index, int* scale);
 
@@ -378,16 +407,6 @@ namespace nanojit
                                   verbose_only(, size_t &nBytes)
                                   , size_t byteLimit=0);
 
-            // These instructions don't have to be saved & reloaded to spill,
-            // they can just be recalculated cheaply.
-            //
-            // WARNING: this function must match asm_restore() -- it should return
-            // true for the instructions that are handled explicitly without a spill
-            // in asm_restore(), and false otherwise.
-            //
-            // If it doesn't match asm_restore(), the register allocator's decisions
-            // about which values to evict will be suboptimal.
-            static bool canRemat(LIns*);
 
             bool deprecated_isKnownReg(Register r) {
                 return r != deprecated_UnknownReg;
@@ -402,12 +421,15 @@ namespace nanojit
             LabelStateMap       _labels;
             Noise*              _noise;             // object to generate random noise used when hardening enabled.
         #if NJ_USES_IMMD_POOL
-            ImmDPoolMap     _immDPool;
+            ImmDPoolMap         _immDPool;
+        #endif
+        #if NJ_USES_IMMF4_POOL
+            ImmF4PoolMap        _immF4Pool;
         #endif
 
             // We generate code into two places:  normal code chunks, and exit
             // code chunks (for exit stubs).  We use a hack to avoid having to
-            // parameterise the code that does the generating -- we let that
+            // parameterize the code that does the generating -- we let that
             // code assume that it's always generating into a normal code
             // chunk (most of the time it is), and when we instead need to
             // generate into an exit code chunk, we set _inExit to true and
@@ -460,12 +482,18 @@ namespace nanojit
             void        asm_restore(LIns*, Register);
 
             bool        asm_maybe_spill(LIns* ins, bool pop);
+
 #ifdef NANOJIT_IA32
-            void        asm_spill(Register rr, int d, bool pop);
+    #define ASM_SPILL_RESTARGS  bool pop FLOAT_ONLY(, int8_t nWords)
 #else
-            void        asm_spill(Register rr, int d, bool quad);
+    #ifdef VMCFG_FLOAT
+    #define ASM_SPILL_RESTARGS  int8_t nWords
+    #else
+    #define ASM_SPILL_RESTARGS  bool quad
+    #endif
 #endif
-            void        asm_load64(LIns* ins);
+            void        asm_spill(Register rr, int d, ASM_SPILL_RESTARGS);
+
             void        asm_ret(LIns* ins);
 #ifdef NANOJIT_64BIT
             void        asm_immq(LIns* ins);
@@ -476,6 +504,7 @@ namespace nanojit
             void        asm_arith(LIns* ins);
             void        asm_neg_not(LIns* ins);
             void        asm_load32(LIns* ins);
+            void        asm_load64(LIns* ins);
             void        asm_cmov(LIns* ins);
             void        asm_param(LIns* ins);
             void        asm_immi(LIns* ins);
@@ -495,6 +524,21 @@ namespace nanojit
             void        asm_dasq(LIns *ins);
             void        asm_qasd(LIns *ins);
 #endif
+#ifdef VMCFG_FLOAT
+            void        asm_mmi(Register rd, int dd, Register rs, int ds);
+            void        asm_store128(LOpcode op, LIns *val, int d, LIns *base);
+            void        asm_load128(LIns* ins);
+            void        asm_immf(LIns* ins);
+            void        asm_immf4(LIns* ins);
+            void        asm_condf4(LIns* ins);
+            void        asm_i2f(LIns* ins);
+            void        asm_ui2f(LIns* ins);
+            void        asm_f2i(LIns* ins);
+            void        asm_d2f(LIns* ins);
+            void        asm_f2d(LIns* ins);
+            void        asm_f2f4(LIns* ins);
+            void        asm_f4comp(LIns* ins);
+#endif
             void        asm_nongp_copy(Register r, Register s);
             void        asm_call(LIns*);
             Register    asm_binop_rhs_reg(LIns* ins);
@@ -509,24 +553,12 @@ namespace nanojit
             void        handleLoopCarriedExprs(InsList& pending_lives);
 
             // platform specific implementation (see NativeXXX.cpp file)
-            void        nInit();
             void        nBeginAssembly();
-            Register    nRegisterAllocFromSet(RegisterMask set);
-            void        nRegisterResetAll(RegAlloc& a);
             void        nPatchBranch(NIns* branch, NIns* location);
             void        nFragExit(LIns* guard);
 
-            RegisterMask nHints[LIR_sentinel+1];
-            RegisterMask nHint(LIns* ins);
-
-            // A special entry for hints[];  if an opcode has this value, we call
-            // nHint() in the back-end.  Used for cases where you need to look at more
-            // than just the opcode to decide.
-            static const RegisterMask PREFER_SPECIAL = 0xffffffff;
-
             // platform specific methods
         public:
-            const static Register savedRegs[NumSavedRegs+1]; // Allocate an extra element in case NumSavedRegs == 0
             DECLARE_PLATFORM_ASSEMBLER()
 
         private:
