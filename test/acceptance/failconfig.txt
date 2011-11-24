@@ -98,6 +98,12 @@ as3/Number/e15_7_4_6_1:Section C , .* ,diff , expectedfail, bug https://bugzilla
 ecma3/Number/e15_7_1:Number\('1\.797693134862316e\+308'\), .*,  , expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=692402
 ecma3/Number/e15_7_2:Number\('1\.797693134862316e\+308'\), .*,  , expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=692402
 
+as3/Types/Number/cos:Number\.cos\(Number\.MAX_VALUE\), x86-(win|lnx).*, , expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=704813
+as3/Types/Number/round: sign check , .*, , expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=686708
+as3/Types/Number/round:Number\.round\(x\) != Number\.floor, .*, , expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=686708
+as3/Types/Number/pow:Number\.pow\(Number\.NEGATIVE_INFINITY. -2\) sign check , .*,, expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=703611
+as3/Types/Number/pow:Number\.pow\(Number\.NEGATIVE_INFINITY. -2\) check\(\) sign check , .*,, expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=703611
+
 
 ####################
 # String
@@ -343,6 +349,7 @@ as3/Types/Float/round: sign check , .*, , expectedfail, https://bugzilla.mozilla
 as3/Types/Float/op_greaterthan:Order\ of\ evaluation, .*,, expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=640052
 as3/Types/Float/op_lessthanorequal:Order\ of\ evaluation, .*,, expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=640052
 as3/Types/Float/pow:float\.pow\(float\.NEGATIVE_INFINITY. -2f\) sign check , .*,, expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=703611
+as3/Types/Float/pow:float\.pow\(float\.NEGATIVE_INFINITY. -2f\) check\(\) sign check , .*,, expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=703611
 as3/Types/Float/ToString:ToString\(float\.MAX_VALUE\) , .*,, expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=699463
 
 as3/Types/Float/loadLegacyCode, arm , ,  expectedfail, need to update runner script
@@ -356,19 +363,11 @@ as3/Types/Float4/component_access_swizzle:^float4\['(x|y|z|w){4}'\], arm-lnx.* ,
 as3/Types/Float4/float4Operations:Flt4(Any|Flt4)Ops Xyzzy, arm-lnx.*-Dinterp , , expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=695001
 as3/Types/Float4/float4Operations:Flt4(Any|Flt4)Ops (?!.*EQ).*, arm-.*debug.* , -Dinterp , expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=700642
 
-as3/Types/Float4/op_binary_logical_and:^float4\(1f\) && float4\(0f\), .* , , expectedfail, ASC jumping ahead of the spec for converting ToBoolean(float4)
-as3/Types/Float4/op_binary_logical_and:^float4\(1f. 2f. 3f. 4f\) && float4\(-1f. -2f. -3f. -4f\) , .* , , expectedfail, ASC jumping ahead of the spec for converting ToBoolean(float4)
-as3/Types/Float4/op_binary_logical_and:^float4\(1f. 2f. 3f. 4f\) && float4\(0f. -2f. -3f. -4f\) , .* , , expectedfail, ASC jumping ahead of the spec for converting ToBoolean(float4)
-as3/Types/Float4/op_binary_logical_and:^float4\(1f. 2f. -0f. 4f\) && float4\(-1f. -2f. -3f. -4f\) , .* , , expectedfail, ASC jumping ahead of the spec for converting ToBoolean(float4)
-as3/Types/Float4/op_binary_logical_or:^float4\(1f\) \|\| float4\(0f\)  , .* , , expectedfail, ASC jumping ahead of the spec for converting ToBoolean(float4)
-as3/Types/Float4/op_binary_logical_or:^float4\(1f. 2f. 3f. 4f\) \|\| float4\(-1f. -2f. -3f. -4f\)  , .* , , expectedfail, ASC jumping ahead of the spec for converting ToBoolean(float4)
-as3/Types/Float4/op_binary_logical_or:^float4\(1f. 2f. 3f. 4f\) \|\| float4\(0f. -2f. -3f. -4f\)  , .* , , expectedfail, ASC jumping ahead of the spec for converting ToBoolean(float4)
-as3/Types/Float4/op_binary_logical_or:^float4\(1f. 2f. -0f. 4f\) \|\| float4\(-1f. -2f. -3f. -4f\)  , .* , , expectedfail, ASC jumping ahead of the spec for converting ToBoolean(float4)
-
 as3/Types/Float4/.*, mips.* , -Dinterp , skip, MIPS does not have a float/float4 implementation
 abcasm/coverage/float/.*, mips.* , -Dinterp , skip, MIPS does not have a float/float4 implementation
 
 as3/Types/Float/atan2:^float\.atan2\(0\.1f. float\.POSITIVE_INFINITY\) check via Infinity, .*-win.*,  , expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=703259
+as3/Types/Float/atan2:^float\.atan2\(0\.1f. float\.POSITIVE_INFINITY\) check\(\) check via Infinity, .*-win.*,  , expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=703259
 as3/Types/Float/atan2:^float\.atan2\(0\.1f. float\.NEGATIVE_INFINITY\), .*-win.*,  , expectedfail, https://bugzilla.mozilla.org/show_bug.cgi?id=703259
 
 as3/Types/Float/exp, .*diff,, skip, https://bugzilla.mozilla.org/show_bug.cgi?id=703259

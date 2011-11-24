@@ -1426,8 +1426,9 @@ return the result of the comparison ToPrimitive(x) == y.
         }
 
         // numeric compare
-        // NOTE: we only do float comparison if both LHS and RHS are floats; but in this case, float & double comparison are identical.
-        // Also note: float4s are compared as Numbers (i.e. converted to NaN)
+        // We only do float comparison if both LHS and RHS are floats,
+        // but in this case, float and double comparison are identical.
+        // Float4s are compared as Numbers (i.e. converted to NaN).
         double     dx = number(lhs);
         double     dy = number(rhs);
 
@@ -1926,21 +1927,16 @@ return the result of the comparison ToPrimitive(x) == y.
                     if( atom == undefinedAtom )
                         return 0;
                     uint8_t bKind = bibopKind(atom);
-                    if(bKind == kBibopFloatType){
+                    if(bKind == kBibopFloatType)
+                    {
                         float f = atomToFloat(atom);
-                        return f != 0.0 && !MathUtils::isNaN(f) ;
-                    } else 
-                    if(bKind == kBibopFloat4Type){
-                        float4_t f4 = atomToFloat4(atom);
-                        float f = f4_x(f4);
-                        if( f!=0.0 && !MathUtils::isNaN(f) ) return true;
-                        f = f4_y(f4); 
-                        if( f!=0.0 && !MathUtils::isNaN(f) ) return true;
-                        f = f4_z(f4); 
-                        if( f!=0.0 && !MathUtils::isNaN(f) ) return true;
-                        f = f4_w(f4); 
-                        return f!=0.0 && !MathUtils::isNaN(f);
-                    } else {
+                        return f != 0.0 && !MathUtils::isNaNf(f) ;
+                    }
+                    else if(bKind == kBibopFloat4Type)
+                    {
+                        return 0;
+                    }
+                    else {
                         AvmAssertMsg(false, "Unhandled bibop kind in ToBoolean()!");
                         return 0;
                     }

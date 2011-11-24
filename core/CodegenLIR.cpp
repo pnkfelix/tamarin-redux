@@ -206,12 +206,11 @@ namespace avmplus
         #define VECTORFLOATADDR(f) vectorFloatAddr((int (FloatVectorObject::*)())(&f))
         #define VECTORFLOATADDRF(f) vectorFloatAddrF((float (FloatVectorObject::*)())(&f))
         #define VECTORFLOAT4ADDR(f) vectorFloat4Addr((int (Float4VectorObject::*)())(&f))
-        #define VECTORFLOAT4ADDRF4(f) NULL
+        #define VECTORFLOAT4ADDRF4(f) vectorFloat4AddrF4((float4_t (Float4VectorObject::*)())(&f))
         #define VECTOROBJADDR(f) vectorObjAddr((int (ObjectVectorObject::*)())(&f))
         #define EFADDR(f)   efAddr((int (ExceptionFrame::*)())(&f))
         #define DEBUGGERADDR(f)   debuggerAddr((int (Debugger::*)())(&f))
         #define FUNCADDR(addr) (uintptr_t)addr
-
 
         intptr_t coreAddr( int (AvmCore::*f)() )
         {
@@ -280,6 +279,10 @@ namespace avmplus
             RETURN_METHOD_PTR(Float4VectorObject, f);
         }
     
+        intptr_t vectorFloat4AddrF4(float4_t (Float4VectorObject::*f)())
+        {
+            RETURN_METHOD_PTR_F4(Float4VectorObject, f);
+        }
 #endif // VMCFG_FLOAT
         intptr_t vectorObjAddr(int (ObjectVectorObject::*f)())
         {
@@ -7235,14 +7238,36 @@ FLOAT_ONLY(           !(v.sst_mask == (1 << SST_float)  && v.traits == FLOAT_TYP
             LIns* rhs = localGetf(rhsi);
             return binaryIns(getCmpFOpcode(fcmp), lhs, rhs);
         }
-        else if( lht == FLOAT4_TYPE || rht == FLOAT4_TYPE){
-            if(fcmp != LIR_eqd ){
-                return InsConst(0); // comparison with NaN, always false
-            } else {
-                LIns* lhs = promoteFloat4Ins(lht, lhsi);
-                LIns* rhs = promoteFloat4Ins(rht, rhsi);
+        else if (lht == FLOAT4_TYPE || rht == FLOAT4_TYPE)
+        {
+            if (fcmp == LIR_eqd) {
+                // TODO: This is not the best way to optimize the mixed-mode cases
+                // if SIMD instructions are not available on the target platform.
+                if (lht == rht) {
+                    // float4 ==/=== float4
+                    LIns* lhs = localGetf4(lhsi);
+                    LIns* rhs = localGetf4(rhsi);
+                    return binaryIns(LIR_eqf4, lhs, rhs);
+                } else if (lht == FLOAT_TYPE) {
+                    // float ==/=== float4
+                    if (strictOperation)
+                        return InsConst(0);
+                    LIns* lhs = Ins(LIR_f2f4, localGetf(lhsi));
+                    LIns* rhs = localGetf4(rhsi);
+                    return binaryIns(LIR_eqf4, lhs, rhs);
+                } else if (rht == FLOAT_TYPE) {
+                    // float4 ==/=== float
+                    if (strictOperation)
+                        return InsConst(0);
+                    LIns* lhs = localGetf4(lhsi);
+                    LIns* rhs = Ins(LIR_f2f4, localGetf(rhsi));
                 return binaryIns(LIR_eqf4, lhs, rhs);
-            }
+                } else
+                    // Punt to out-of-line handler.
+                    return NULL;
+            } else
+                // Comparison with NaN, always false.
+                return InsConst(0);
         }
 #endif // VMCFG_FLOAT
         else if (lht && lht->isNumeric() && rht && rht->isNumeric())
@@ -7258,7 +7283,8 @@ FLOAT_ONLY(           !(v.sst_mask == (1 << SST_float)  && v.traits == FLOAT_TYP
                 if (result)
                     return result;
             }
-            /* Note: no optimizations needed above for "float" or "numeric"; those optimize String.charCodeAt(), which returns a Number by language definition */
+            // Note: no optimizations needed above for "float" or "numeric".
+            // Those optimize String.charCodeAt(), which returns a Number by language definition.
 
             // If we're comparing a uint to an int and the int is a non-negative
             // integer constant, don't promote to doubles for the compare
@@ -7297,8 +7323,9 @@ FLOAT_ONLY(           !(v.sst_mask == (1 << SST_float)  && v.traits == FLOAT_TYP
             #endif
             }
             if(!strictOperation && (lht->isNumberType() || rht->isNumberType()) ){
-                /* NOTE: this assumes that comparisons between two floats, performed as doubles, work just as well */
-                /* but for float vs. number, we can't do strict equality tests, this way, since the types are assumed to be different */
+                // NOTE: This assumes that comparisons between two floats works just as
+                // well performed on doubles.  For float vs. number, we can't do strict
+                // equality tests this way, since the types are assumed to be different.
                 LIns* lhs = promoteNumberIns(lht, lhsi);
                 LIns* rhs = promoteNumberIns(rht, rhsi);
                 return binaryIns(fcmp, lhs, rhs);
