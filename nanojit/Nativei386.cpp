@@ -62,9 +62,10 @@ namespace nanojit
 
     #define TODO(x) do{ verbose_only(outputf(#x);) NanoAssertMsgf(false, "%s", #x); } while(0)
 
-    const Register Assembler::argRegs[] = { rECX, rEDX };
-    const Register Assembler::retRegs[] = { rEAX, rEDX };
-    const Register Assembler::savedRegs[] = { rEBX, rESI, rEDI };
+    const Register argRegsF4[] = { XMM0, XMM1, XMM2 }; // don't make it part of the assembler, it's specific to i386
+    const Register RegAlloc::argRegs[] = { rECX, rEDX };
+    const Register RegAlloc::retRegs[] = { rEAX, rEDX };
+    const Register RegAlloc::savedRegs[] = { rEBX, rESI, rEDI };
 
     const static uint8_t max_abi_regs[] = {
         2, /* ABI_FASTCALL */
@@ -636,7 +637,7 @@ namespace nanojit
 
     // sse instructions
     inline void Assembler::SSE(I32 opc3, R d, R s) {
-        underrunProtect(9);
+        underrunProtect(4);
         MODRMr(REGNUM(d)&7, REGNUM(s)&7);
         OPCODE3(opc3);
     }
@@ -645,6 +646,12 @@ namespace nanojit
         underrunProtect(9);
         MODRMm(REGNUM(r)&7, d, b);
         OPCODE3(opc3);
+    }
+
+    inline void Assembler::SSEs(I32 c, R d, R s) {
+        underrunProtect(3);
+        MODRMr(REGNUM(d)&7, REGNUM(s)&7);
+        OPCODE2(c);
     }
 
     inline void Assembler::SSEsib(I32 opc3, R rr, I32 d, R rb, R ri, I32 scale) {
@@ -664,6 +671,259 @@ namespace nanojit
         // *addr is a constant, so we can print it here.
         asm_output("movsd %s,(%p) // =%f", gpn(r), (void*)addr, *addr);
     }
+    
+    // sse instructions
+    inline void Assembler::SSEsm(I32 c, R r,  I32 d, R b) {
+        underrunProtect(8);
+        MODRMm(REGNUM(r)&7, d, b);
+        OPCODE2(c);
+    }
+
+    inline void Assembler::SSEu8_4(I32 opc4, R d, R s, uint8_t i) {
+        underrunProtect(6);
+        IMM8(i);
+        MODRMr(REGNUM(d)&7, REGNUM(s)&7);
+        OPCODE4(opc4);
+    }
+
+    inline void Assembler::SSEu8_3(I32 opc3, R d, R s, uint8_t i) {
+        underrunProtect(5);
+        IMM8(i);
+        MODRMr(REGNUM(d)&7, REGNUM(s)&7);
+        OPCODE3(opc3);
+    }
+
+    inline void Assembler::SSEu8_2(I32 opc2, R d, R s, uint8_t i) {
+        underrunProtect(4);
+        IMM8(i);
+        MODRMr(REGNUM(d)&7, REGNUM(s)&7);
+        OPCODE2(opc2);
+    }
+
+    inline void Assembler::SSEssib(I32 opc2, R rr, I32 d, R rb, R ri, I32 scale) {
+        underrunProtect(8);
+        MODRMsib(REGNUM(rr)&7, rb, ri, scale, d);
+        OPCODE2(opc2);
+    }
+
+    inline void Assembler::LDSSm(R r, const float* addr) {
+        count_ldq();
+        underrunProtect(8);
+        IMM32(int32_t(addr));
+        MODRM(0, REGNUM(r) & 7, 5);     // amode == addr(r)
+        *(--_nIns) = 0x10;
+        *(--_nIns) = 0x0f;
+        *(--_nIns) = 0xf3;
+        // *addr is a constant, so we can print it here.
+        asm_output("movss %s,(%p) // =%f", gpn(r), (void*)addr, *addr);
+    }
+
+    inline void Assembler::LDPSm(R r, const float4_t* addr) {
+        count_ldf4();
+        bool is_aligned = (intptr_t(addr) & 0xf) == 0;
+        underrunProtect(8);
+        IMM32(int32_t(addr));
+        MODRM(0, REGNUM(r) & 7, 5);     // amode == addr(r)
+        *(--_nIns) = is_aligned? 0x28:0x10;
+        *(--_nIns) = 0x0f;
+        // *addr is a constant, so we can print it here.
+        asm_output("mov%cps %s,(%p) // =%f,%f,%f,%f", is_aligned? 'a':'u', gpn(r), (void*)addr, f4_x(*addr), f4_y(*addr), f4_z(*addr),f4_w(*addr) );
+    }
+
+    inline void Assembler::SSE_LDUPS(R r, I32 d, R b) { count_ld();  SSEsm(0x0f10, r, d, b); asm_output("movups %s,%d(%s)", gpn(r), d, gpn(b)); }
+
+    inline void Assembler::SSE_LDUPSsib(R rr, I32 d, R rb, R ri, I32 scale) {
+        count_ld();
+        SSEssib(0x0f10, rr, d, rb, ri, scale);
+        asm_output("movups %s,%d(%s+%s*%c)", gpn(rr), d, gpn(rb), gpn(ri), SIBIDX(scale));
+    }
+
+    inline uint8_t PSHUFD_COMPONENT_MASK(int i) { NanoAssert(i>=0 && i<=3); const uint8_t retval[4] = { 0, 0x55, 0xAA, 0xFF }; return retval[i & 3]; }
+    inline void Assembler::SSE_PSHUFD(R rd, R rs, uint8_t imm) {
+        count_fpu();
+        SSEu8_3(0x660f70, rd, rs, imm);
+        asm_output("pshufd %s,%s,%x", gpn(rd), gpn(rs), imm);
+    }
+
+    inline void Assembler::SSE_DPPS(R rd, R rs, uint8_t imm) {
+        count_fpu();
+        SSEu8_4(0x660f3a40, rd, rs, imm);
+        asm_output("dpps %s,%s,%x", gpn(rd), gpn(rs), imm);
+    }
+
+    inline void Assembler::SSE_STUPS(I32 d, R b, R r) { count_stf4(); SSEsm(0x0f11, r, d, b); asm_output("movups %d(%s),%s", d, gpn(b), gpn(r)); }
+    inline void Assembler::SSE_CMPNEQPS(R rd, R rs) { count_fpu(); SSEu8_2(0x0fc2, rd,rs,4); asm_output("cmpneqps %s,%s", gpn(rd), gpn(rs)); }
+    inline void Assembler::SSE_CVTSI2SS(R xr, R gr)  { count_fpu(); SSE(0xf30f2a, xr, gr); asm_output("cvtsi2ss %s,%s", gpn(xr), gpn(gr)); }
+    inline void Assembler::SSE_CVTTSS2SI(R gr, R xr) { count_fpu(); SSE(0xf30f2c, gr, xr); asm_output("cvttss2si %s,%s",gpn(gr), gpn(xr)); }
+
+    inline void Assembler::SSE_MOVSS(R rd, R rs) {
+        count_mov();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSE(0xf30f10, rd, rs);
+        asm_output("movss %s,%s", gpn(rd), gpn(rs));
+
+    }
+
+    inline void Assembler::SSE_PMOVMSKB(R rd, R rs) {
+        count_mov();
+        NanoAssert(IsGpReg(rd) && IsXmmReg(rs));
+        MODRMr(REGNUM(rd), REGNUM(rs)&7);
+        OPCODE3(0x660fd7);
+        asm_output("pmovmskb %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_ADDSS(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSE(0xf30f58, rd, rs);
+        asm_output("addss %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_ADDPS(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSEs(0x0f58, rd, rs);
+        asm_output("addps %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_SUBSS(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSE(0xf30f5c, rd, rs);
+        asm_output("subss %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_MULSS(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSE(0xf30f59, rd, rs);
+        asm_output("mulss %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_DIVSS(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSE(0xf30f5e, rd, rs);
+        asm_output("divss %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_RCPSS(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSE(0xf30f53, rd, rs);
+        asm_output("rpcss %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_RSQRTSS(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSE(0xf30f52, rd, rs);
+        asm_output("rsqrtss %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_SQRTSS(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSE(0xf30f51, rd, rs);
+        asm_output("sqrtss %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_SQRTSD(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSE(0xf20f51, rd, rs);
+        asm_output("sqrtsd %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_SUBPS(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSEs(0x0f5c, rd, rs);
+        asm_output("subps %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_MULPS(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSEs(0x0f59, rd, rs);
+        asm_output("mulps %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_DIVPS(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSEs(0x0f5e, rd, rs);
+        asm_output("divps %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_RCPPS(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSEs(0x0f53, rd, rs);
+        asm_output("rcpps %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_RSQRTPS(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSEs(0x0f52, rd, rs);
+        asm_output("rsqrtps %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_SQRTPS(R rd, R rs) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSEs(0x0f51, rd, rs);
+        asm_output("sqrtps %s,%s", gpn(rd), gpn(rs));
+    }
+
+    inline void Assembler::SSE_UCOMISS(R rl, R rr) {
+        count_fpu();
+        NanoAssert(IsXmmReg(rl) && IsXmmReg(rr));
+        SSEs(0x0f2e, rl, rr);
+        asm_output("ucomiss %s,%s", gpn(rl), gpn(rr));
+    }
+
+    inline void Assembler::SSE_XORPS(R r, const uint32_t* maskaddr) {
+        count_fpuld();
+        underrunProtect(8);
+        IMM32(int32_t(maskaddr));
+        MODRM(0, REGNUM(r) & 7, 5);     // amode == maskaddr(r)
+        *(--_nIns) = 0x57;
+        *(--_nIns) = 0x0f;
+        asm_output("xorps %s,(%p)", gpn(r), (void*)maskaddr);
+    }
+
+    inline void Assembler::SSE_ANDPS(R r, const uint32_t* maskaddr) {
+        count_fpuld();
+        underrunProtect(8);
+        IMM32(int32_t(maskaddr));
+        MODRM(0, REGNUM(r) & 7, 5);     // amode == maskaddr(r)
+        *(--_nIns) = 0x54;
+        *(--_nIns) = 0x0f;
+        asm_output("andps %s,(%p)", gpn(r), (void*)maskaddr);
+    }
+
+    inline void Assembler::FCOM32(bool p, I32 d, R b) {
+        count_fpuld();
+        FPUm(0xd802|(p?1:0), d, b);
+        asm_output("fcom32%s %d(%s)", (p?"p":""), d, gpn(b));
+        if (p) fpu_pop();
+    }
+
+    inline void Assembler::FLD32sm(const float* dm) { count_ldq();   FPUdm(0xd900, (const double*)dm);  asm_output("fld32 (%p)", (void*)dm); fpu_push();}
+
+    inline void Assembler::FADD32( I32 d, R b) { count_fpu(); FPUm(0xd800, d, b); asm_output("fadd32 %d(%s)", d, gpn(b)); }
+    inline void Assembler::FSUB32( I32 d, R b) { count_fpu(); FPUm(0xd804, d, b); asm_output("fsub32 %d(%s)", d, gpn(b)); }
+    inline void Assembler::FSUBR32(I32 d, R b) { count_fpu(); FPUm(0xd805, d, b); asm_output("fsubr %d(%s)", d, gpn(b)); }
+    inline void Assembler::FMUL32( I32 d, R b) { count_fpu(); FPUm(0xd801, d, b); asm_output("fmul32 %d(%s)", d, gpn(b)); }
+    inline void Assembler::FDIV32( I32 d, R b) { count_fpu(); FPUm(0xd806, d, b); asm_output("fdiv32 %d(%s)", d, gpn(b)); }
+    inline void Assembler::FDIVR32(I32 d, R b) { count_fpu(); FPUm(0xd807, d, b); asm_output("fdivr32 %d(%s)", d, gpn(b)); }
+
+    inline void Assembler::FADD32dm( const float* dm) { count_ldq(); FPUdm(0xd800, (const double* const) dm); asm_output("fadd32 (%p)", (void*)dm); }
+    inline void Assembler::FSUBR32dm(const float* dm) { count_ldq(); FPUdm(0xd805, (const double* const) dm); asm_output("fsubr32 (%p)", (void*)dm); }
+    inline void Assembler::FMUL32dm( const float* dm) { count_ldq(); FPUdm(0xd801, (const double* const) dm); asm_output("fmul32 (%p)", (void*)dm); }
+    inline void Assembler::FDIVR32dm(const float* dm) { count_ldq(); FPUdm(0xd807, (const double* const) dm); asm_output("fdivr32 (%p)", (void*)dm); }
 
     inline void Assembler::SSE_LDQ( R r, I32 d, R b) { count_ldq(); SSEm(0xf30f7e, r, d, b); asm_output("movq %s,%d(%s)", gpn(r), d, gpn(b)); }
     inline void Assembler::SSE_LDSS(R r, I32 d, R b) { count_ld();  SSEm(0xf30f10, r, d, b); asm_output("movss %s,%d(%s)", gpn(r), d, gpn(b)); }
@@ -711,6 +971,13 @@ namespace nanojit
             SSE(0x660f6e, d, s);
         }
         asm_output("movd %s,%s", gpn(d), gpn(s));
+    }
+
+    inline void Assembler::SSE_MOVAPS(R rd, R rs) {
+        count_mov();
+        NanoAssert(IsXmmReg(rd) && IsXmmReg(rs));
+        SSEs(0x0f28, rd, rs);
+        asm_output("movaps %s,%s", gpn(rd), gpn(rs));
     }
 
     inline void Assembler::SSE_MOVSD(R rd, R rs) {
@@ -780,6 +1047,17 @@ namespace nanojit
         asm_output("xorpd %s,(%p)", gpn(r), (void*)maskaddr);
     }
 
+    inline void Assembler::SSE_ANDPD(R r, const uint32_t* maskaddr) {
+        count_fpuld();
+        underrunProtect(8);
+        IMM32(int32_t(maskaddr));
+        MODRM(0, REGNUM(r) & 7, 5);     // amode == maskaddr(r)
+        OPCODE(0x54);
+        OPCODE(0x0f);
+        OPCODE(0x66);
+        asm_output("xorpd %s,(%p)", gpn(r), (void*)maskaddr);
+    }
+
     inline void Assembler::SSE_XORPDr(R rd, R rs) {
         count_fpu();
         SSE(0x660f57, rd, rs);
@@ -838,7 +1116,12 @@ namespace nanojit
 
     inline void Assembler::FSTPQ(I32 d, R b) { FSTQ(1, d, b); }
 
-    inline void Assembler::FCOM(bool p, I32 d, R b) { count_fpuld(); FPUm(0xdc02|(p?1:0), d, b); asm_output("fcom%s %d(%s)", (p?"p":""), d, gpn(b)); if (p) fpu_pop(); }
+    inline void Assembler::FCOM(bool p, I32 d, R b) { 
+        count_fpuld(); 
+        FPUm(0xdc02|(p?1:0), d, b); 
+        asm_output("fcom%s %d(%s)", (p?"p":""), d, gpn(b)); 
+        if (p) fpu_pop(); 
+    }
     inline void Assembler::FCOMdm(bool p, const double* dm) {
         count_fpuld();
         FPUdm(0xdc02|(p?1:0), dm);
@@ -885,6 +1168,7 @@ namespace nanojit
         OPCODE(0xE8);
         verbose_only(asm_output("call %s", (ci->_name));)
         debug_only(if (ci->returnType()==ARGTYPE_D) fpu_push();)
+        debug_only(if (ci->returnType()==ARGTYPE_F) fpu_push();)
     }
 
     // indirect call thru register
@@ -894,19 +1178,28 @@ namespace nanojit
         ALU(0xff, 2, r);
         verbose_only(asm_output("call %s", gpn(r));)
         debug_only(if (ci->returnType()==ARGTYPE_D) fpu_push();) (void)ci;
+        debug_only(if (ci->returnType()==ARGTYPE_F) fpu_push();)
     }
 
-    void Assembler::nInit()
+    const RegisterMask PREFER_SPECIAL = ~ ((RegisterMask)0);
+    // Init per-opcode register hint table.  Defaults to no hints for all instructions 
+    // (initialized to 0 )
+    static bool nHintsInit(RegisterMask Hints[])
     {
-        nHints[LIR_calli]  = rmask(retRegs[0]);
-        nHints[LIR_calld]  = rmask(FST0);
-        nHints[LIR_paramp] = PREFER_SPECIAL;
-        nHints[LIR_immi]   = ScratchRegs;
+        VMPI_memset(Hints,0,sizeof(RegisterMask)*LIR_sentinel );
+
+        Hints[LIR_calli]  = rmask(RegAlloc::retRegs[0]);
+        Hints[LIR_calld]  = rmask(FST0);
+        Hints[LIR_callf]  = rmask(FST0);
+        Hints[LIR_callf4] = rmask(XMM0);
+        Hints[LIR_paramp] = PREFER_SPECIAL;
+        Hints[LIR_immi]   = ScratchRegs;
         // Nb: Doing this with a loop future-proofs against the possibilty of
         // new comparison operations being added.
         for (LOpcode op = LOpcode(0); op < LIR_sentinel; op = LOpcode(op+1))
             if (isCmpOpcode(op))
-                nHints[op] = AllowableByteRegs;
+                Hints[op] = AllowableByteRegs;
+        return true;
     }
 
     void Assembler::nBeginAssembly() {
@@ -999,42 +1292,100 @@ namespace nanojit
         return  _nIns;
     }
 
+    static inline uint32_t compute_pushsize(const CallInfo* ci, uint32_t max_iregs)
+    {
+        uint32_t iargs = ci->count_int_args();
+        uint32_t fargs = ci->count_float_args();
+        uint32_t f4args = ci->count_float4_args();
+        int32_t dargs = ci->count_args() - fargs - f4args - iargs;
+        bool indirect = ci->isIndirect();
+
+        if (f4args <= NJ_MAX_F4ARGS_IN_REGS) {
+            if (indirect) {
+                // target arg isn't pushed, its consumed in the call - i.e one less iarg on stack (potentially)
+                iargs --;
+            }
+            if (max_iregs > iargs)
+                max_iregs = iargs;
+            int32_t istack = iargs - max_iregs;  // first 2 4B args are in registers, on _fastcall calling convention
+            return 4*istack + 4*fargs + 8*dargs; // actual stack space used
+        } else {
+            /* this is tricky; since float4s on stack *must* be aligned, we can't just add values - it depends on the parameter order */
+            ArgType argTypes[MAXARGS];
+            uint32_t argc = ci->getArgTypes(argTypes);
+            if (indirect) {
+                // target arg isn't pushed, its consumed in the call - i.e ignore the last argument when computing stack space
+                argc--;
+                NanoAssert(argTypes[argc]== ARGTYPE_P); // should be a pointer to the called function; otherwise, something's wrong!
+            }
+            int32_t pushsize = 0;
+            int32_t max_f4regs = NJ_MAX_F4ARGS_IN_REGS;
+            for (uint32_t i = 0; i < argc; i++) {
+                switch(argTypes[i]) {
+                case ARGTYPE_I:
+                case ARGTYPE_UI:
+                    if( max_iregs > 0 )
+                        max_iregs--; // no stack for this arg!
+                    else  
+                        pushsize += 4; 
+                    break;
+                case ARGTYPE_F:
+                    pushsize += 4; break;
+                case ARGTYPE_D:
+                    pushsize += 8; break;
+                case ARGTYPE_F4:
+                    if(max_f4regs>0)
+                        --max_f4regs;// no stack for this arg!
+                    else
+                        pushsize = alignUp(pushsize,16)+16;
+                    break;
+                default: 
+                    NanoAssert(false);
+                }
+            }
+            return pushsize;
+        }
+    }
+
+    /* Just as a recap, here's how the calling convention works on x86/32bit :
+    I:PARAMETER PASSING
+    1. For int:
+      - in all calling conventions(except FASTCALL), parameters are passed on stack. 
+      - in FASTCALL, 2 parameters are passed in registers (ECX/EDX), the rest on stack.
+    2. For float/double: in all calling conventions, they are transferred on stack.
+    3. Flor float4: the first three parameters of type __m128 are transferred in registers 
+    XMM0 - XMM2. Any additional parameters of type __m128 are transferred on the stack aligned 
+    by 16. This alignment is accomplished as follows: If there are more than three parameters 
+    of type __m128 then the stack must be aligned by 16 before the call instruction. 
+    Consequently, the value of the stack pointer is 12 modulo 16 at the entry of the called function.
+    
+    II:Return value
+    1. Int: RAX
+    2. float/double: FST0
+    3. float4: XMM0
+    */
     void Assembler::asm_call(LIns* ins)
     {
         if (!ins->isop(LIR_callv)) {
-            Register rr = ( ins->isop(LIR_calld) ? FST0 : retRegs[0] );
+            // Float4 returned in XMM0; float, double returned in FST0; ints,pointers returned in RAX
+            Register rr = ins->isop(LIR_callf4) ? XMM0 :
+                          ins->isop(LIR_callf) || ins->isop(LIR_calld) ? FST0 :
+                          RegAlloc::retRegs[0];
             prepareResultReg(ins, rmask(rr));
             evictScratchRegsExcept(rmask(rr));
         } else {
             evictScratchRegsExcept(0);
         }
         const CallInfo* call = ins->callInfo();
-        // must be signed, not unsigned
-        uint32_t iargs = call->count_int32_args();
-        int32_t fargs = call->count_args() - iargs;
-
-        bool indirect = call->isIndirect();
-        if (indirect) {
-            // target arg isn't pushed, its consumed in the call
-            iargs --;
-        }
-
         AbiKind abi = call->_abi;
         uint32_t max_regs = max_abi_regs[abi];
-        if (max_regs > iargs)
-            max_regs = iargs;
-
-        int32_t istack = iargs-max_regs;  // first 2 4B args are in registers
+        bool indirect = call->isIndirect();
         int32_t extra = 0;
-        const int32_t pushsize = 4*istack + 8*fargs; // actual stack space used
-
-#if _MSC_VER
-        // msc only provides 4-byte alignment but we have 8 byte stack adjustment
-        // logic so maintain our 8 byte alignment.
-        uint32_t align = 8;
-#else
         uint32_t align = NJ_ALIGN_STACK;
-#endif
+
+        const int32_t pushsize = compute_pushsize(call, max_regs);
+
+        NanoAssert( (align & 7) == 0);  // Alignment should always be at least 8
 
         if (pushsize) {
             if (_config.i386_fixed_esp) {
@@ -1057,7 +1408,8 @@ namespace nanojit
             }
         }
 
-        NanoAssert(ins->isop(LIR_callv) || ins->isop(LIR_callp) || ins->isop(LIR_calld));
+        NanoAssert(ins->isop(LIR_callv) || ins->isop(LIR_callp) || ins->isop(LIR_calld) ||
+                   ins->isop(LIR_callf) || ins->isop(LIR_callf4));
         if (!indirect) {
             CALL(call);
         }
@@ -1081,7 +1433,8 @@ namespace nanojit
         ArgType argTypes[MAXARGS];
         uint32_t argc = call->getArgTypes(argTypes);
         int32_t stkd = 0;
-
+        max_regs = max_abi_regs[abi];
+        
         if (indirect) {
             argc--;
             asm_arg(ARGTYPE_P, ins->arg(argc), rEAX, stkd);
@@ -1089,14 +1442,41 @@ namespace nanojit
                 stkd = 0;
         }
 
+        uint32_t nf4 = 0;
+        /* Careful here! 
+           If we take the normal flow, the instructions that (temporarily) load float/double parameters in regs may inadvertently
+           overwrite our float4 registers. So we need to assign first the registers to float4 args, and only then assign the rest
+           of the arguments
+        */
+        for (uint32_t i = 0; i < argc && nf4 < NJ_MAX_F4ARGS_IN_REGS; i++)
+        {
+            uint32_t j = argc-i-1;
+            ArgType ty = argTypes[j];
+            Register r = UnspecifiedReg;
+            if( ty == ARGTYPE_F4 ){
+                if(nf4 < NJ_MAX_F4ARGS_IN_REGS )
+                    r = argRegsF4[nf4++];
+            } else continue;
+            NanoAssert( r != UnspecifiedReg );
+            asm_arg(ty, ins->arg(j), r, stkd);
+            NanoAssert( stkd == 0 );
+        }
+        nf4 = 0; 
+
         for (uint32_t i = 0; i < argc; i++)
         {
             uint32_t j = argc-i-1;
             ArgType ty = argTypes[j];
             Register r = UnspecifiedReg;
-            if (n < max_regs && ty != ARGTYPE_D) {
-                r = argRegs[n++]; // tell asm_arg what reg to use
+            if (ty == ARGTYPE_F4) {
+                if(nf4 < NJ_MAX_F4ARGS_IN_REGS) {
+                    nf4++; // Already assigned!!
+                    continue;
+                }
+            } else if (n < max_regs && ty != ARGTYPE_D && ty != ARGTYPE_F) {
+                r = RegAlloc::argRegs[n++]; // tell asm_arg what reg to use
             }
+            
             asm_arg(ty, ins->arg(j), r, stkd);
             if (!_config.i386_fixed_esp)
                 stkd = 0;
@@ -1110,35 +1490,14 @@ namespace nanojit
         }
     }
 
-    Register Assembler::nRegisterAllocFromSet(RegisterMask set)
-    {
-        Register r;
-        RegAlloc &regs = _allocator;
-    #ifdef _MSC_VER
-        _asm
-        {
-            mov ecx, regs
-            bsf eax, set                    // i = first bit set
-            btr RegAlloc::free[ecx], eax    // free &= ~rmask(i)
-            mov r, eax
-        }
-    #else
-        asm(
-            "bsf    %1, %%eax\n\t"
-            "btr    %%eax, %2\n\t"
-            "movl   %%eax, %0\n\t"
-            : "=m"(r) : "m"(set), "m"(regs.free) : "%eax", "memory" );
-    #endif /* _MSC_VER */
-        return r;
-    }
-
-    void Assembler::nRegisterResetAll(RegAlloc& a)
+    RegisterMask RegAlloc::nInitManagedRegisters()
     {
         // add scratch registers to our free list for the allocator
-        a.clear();
-        a.free = SavedRegs | ScratchRegs;
-        if (!_config.i386_sse2)
-            a.free &= ~XmmRegs;
+        RegisterMask retval = SavedRegs | ScratchRegs;
+        NanoAssert(_assembler);
+        if (!_assembler->_config.i386_sse2)
+            retval &= ~XmmRegs;
+        return retval;
     }
 
     void Assembler::nPatchBranch(NIns* branch, NIns* targ)
@@ -1152,18 +1511,25 @@ namespace nanojit
             NanoAssertMsg(0, "Unknown branch type in nPatchBranch");
     }
 
-    RegisterMask Assembler::nHint(LIns* ins)
+    static RegisterMask  Hints[LIR_sentinel+1]; // effectively const, save for the initialization
+    static bool initialized = nHintsInit(Hints);
+    RegisterMask RegAlloc::nHint(LIns* ins)
     {
+        NanoAssert(initialized);
+
+        RegisterMask prefer = Hints[ins->opcode()];
+        if(prefer != PREFER_SPECIAL) return prefer;
+
         NanoAssert(ins->isop(LIR_paramp));
-        RegisterMask prefer = 0;
+        NanoAssert(_assembler);
         uint8_t arg = ins->paramArg();
         if (ins->paramKind() == 0) {
-            uint32_t max_regs = max_abi_regs[_thisfrag->lirbuf->abi];
+            uint32_t max_regs = max_abi_regs[_assembler->_thisfrag->lirbuf->abi];
             if (arg < max_regs)
-                prefer = rmask(argRegs[arg]);
+                prefer = rmask(RegAlloc::argRegs[arg]);
         } else {
             if (arg < NumSavedRegs)
-                prefer = rmask(savedRegs[arg]);
+                prefer = rmask(RegAlloc::savedRegs[arg]);
         }
         return prefer;
     }
@@ -1182,7 +1548,7 @@ namespace nanojit
         return false;
     }
 
-    bool Assembler::canRemat(LIns* ins)
+    bool RegAlloc::canRemat(LIns* ins)
     {
         return ins->isImmAny() || ins->isop(LIR_allocp) || canRematLEA(ins);
     }
@@ -1207,7 +1573,10 @@ namespace nanojit
 
         } else if (ins->isImmD()) {
             asm_immd(r, ins->immDasQ(), ins->immD(), /*canClobberCCs*/false);
-
+        } else if (ins->isImmF()) {
+            asm_immf(r, ins->immFasI(), ins->immF(), /*canClobberCCs*/false);
+        } else if (ins->isImmF4()) {
+            asm_immf4(r, ins->immF4(), /*canClobberCCs*/false);
         } else if (ins->isop(LIR_paramp) && ins->paramKind() == 0 &&
             (arg = ins->paramArg()) >= (abi_regcount = max_abi_regs[_thisfrag->lirbuf->abi])) {
             // Incoming arg is on stack, can restore it from there instead of spilling.
@@ -1237,7 +1606,18 @@ namespace nanojit
             if (ins->isI()) {
                 NanoAssert(rmask(r) & GpRegs);
                 LD(r, d, FP);
-            } else {
+            } else if(ins->isF()) {
+                if (rmask(r) & XmmRegs) {
+                    SSE_LDSS(r, d, FP);
+                } else {
+                    NanoAssert(r == FST0);
+                    FLD32(d, FP);
+                }
+            } else if(ins->isF4()) {
+                NanoAssert(rmask(r) & XmmRegs);
+                 SSE_LDUPS(r, d, FP);
+            }
+            else {
                 NanoAssert(ins->isD());
                 if (rmask(r) & XmmRegs) {
                     SSE_LDQ(r, d, FP);
@@ -1320,17 +1700,55 @@ namespace nanojit
         }
     }
 
-    void Assembler::asm_spill(Register rr, int d, bool pop)
+    void Assembler::asm_spill(Register rr, int d, bool pop, int8_t nWords)
     {
         NanoAssert(d);
         if (rmask(rr) & GpRegs) {
+            NanoAssert(nWords == 1);
             ST(FP, d, rr);
         } else if (rmask(rr) & XmmRegs) {
-            SSE_STQ(d, FP, rr);
+            switch (nWords) {
+            case 4: SSE_STUPS(d, FP, rr); break;
+            case 2: SSE_STQ(d, FP, rr); break;
+            default: NanoAssertMsgf(false, "nWords is %d, expected 1,2,or 4", nWords); // fall thru
+            case 1: SSE_STSS(d, FP, rr);
+            }
         } else {
+            NanoAssert(nWords == 1 || nWords == 2);
             NanoAssert(rr == FST0);
-            FSTQ(pop, d, FP);
+            if(nWords == 2)
+                FSTQ(pop, d, FP);
+            else 
+                FST32(pop, d, FP);
         }
+    }
+
+    void Assembler::asm_load128(LIns* ins)
+    {
+        NanoAssert(_config.i386_sse2);
+        LIns* base = ins->oprnd1();
+        int d = ins->disp();
+
+        Register rr = prepareResultReg(ins, XmmRegs);
+        NanoAssert(rmask(rr) & XmmRegs);
+
+        if (base->opcode() == LIR_addp ) {
+            LIns* index;
+            int scale;
+            getBaseIndexScale(base, &base, &index, &scale);
+            // (**) We don't have the usual opportunity to clobber 'base'
+            // or 'ins' with the result because it has a different type.
+            Register rb, ri;
+            RegisterMask allow = GpRegs & ~rmask(rr);
+            getBaseReg2(allow, index, ri, allow, base, rb, d);
+            SSE_LDUPSsib(rr, d, rb, ri, scale);
+            SSE_XORPDr(rr, rr);
+        } else {
+            Register rb = getBaseReg(base, d, GpRegs);
+            SSE_LDUPS(rr, d, rb);
+            SSE_XORPDr(rr, rr);  
+        }
+        freeResourcesOf(ins);
     }
 
     void Assembler::asm_load64(LIns* ins)
@@ -1364,6 +1782,8 @@ namespace nanojit
                 switch (ins->opcode()) {
                 case LIR_ldd:   SSE_LDQsib(rr, d, rb, ri, scale);  break;
                 case LIR_ldf2d: SSE_CVTSS2SD(rr, rr);
+                                // fall through 
+                case LIR_ldf:
                                 SSE_LDSSsib(rr, d, rb, ri, scale);
                                 SSE_XORPDr(rr, rr);                 break;
                 default:        NanoAssert(0);                      break;
@@ -1377,6 +1797,8 @@ namespace nanojit
                     switch (ins->opcode()) {
                     case LIR_ldd:   SSE_LDQ(rr, d, rb);     break;
                     case LIR_ldf2d: SSE_CVTSS2SD(rr, rr);
+                                    // fall through 
+                    case LIR_ldf:
                                     SSE_LDSS(rr, d, rb);
                                     SSE_XORPDr(rr, rr);     break;
                     default:        NanoAssert(0);          break;
@@ -1385,7 +1807,8 @@ namespace nanojit
                     NanoAssert(rr == FST0);
                     switch (ins->opcode()) {
                     case LIR_ldd:   FLDQ(d, rb);            break;
-                    case LIR_ldf2d: FLD32(d, rb);           break;
+                    case LIR_ldf2d:
+                    case LIR_ldf:   FLD32(d, rb);           break;
                     default:        NanoAssert(0);          break;
                     }
                 }
@@ -1402,7 +1825,10 @@ namespace nanojit
                 // Don't use an fpu reg to simply load & store the value.
                 asm_mmq(FP, dr, rb, d);
                 break;
-
+            case LIR_ldf:
+                // move just 32 bits
+                asm_mmi(FP, dr, rb, d);
+                break;
             case LIR_ldf2d:
                 // Need to use fpu to expand 32->64.
                 FSTPQ(dr, FP);
@@ -1422,7 +1848,7 @@ namespace nanojit
 
     void Assembler::asm_store64(LOpcode op, LIns* value, int d, LIns* base)
     {
-        if (op == LIR_std2f) {
+        if (op == LIR_std2f || (op == LIR_stf && (!value->isImmF() || value->isInReg()))) {
             Register rb = getBaseReg(base, d, GpRegs);
             bool pop = !value->isInReg();
             Register rv = ( pop
@@ -1430,14 +1856,18 @@ namespace nanojit
                           : value->getReg() );
 
             if (rmask(rv) & XmmRegs) {
-                // need a scratch reg
-                Register rt = registerAllocTmp(XmmRegs);
+                if (op != LIR_std2f) {
+                    // just store - already single-precision.
+                    SSE_STSS(d, rb, rv);
+                } else {
+                    // need a scratch reg
+                    Register rt = _allocator.allocTempReg(XmmRegs);
 
-                // cvt to single-precision and store
-                SSE_STSS(d, rb, rt);
-                SSE_CVTSD2SS(rt, rv);
-                SSE_XORPDr(rt, rt);     // zero dest to ensure no dependency stalls
-
+                    // cvt to single-precision and store
+                    SSE_STSS(d, rb, rt);
+                    SSE_CVTSD2SS(rt, rv);
+                    SSE_XORPDr(rt, rt);     // zero dest to ensure no dependency stalls
+                }
             } else {
                 FST32(pop, d, rb);
             }
@@ -1446,7 +1876,9 @@ namespace nanojit
             Register rb = getBaseReg(base, d, GpRegs);
             STi(rb, d+4, value->immDhi());
             STi(rb, d,   value->immDlo());
-
+        } else if (value->isImmF()) {
+            Register rb = getBaseReg(base, d, GpRegs);
+            STi(rb, d, value->immFasI());
         } else if (base->opcode() == LIR_addp && _config.i386_sse2) {
             LIns* index;
             int scale;
@@ -1472,11 +1904,33 @@ namespace nanojit
             Register rv = ( pop
                           ? findRegFor(value, _config.i386_sse2 ? XmmRegs : FpRegs)
                           : value->getReg() );
+            
+            NanoAssert(op != LIR_stf); // stf was handled before
             if (rmask(rv) & XmmRegs)
                 SSE_STQ(d, rb, rv);
             else
                 FSTQ(pop, d, rb);
         }
+    }
+
+    void Assembler::asm_store128(LOpcode op, LIns *value, int d, LIns *base) {
+        NanoAssert((value->isF4() && (op==LIR_stf4)) ); (void) op;
+        NanoAssert(_config.i386_sse2 );
+
+        Register b = getBaseReg(base, d, GpRegs);
+        Register r = findRegFor(value, XmmRegs);
+        SSE_STUPS(d, b, r);
+    }
+
+    // Copy 32 bits: (rd+dd) <- (rs+ds).
+    //
+    void Assembler::asm_mmi(Register rd, int dd, Register rs, int ds)
+    {
+        // We avoid copying via the FP stack because it's slow and likely
+        // to cause spills.
+        Register t = _allocator.allocTempReg(GpRegs & ~(rmask(rd)|rmask(rs)));
+        ST(rd, dd, t);
+        LD(t, ds, rs);
     }
 
     // Copy 64 bits: (rd+dd) <- (rs+ds).
@@ -1487,13 +1941,13 @@ namespace nanojit
         // an FPU reg.  Either way, avoid allocating an FPU reg just to load
         // and store it.
         if (_config.i386_sse2) {
-            Register t = registerAllocTmp(XmmRegs);
+            Register t = _allocator.allocTempReg(XmmRegs);
             SSE_STQ(dd, rd, t);
             SSE_LDQ(t, ds, rs);
         } else {
             // We avoid copying via the FP stack because it's slow and likely
             // to cause spills.
-            Register t = registerAllocTmp(GpRegs & ~(rmask(rd)|rmask(rs)));
+            Register t = _allocator.allocTempReg(GpRegs & ~(rmask(rd)|rmask(rs)));
             ST(rd, dd+4, t);
             LD(t, ds+4, rs);
             ST(rd, dd, t);
@@ -1503,7 +1957,8 @@ namespace nanojit
 
     Branches Assembler::asm_branch_helper(bool branchOnFalse, LIns* cond, NIns* targ)
     {
-        return isCmpDOpcode(cond->opcode())
+        // note: float4 is handled by the asm_branchi_helper path
+        return isCmpDOpcode(cond->opcode()) || isCmpFOpcode(cond->opcode())
              ? asm_branchd_helper(branchOnFalse, cond, targ)
              : asm_branchi_helper(branchOnFalse, cond, targ);
     }
@@ -1513,6 +1968,7 @@ namespace nanojit
         if (branchOnFalse) {
             // op == LIR_xf/LIR_jf
             switch (cond->opcode()) {
+            case LIR_eqf4: // fall through to LIR_eqi
             case LIR_eqi:   JNE(targ);      break;
             case LIR_lti:   JNL(targ);      break;
             case LIR_lei:   JNLE(targ);     break;
@@ -1527,6 +1983,7 @@ namespace nanojit
         } else {
             // op == LIR_xt/LIR_jt
             switch (cond->opcode()) {
+            case LIR_eqf4: // fall through to LIR_eqi
             case LIR_eqi:   JE(targ);       break;
             case LIR_lti:   JL(targ);       break;
             case LIR_lei:   JLE(targ);      break;
@@ -1563,7 +2020,12 @@ namespace nanojit
 
     void Assembler::asm_cmp(LIns *cond)
     {
-        isCmpDOpcode(cond->opcode()) ? asm_cmpd(cond) : asm_cmpi(cond);
+        if (isCmpF4Opcode(cond->opcode()))
+            asm_cmpf4(cond);
+        else if (isCmpDOpcode(cond->opcode()) || isCmpFOpcode(cond->opcode()))
+            asm_cmpd(cond);
+        else
+            asm_cmpi(cond);
     }
 
     // This generates a 'test' or 'cmp' instruction for a condition, which
@@ -1655,10 +2117,25 @@ namespace nanojit
         }
     }
 
+    void Assembler::asm_condf4(LIns *cond) {
+        NanoAssert(cond->opcode() == LIR_eqf4);
+        NanoAssert(_config.i386_sse2);
+        Register r = prepareResultReg(cond, AllowableByteRegs);
+
+        // SETcc only sets low 8 bits, so extend
+        MOVZX8(r, r);
+        SETE(r);
+        freeResourcesOf(cond);
+        asm_cmpf4(cond);
+    }
+
     void Assembler::asm_condd(LIns* ins)
     {
         LOpcode opcode = ins->opcode();
         Register r = prepareResultReg(ins, AllowableByteRegs);
+
+        if (isCmpFOpcode(opcode))
+          opcode = getCmpDOpcode(opcode);
 
         // SETcc only sets low 8 bits, so extend
         MOVZX8(r,r);
@@ -2030,21 +2507,28 @@ namespace nanojit
 
         NanoAssert(condval->isCmp());
         NanoAssert((ins->isop(LIR_cmovi) && iftrue->isI() && iffalse->isI()) ||
+                   (ins->isop(LIR_cmovf) && iftrue->isF() && iffalse->isF()) ||
+                   (ins->isop(LIR_cmovf4)&& iftrue->isF4()&& iffalse->isF4())||
                    (ins->isop(LIR_cmovd) && iftrue->isD() && iffalse->isD()));
-
-        if (!_config.i386_sse2 && ins->isop(LIR_cmovd)) {
+        NanoAssert(_config.i386_sse2 || !ins->isop(LIR_cmovf4));
+        if (!_config.i386_sse2 && (ins->isop(LIR_cmovd) || ins->isop(LIR_cmovf))) {
             // See the SSE2 case below for an explanation of the subtleties here.
-            debug_only( Register rr = ) prepareResultReg(ins, x87Regs);
-            NanoAssert(FST0 == rr);
+            Register rr = prepareResultReg(ins, x87Regs);
+            NanoAssert(FST0 == rr); (void)rr;
             NanoAssert(!iftrue->isInReg() && !iffalse->isInReg());
 
             NIns* target = _nIns;
 
             if (iffalse->isImmD()) {
                 asm_immd(FST0, iffalse->immDasQ(), iffalse->immD(), /*canClobberCCs*/false);
+            } else if (iffalse->isImmF()) {
+                asm_immf(FST0, iffalse->immFasI(), iffalse->immF(), /*canClobberCCs*/false);
             } else {
                 int df = findMemFor(iffalse);
-                FLDQ(df, FP);
+                if(iffalse->isD())
+                    FLDQ  (df, FP);
+                else
+                    FLD32 (df, FP);
             }
             FSTP(FST0);     // pop the stack
             asm_branch_helper(false, condval, target);
@@ -2059,11 +2543,11 @@ namespace nanojit
             return;
         }
 
-        RegisterMask allow = ins->isD() ? XmmRegs : GpRegs;
+        RegisterMask allow = (ins->isD() || ins->isF() || ins->isF4()) ? XmmRegs : GpRegs;
         Register rr = prepareResultReg(ins, allow);
         Register rf = findRegFor(iffalse, allow & ~rmask(rr));
 
-        if (ins->isop(LIR_cmovd)) {
+        if (ins->isop(LIR_cmovd) || ins->isop(LIR_cmovf) || ins->isop(LIR_cmovf4)) {
             // The obvious way to handle this is as follows:
             //
             //     mov rr, rt       # only needed if rt is live afterwards
@@ -2086,7 +2570,9 @@ namespace nanojit
             // because move instructions don't modify the condition codes.
             //
             NIns* target = _nIns;
-            asm_nongp_copy(rr, rf);
+            
+            if (rr != rf)
+                asm_nongp_copy(rr, rf);
             asm_branch_helper(false, condval, target);
 
             // If 'iftrue' isn't in a register, it can be clobbered by 'ins'.
@@ -2152,10 +2638,10 @@ namespace nanojit
             // requirement of an abi.  Currently, this is 2, for ABI_FASTCALL.  See
             // the definition of max_abi_regs earlier in this file.  The following
             // assertion reflects this invariant:
-            NanoAssert(abi_regcount <= sizeof(argRegs)/sizeof(argRegs[0]));
+            NanoAssert(abi_regcount <= sizeof(RegAlloc::argRegs)/sizeof(RegAlloc::argRegs[0]));
             if (arg < abi_regcount) {
                 // Incoming arg in register.
-                prepareResultReg(ins, rmask(argRegs[arg]));
+                prepareResultReg(ins, rmask(RegAlloc::argRegs[arg]));
                 // No code to generate.
             } else {
                 // Incoming arg is on stack, and rEBP points nearby (see genPrologue()).
@@ -2165,7 +2651,7 @@ namespace nanojit
             }
         } else {
             // Saved param.
-            prepareResultReg(ins, rmask(savedRegs[arg]));
+            prepareResultReg(ins, rmask(RegAlloc::savedRegs[arg]));
             // No code to generate.
         }
         freeResourcesOf(ins);
@@ -2188,6 +2674,81 @@ namespace nanojit
             LDi(r, val);
     }
 
+    void Assembler::asm_immf(Register r, int32_t i, float f, bool canClobberCCs)
+    {
+        // Floats require non-standard handling. There is no load-32-bit-immediate
+        // instruction on i386, so in the general case, we must load it from memory.
+        // This is unlike most other LIR operations which can be computed directly
+        // in a register. We can special-case 0.0 and various other small ints
+        // (1.0 on x87, any int32_t value on SSE2), but for all other values, we
+        // allocate an 8-byte chunk via dataAlloc and load from there. Note that
+        // this implies that floats never require spill area, since they will always
+        // be rematerialized from const data (or inline instructions in the special cases).
+        
+        if (rmask(r) & XmmRegs) {
+            if (i == 0) {
+                // test (int32)0 since -0.0 == 0.0
+                SSE_XORPDr(r, r);
+            } else if (f && f == (int)f && canClobberCCs) {
+                // can fit in 32bits? then use cvt which is faster
+                Register tr = _allocator.allocTempReg(GpRegs);
+                SSE_CVTSI2SS(r, tr);
+                SSE_XORPDr(r, r);   // zero r to ensure no dependency stalls
+                                    // pedantic: should be XORPSr; but XORPDr shoudl work too.
+                asm_immi(tr, (int)f, canClobberCCs);
+            } else {
+                const uint64_t* p = findImmDFromPool(i);
+                LDSSm(r, (const float*)p); // ok to cast to "float*" since i386 is little-endian
+            }
+        } else {
+            NanoAssert(r == FST0);
+            if (i == 0) {
+                // test (int64)0 since -0.0 == 0.0
+                FLDZ();
+            } else if (f == 1.0) {
+                FLD1();
+            } else {
+                const uint64_t* p = findImmDFromPool(i);
+                FLD32sm((const float*)p);
+            }
+        }
+    }
+
+    void Assembler::asm_immf(LIns* ins)
+    {
+        NanoAssert(ins->isImmF());
+        if (ins->isInReg()) {
+            Register rr = ins->getReg();
+            NanoAssert(rmask(rr) & FpRegs);
+            asm_immf(rr, ins->immFasI(), ins->immF(), /*canClobberCCs*/true);
+        } else {
+            // Do nothing, will be rematerialized when necessary.
+        }
+        
+        freeResourcesOf(ins);
+    }    
+
+    void Assembler::asm_immf4(Register r, const float4_t& f4, bool canClobberCCs){
+       NanoAssert(_config.i386_sse2);(void)canClobberCCs;
+       const float4_t* p = findImmF4FromPool(f4);
+       NanoAssert(p);
+       LDPSm(r, (const float4_t*)p);
+    }
+
+    void Assembler::asm_immf4(LIns* ins)
+    {
+        NanoAssert(ins->isImmF4());
+        if (ins->isInReg()) {
+            Register rr = ins->getReg();
+            NanoAssert(rmask(rr) & XmmRegs);
+            asm_immf4(rr, ins->immF4(), /*canClobberCCs*/true);
+        } else {
+            // Do nothing, will be rematerialized when necessary.
+        }
+
+        freeResourcesOf(ins);
+    }    
+
     void Assembler::asm_immd(Register r, uint64_t q, double d, bool canClobberCCs)
     {
         // Floats require non-standard handling. There is no load-64-bit-immediate
@@ -2205,7 +2766,7 @@ namespace nanojit
                 SSE_XORPDr(r, r);
             } else if (d && d == (int)d && canClobberCCs) {
                 // can fit in 32bits? then use cvt which is faster
-                Register tr = registerAllocTmp(GpRegs);
+                Register tr = _allocator.allocTempReg(GpRegs);
                 SSE_CVTSI2SD(r, tr);
                 SSE_XORPDr(r, r);   // zero r to ensure no dependency stalls
                 asm_immi(tr, (int)d, canClobberCCs);
@@ -2241,66 +2802,136 @@ namespace nanojit
         freeResourcesOf(ins);
     }
 
-    // negateMask is used by asm_fneg.
+    // negateMaskD,F,F4 are used by asm_neg_abs.
 #if defined __SUNPRO_CC
     // From Sun Studio C++ Readme: #pragma align inside namespace requires mangled names.
     // Initialize here to avoid multithreading contention issues during initialization.
-    static uint32_t negateMask_temp[] = {0, 0, 0, 0, 0, 0, 0};
+    // each array must be big enough to hold a 128 bit 16-byte aligned value inside.
+    // static writable arrays start as zerod memory.
+    static uint32_t negateMaskD_temp[8];
+    static uint32_t negateMaskF_temp[8];
+    static uint32_t negateMaskF4_temp[8];
+    static uint32_t absMaskD_temp[8];
+    static uint32_t absMaskF_temp[8];
+    static uint32_t absMaskF4_temp[8];
 
-    static uint32_t* negateMaskInit()
-    {
-        uint32_t* negateMask = (uint32_t*)alignUp(negateMask_temp, 16);
-        negateMask[1] = 0x80000000;
-        return negateMask;
+    static uint32_t* initMaskD(uint32_t mask_temp[], uint32_t upper, uint32_t lower) {
+        uint32_t* mask = (uint32_t*) alignUp(mask_temp, 16);
+        mask[0] = lower;
+        mask[1] = upper;
+        return mask;
     }
 
-    static uint32_t *negateMask = negateMaskInit();
+    static uint32_t* initMaskF(uint32_t mask_temp[], uint32_t value) {
+        uint32_t* mask = (uint32_t*) alignUp(mask_temp, 16);
+        mask[0] = value;
+        return mask;
+        }
+
+    static uint32_t* initMaskF4(uint32_t mask_temp[], uint32_t value) {
+        uint32_t* mask = (uint32_t*) alignUp(mask_temp, 16);
+        mask[0] = mask[1] = mask[2] = mask[3] = value;
+        return mask;
+    }
+
+    static uint32_t *negateMaskD  = initMaskD(negateMaskD_temp,   0x80000000, 0);
+    static uint32_t *negateMaskF  = initMaskF(negateMaskF_temp,   0x80000000);
+    static uint32_t *negateMaskF4 = initMaskF4(negateMaskF4_temp, 0x80000000);
+    static uint32_t *absMaskD     = initMaskD(absMaskD_temp,      0x7FFFFFFF, 0xFFFFFFFF);
+    static uint32_t *absMaskF     = initMaskF(absMaskF_temp,      0x7FFFFFFF);
+    static uint32_t *absMaskF4    = initMaskF4(absMaskF4_temp,    0x7FFFFFFF);
 #else
-    static const AVMPLUS_ALIGN16(uint32_t) negateMask[] = {0,0x80000000,0,0};
+    static const AVMPLUS_ALIGN16(uint32_t) negateMaskD[]  = {0,0x80000000,0,0};
+    static const AVMPLUS_ALIGN16(uint32_t) negateMaskF[]  = { 0x80000000, 0,          0,          0 };
+    static const AVMPLUS_ALIGN16(uint32_t) negateMaskF4[] = {0x80000000,0x80000000,0x80000000,0x80000000};
+    static const AVMPLUS_ALIGN16(uint32_t) absMaskD[]     = { 0xFFFFFFFF, 0x7FFFFFFF, 0,          0 };
+    static const AVMPLUS_ALIGN16(uint32_t) absMaskF[]     = { 0x7FFFFFFF, 0,          0,          0 };
+    static const AVMPLUS_ALIGN16(uint32_t) absMaskF4[]    = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF };
 #endif
 
-    void Assembler::asm_fneg(LIns* ins)
+    void Assembler::asm_neg_abs(LIns* ins)
     {
-        LIns *lhs = ins->oprnd1();
+        LIns *arg = ins->oprnd1();
 
         if (_config.i386_sse2) {
             Register rr = prepareResultReg(ins, XmmRegs);
-
-            // If 'lhs' isn't in a register, it can be clobbered by 'ins'.
+            // If 'arg' isn't in a register, it can be clobbered
             Register ra;
-            if (!lhs->isInReg()) {
+            if (!arg->isInReg()) {
                 ra = rr;
-            } else if (!(rmask(lhs->getReg()) & XmmRegs)) {
-                // We need to evict lhs from x87Regs, which then puts us in
+            } else if (!(rmask(arg->getReg()) & XmmRegs)) {
+                // We need to evict arg from x87Regs, which then puts us in
                 // the same situation as the !isInReg() case.
-                evict(lhs);
+                evict(arg);
                 ra = rr;
             } else {
-                ra = lhs->getReg();
+                ra = arg->getReg();
             }
 
-            SSE_XORPD(rr, negateMask);
-
-            if (rr != ra)
-                SSE_MOVSD(rr, ra);
+            if (ins->retType() == LTy_D) {
+                switch (ins->opcode()) {
+                default: NanoAssert(!"bad opcode");
+                case LIR_negd: SSE_XORPD(rr, negateMaskD); break;
+                case LIR_absd: SSE_ANDPD(rr, absMaskD); break;
+                }
+                if (rr != ra)
+                    SSE_MOVSD(rr, ra);
+            } else {
+            switch(ins->opcode()){
+                default: NanoAssert(!"bad opcode");
+                case LIR_negf:  SSE_XORPS(rr, negateMaskF); break;
+                case LIR_negf4: SSE_XORPS(rr, negateMaskF4); break;
+                case LIR_absf:  SSE_ANDPS(rr, absMaskF); break;
+                case LIR_absf4: SSE_ANDPS(rr, absMaskF4); break;
+            }
+                if (rr != ra)
+                    SSE_MOVAPS(rr, ra);
+            }
 
             freeResourcesOf(ins);
-            if (!lhs->isInReg()) {
+            if (!arg->isInReg()) {
                 NanoAssert(ra == rr);
-                findSpecificRegForUnallocated(lhs, ra);
+                findSpecificRegForUnallocated(arg, ra);
             }
-
         } else {
-            debug_only( Register rr = ) prepareResultReg(ins, x87Regs);
+            Register rr = prepareResultReg(ins, x87Regs); (void)rr;
+            NanoAssert(ins->opcode() == LIR_negd);
             NanoAssert(FST0 == rr);
-
-            NanoAssert(!lhs->isInReg() || FST0 == lhs->getReg());
+            NanoAssert(!arg->isInReg() || FST0 == arg->getReg());
 
             FCHS();
 
             freeResourcesOf(ins);
-            if (!lhs->isInReg())
-                findSpecificRegForUnallocated(lhs, FST0);
+            if (!arg->isInReg())
+                findSpecificRegForUnallocated(arg, FST0);
+        }
+    }
+
+    void Assembler::asm_recip_sqrt(LIns* ins)
+    {
+        NanoAssert(_config.i386_sse2);
+        LIns* lhs = ins->oprnd1();
+
+        Register rr = prepareResultReg(ins, XmmRegs);
+
+        // If 'lhs' isn't in a register, it can be clobbered by 'ins'.
+        Register ra = lhs->isInReg() ? lhs->getReg() : rr;
+
+        switch (ins->opcode()) {
+        default: NanoAssert("!bad opcode");
+        case LIR_recipf:  SSE_RCPSS  (rr, ra); break;
+        case LIR_recipf4: SSE_RCPPS  (rr, ra); break;
+        case LIR_rsqrtf:  SSE_RSQRTSS(rr, ra); break;
+        case LIR_rsqrtf4: SSE_RSQRTPS(rr, ra); break;
+        case LIR_sqrtf:   SSE_SQRTSS (rr, ra); break;
+        case LIR_sqrtf4:  SSE_SQRTPS (rr, ra); break;
+        case LIR_sqrtd:   SSE_SQRTSD (rr, ra); break;
+        }
+
+            freeResourcesOf(ins);
+        if (!lhs->isInReg()) {
+            NanoAssert(ra == rr);
+            findSpecificRegForUnallocated(lhs, ra);
         }
     }
 
@@ -2338,9 +2969,21 @@ namespace nanojit
                 else
                     asm_pusharg(ins);
             }
-
+        } else if (ty == ARGTYPE_F4 ) {
+            NanoAssert(ins->isF4());
+            if (r != UnspecifiedReg) {
+                findSpecificRegFor(ins,r);
+            }
+            else {
+                NanoAssert(_config.i386_sse2);
+                Register r = findRegFor(ins, XmmRegs);
+                SSE_STUPS(stkd, SP, r);       // TODO: use STAPS!!
+                if (!_config.i386_fixed_esp)
+                    SUBi(rESP, 16);
+                stkd += 16;
+            }
         } else {
-            NanoAssert(ty == ARGTYPE_D);
+            NanoAssert((ty == ARGTYPE_D && ins->isD()) || (ty == ARGTYPE_F && ins->isF()));
             asm_farg(ins, stkd);
         }
     }
@@ -2383,12 +3026,19 @@ namespace nanojit
 
     void Assembler::asm_farg(LIns* ins, int32_t& stkd)
     {
-        NanoAssert(ins->isD());
+        NanoAssert(ins->isD() || ins->isF());
+        bool singlePrecision = ins->isF();
         Register r = findRegFor(ins, FpRegs);
         if (rmask(r) & XmmRegs) {
-            SSE_STQ(stkd, SP, r);
+            if(singlePrecision)
+                SSE_STSS(stkd, SP, r);
+            else
+                SSE_STQ(stkd, SP, r);
         } else {
-            FSTPQ(stkd, SP);
+            if(singlePrecision)
+                FST32(1, stkd,SP);
+            else
+                FSTPQ(stkd, SP);
 
             // 22Jul09 rickr - Enabling the evict causes a 10% slowdown on primes
             //
@@ -2405,9 +3055,9 @@ namespace nanojit
             evict(ins);
         }
         if (!_config.i386_fixed_esp)
-            SUBi(rESP, 8);
+            SUBi(rESP, singlePrecision ? 4 : 8);
 
-        stkd += sizeof(double);
+        stkd += singlePrecision ? sizeof(float) : sizeof(double);
     }
 
     void Assembler::asm_fop(LIns* ins)
@@ -2431,7 +3081,6 @@ namespace nanojit
             Register ra;
             if (!lhs->isInReg()) {
                 ra = rr;
-
             } else if (!(rmask(lhs->getReg()) & XmmRegs)) {
                 NanoAssert(lhs->getReg() == FST0);
 
@@ -2439,7 +3088,6 @@ namespace nanojit
                 // the same situation as the !isInReg() case.
                 evict(lhs);
                 ra = rr;
-
             } else {
                 ra = lhs->getReg();
                 NanoAssert(rmask(ra) & XmmRegs);
@@ -2453,11 +3101,23 @@ namespace nanojit
             case LIR_subd:  SSE_SUBSD(rr, rb);  break;
             case LIR_muld:  SSE_MULSD(rr, rb);  break;
             case LIR_divd:  SSE_DIVSD(rr, rb);  break;
-            default:        NanoAssert(0);
+            case LIR_addf:  SSE_ADDSS(rr, rb);  break;
+            case LIR_subf:  SSE_SUBSS(rr, rb);  break;
+            case LIR_mulf:  SSE_MULSS(rr, rb);  break;
+            case LIR_divf:  SSE_DIVSS(rr, rb);  break;
+            case LIR_addf4: SSE_ADDPS(rr, rb);  break;
+            case LIR_subf4: SSE_SUBPS(rr, rb);  break;
+            case LIR_mulf4: SSE_MULPS(rr, rb);  break;
+            case LIR_divf4: SSE_DIVPS(rr, rb);  break;
+            case LIR_dotf4: SSE_DPPS(rr, rb, 0xF1); break;
+            case LIR_dotf3: SSE_DPPS(rr, rb, 0x71); break;
+            case LIR_dotf2: SSE_DPPS(rr, rb, 0x31); break;
+            default:        NanoAssertMsgf(false,"Unhandled op %d",op);
             }
 
-            if (rr != ra)
-                SSE_MOVSD(rr, ra);
+            if (rr != ra){
+                SSE_MOVAPS(rr, ra); // doesn't hurt if we move all 128 bits...
+            }
 
             freeResourcesOf(ins);
             if (!lhs->isInReg()) {
@@ -2485,7 +3145,16 @@ namespace nanojit
                 case LIR_divd:  FDIVRdm((const double*)p);  break;
                 default:        NanoAssert(0);
                 }
+            } else if (rhs->isImmF()) {
+                const uint64_t* p = findImmDFromPool(rhs->immFasI());
 
+                switch (op) {
+                case LIR_addf:  FADD32dm( (const float*)p);  break;
+                case LIR_subf:  FSUBR32dm((const float*)p);  break;
+                case LIR_mulf:  FMUL32dm( (const float*)p);  break;
+                case LIR_divf:  FDIVR32dm((const float*)p);  break;
+                default:        NanoAssert(0);
+                }
             } else {
                 int db = findMemFor(rhs);
 
@@ -2494,6 +3163,10 @@ namespace nanojit
                 case LIR_subd:  FSUBR(db, FP);  break;
                 case LIR_muld:  FMUL( db, FP);  break;
                 case LIR_divd:  FDIVR(db, FP);  break;
+                case LIR_addf:  FADD32( db, FP);  break;
+                case LIR_subf:  FSUBR32(db, FP);  break;
+                case LIR_mulf:  FMUL32( db, FP);  break;
+                case LIR_divf:  FDIVR32(db, FP);  break;
                 default:        NanoAssert(0);
                 }
             }
@@ -2528,7 +3201,7 @@ namespace nanojit
 
         Register rr = prepareResultReg(ins, FpRegs);
         if (rmask(rr) & XmmRegs) {
-            Register rt = registerAllocTmp(GpRegs);
+            Register rt = _allocator.allocTempReg(GpRegs);
 
             // Technique inspired by gcc disassembly.  Edwin explains it:
             //
@@ -2577,6 +3250,120 @@ namespace nanojit
         freeResourcesOf(ins);
     }
 
+    void Assembler::asm_i2f(LIns* ins)
+    {
+        LIns* lhs = ins->oprnd1();
+        
+        Register rr = prepareResultReg(ins, FpRegs);
+        if (rmask(rr) & XmmRegs) {
+            // todo support int value in memory
+            Register ra = findRegFor(lhs, GpRegs);
+            SSE_CVTSI2SS(rr, ra);
+            SSE_XORPDr(rr, rr);     // zero rr to ensure no dependency stalls
+        } else {
+            int d = findMemFor(lhs);
+            FILD(d, FP);
+        }
+        
+        freeResourcesOf(ins);
+    }
+    
+    void Assembler::asm_ui2f(LIns* ins)
+    {
+        LIns* lhs = ins->oprnd1();
+        
+        Register rr = prepareResultReg(ins, FpRegs);
+        if (rmask(rr) & XmmRegs) {
+            Register rt = _allocator.allocTempReg(GpRegs);
+            
+            // See ui2d for explanations
+            
+            static const double k_NEGONE = 2147483648.0;
+            
+            SSE_CVTSD2SS(rr, rr); // That's all we add from asm_ui2d
+            
+            SSE_ADDSDm(rr, &k_NEGONE);
+            
+            SSE_CVTSI2SD(rr, rt);
+            SSE_XORPDr(rr, rr);  // zero rr to ensure no dependency stalls
+            
+            if ( lhs->isInRegMask(GpRegs) ) {
+                Register ra = lhs->getReg();
+                LEA(rt, 0x80000000, ra);
+                
+            } else {
+                const int d = findMemFor(lhs);
+                SUBi(rt, 0x80000000);
+                LD(rt, d, FP);
+            }
+            
+        } else {
+            // Use space just below rESP and use PUSH to avoid writing
+            // past the end of the stack, see bug 590553.
+            Register ra = findRegFor(lhs, GpRegs);
+            NanoAssert(rr == FST0);
+            ADDi(SP, 8);       // fix up the stack
+            FILDQ(0, SP);      // convert int64 to double; 
+            PUSHr(ra);         // low 32 bits = unsigned value
+            PUSHi(0);          // high 32 bits = 0
+        }
+        
+        freeResourcesOf(ins);
+    }
+    
+    void Assembler::asm_f2i(LIns* ins)
+    {
+        if(!_config.i386_sse2) {
+            return asm_d2i(ins);
+        }
+        
+        LIns *lhs = ins->oprnd1();
+        Register rr = prepareResultReg(ins, GpRegs);
+        Register ra = findRegFor(lhs, XmmRegs);
+        SSE_CVTTSS2SI(rr, ra); 
+        freeResourcesOf(ins);
+    }
+
+    void Assembler::asm_f2d(LIns* ins)
+    {
+        LIns *lhs = ins->oprnd1();
+        
+        if (_config.i386_sse2) {
+            Register rr = prepareResultReg(ins, XmmRegs);
+            Register ra = findRegFor(lhs, XmmRegs);
+            SSE_CVTSS2SD(rr, ra); 
+        } else {
+            bool pop = !lhs->isInReg();
+            findSpecificRegFor(lhs, FST0);
+            if (ins->isInReg())
+                evict(ins);
+            int d = findMemFor(ins);
+            FSTQ(pop, d, FP);
+        }
+        
+        freeResourcesOf(ins);
+    }
+    
+    void Assembler::asm_d2f(LIns* ins)
+    {
+        LIns *lhs = ins->oprnd1();
+        
+        if (_config.i386_sse2) {
+            Register rr = prepareResultReg(ins, XmmRegs);
+            Register ra = findRegFor(lhs, XmmRegs);
+            SSE_CVTSD2SS(rr, ra); 
+        } else {
+            bool pop = !lhs->isInReg();
+            findSpecificRegFor(lhs, FST0);
+            if (ins->isInReg())
+                evict(ins);
+            int d = findMemFor(ins);
+            FST32(pop, d, FP);
+        }
+        
+        freeResourcesOf(ins);
+    }
+    
     void Assembler::asm_d2i(LIns* ins)
     {
         LIns *lhs = ins->oprnd1();
@@ -2597,11 +3384,25 @@ namespace nanojit
         freeResourcesOf(ins);
     }
 
+    RegisterMask RegAlloc::nRegCopyCandidates(Register r, RegisterMask allow) {
+        if(rmask(r) & GpRegs)
+            return allow & GpRegs;// theoretically we could allow XmmRegs too, but asm_nongp_copy is not done. 
+        
+        if(rmask(r) & XmmRegs)// we can't allow GpRegs, even though nongp_copy works, because XMM may need the full 128bits
+            return allow & XmmRegs;
+
+        if(rmask(r) & x87Regs)
+            return allow & x87Regs;
+
+        NanoAssert(false); // How did we get here?
+        return 0;
+    }
+
     void Assembler::asm_nongp_copy(Register rd, Register rs)
     {
         if ((rmask(rd) & XmmRegs) && (rmask(rs) & XmmRegs)) {
             // xmm -> xmm
-            SSE_MOVSD(rd, rs);
+            SSE_MOVAPS(rd, rs);
         } else if ((rmask(rd) & GpRegs) && (rmask(rs) & XmmRegs)) {
             // xmm -> gp
             SSE_MOVD(rd, rs);
@@ -2623,6 +3424,7 @@ namespace nanojit
             if (branchOnFalse) {
                 // op == LIR_xf
                 switch (opcode) {
+                case LIR_eqf:
                 case LIR_eqd:
                     if (cond->oprnd1() == cond->oprnd2()) {
                         JP(targ);
@@ -2633,15 +3435,20 @@ namespace nanojit
                         patch2 = _nIns;
                     }
                     break;
+                case LIR_ltf:
                 case LIR_ltd:
+                case LIR_gtf:
                 case LIR_gtd:   JNA(targ);      break;
+                case LIR_lef:
                 case LIR_led:
+                case LIR_gef:
                 case LIR_ged:   JNAE(targ);     break;
                 default:        NanoAssert(0);  break;
                 }
             } else {
                 // op == LIR_xt
                 switch (opcode) {
+                case LIR_eqf:
                 case LIR_eqd:
                     if (cond->oprnd1() == cond->oprnd2()) {
                         JNP(targ);
@@ -2656,9 +3463,13 @@ namespace nanojit
                         JP(skip); // unordered
                     }
                     break;
+                case LIR_ltf:
                 case LIR_ltd:
+                case LIR_gtf:
                 case LIR_gtd:   JA(targ);       break;
+                case LIR_lef:
                 case LIR_led:
+                case LIR_gef:
                 case LIR_ged:   JAE(targ);      break;
                 default:        NanoAssert(0);  break;
                 }
@@ -2679,14 +3490,46 @@ namespace nanojit
     // WARNING: This function cannot generate any code that will affect the
     // condition codes prior to the generation of the
     // ucomisd/fcompp/fcmop/fcom.  See asm_cmpi() for more details.
+    void Assembler::asm_cmpf4(LIns *cond) {
+        NanoAssert((cond->opcode()==LIR_eqf4) );
+
+        LIns* a = cond->oprnd1();
+        LIns* b = cond->oprnd2();
+        Register gt = _allocator.allocTempReg(GpRegs);
+
+        /*
+            CMPNEQPS ra, rb  // CMPPS ra,rb,4
+            // we could use PTEST but it's SSE4_1, we don't want to assume SSE4 support yet 
+            PMOVMSKB gp, ra
+            CMP      gp, 0
+        */
+       TEST(gt,gt);
+       Register rt = _allocator.allocTempReg(XmmRegs );
+       SSE_PMOVMSKB(gt,rt);
+       Register ra, rb;
+       
+       findRegFor2(XmmRegs & ~rmask(rt) , a, ra, XmmRegs & ~rmask(rt) , b, rb);
+       SSE_CMPNEQPS(rt,rb);
+       if(ra!=rt)
+           asm_nongp_copy(rt,ra);
+    }
+
+    // WARNING: This function cannot generate any code that will affect the
+    // condition codes prior to the generation of the
+    // ucomisd/fcompp/fcmop/fcom.  See asm_cmpi() for more details.
     void Assembler::asm_cmpd(LIns *cond)
     {
         LOpcode condop = cond->opcode();
-        NanoAssert(isCmpDOpcode(condop));
+        bool singlePrecision = isCmpFOpcode(condop);
+        NanoAssert(isCmpDOpcode(condop) || singlePrecision);
+
         LIns* lhs = cond->oprnd1();
         LIns* rhs = cond->oprnd2();
-        NanoAssert(lhs->isD() && rhs->isD());
-
+        NanoAssert(singlePrecision ? (lhs->isF() && rhs->isF()) :
+                                     (lhs->isD() && rhs->isD()));
+        condop = singlePrecision? getCmpDOpcode(condop) : condop; // force double precision, to simplify testing/conditions. 
+                                                                  // Will revert the opcode to single-precision just before using it
+        
         if (_config.i386_sse2) {
             // First, we convert (a < b) into (b > a), and (a <= b) into (b >= a).
             if (condop == LIR_ltd) {
@@ -2730,7 +3573,11 @@ namespace nanojit
 
             Register ra, rb;
             findRegFor2(XmmRegs, lhs, ra, XmmRegs, rhs, rb);
-            SSE_UCOMISD(ra, rb);
+
+            if (singlePrecision)
+                SSE_UCOMISS(ra,rb); 
+            else 
+                SSE_UCOMISD(ra, rb);
 
         } else {
             // First, we convert (a > b) into (b < a), and (a >= b) into (b <= a).
@@ -2807,15 +3654,63 @@ namespace nanojit
             } else {
                 TEST_AH(mask);
                 FNSTSW_AX();        // requires rEAX to be free
-                if (rhs->isImmD()) {
-                    const uint64_t* p = findImmDFromPool(rhs->immDasQ());
+                if (rhs->isImmAny()) {
+                    const uint64_t* p;
+                    if (singlePrecision) {
+                        NanoAssert(rhs->isImmF());
+                        union {
+                            double d;
+                            uint64_t q;
+                        } u;
+                        u.d = rhs->immF();//  convert to double, to avoid adding a findImmFFromPool + a FCOMdm32 instruction
+                        p = findImmDFromPool(u.q); 
+                    } else {
+                        NanoAssert(rhs->isImmD());
+                        p =findImmDFromPool(rhs->immDasQ());
+                    }
                     FCOMdm(pop, (const double*)p);
                 } else {
                     int d = findMemFor(rhs);
-                    FCOM(pop, d, FP);
+                    if (singlePrecision)
+                        FCOM32(pop,d,FP);
+                    else
+                        FCOM(pop, d, FP);
                 }
             }
         }
+    }
+
+    void Assembler::asm_f2f4(LIns *ins) {
+        LIns *a = ins->oprnd1();
+        NanoAssert(ins->isF4() && a->isF());
+        NanoAssert(_config.i386_sse2);
+
+        Register rr = prepareResultReg(ins, XmmRegs);
+        Register rb = findRegFor(a, XmmRegs);
+        SSE_PSHUFD(rr, rb, PSHUFD_COMPONENT_MASK(0)); 
+        freeResourcesOf(ins);
+    }
+    
+    void Assembler::asm_f4comp(LIns* ins) {
+        NanoAssert(ins->isop(LIR_swzf4) ? ins->isF4() : ins->isF());
+        NanoAssert(ins->oprnd1()->isF4());
+        NanoAssert(_config.i386_sse2);
+        LIns *a = ins->oprnd1();
+        Register rr = prepareResultReg(ins, XmmRegs);
+        Register rb = findRegFor(a, XmmRegs);
+        switch (ins->opcode()) {
+        default: NanoAssert(!"bad opcode for asm_f4comp()"); break;
+        case LIR_f4x: SSE_PSHUFD(rr, rb, PSHUFD_COMPONENT_MASK(0)); break;
+        case LIR_f4y: SSE_PSHUFD(rr, rb, PSHUFD_COMPONENT_MASK(1)); break;
+        case LIR_f4z: SSE_PSHUFD(rr, rb, PSHUFD_COMPONENT_MASK(2)); break;
+        case LIR_f4w: SSE_PSHUFD(rr, rb, PSHUFD_COMPONENT_MASK(3)); break;
+        case LIR_swzf4: {
+          uint8_t mask = ins->mask();
+          SSE_PSHUFD(rr, rb, mask);
+          break;
+        }
+        }
+        freeResourcesOf(ins);
     }
 
     // Increment the 32-bit profiling counter at pCtr, without
@@ -2887,10 +3782,13 @@ namespace nanojit
         assignSavedRegs();
 
         LIns *val = ins->oprnd1();
+
         if (ins->isop(LIR_reti)) {
-            findSpecificRegFor(val, retRegs[0]);
+            findSpecificRegFor(val, RegAlloc::retRegs[0]);
+        } else if (ins->isop(LIR_retf4)) {
+            findSpecificRegFor(val, XMM0); // float4 values always returned in XMM0
         } else {
-            NanoAssert(ins->isop(LIR_retd));
+            NanoAssert(ins->isop(LIR_retd) || ins->isop(LIR_retf));
             findSpecificRegFor(val, FST0);
             fpu_pop();
         }

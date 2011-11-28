@@ -384,9 +384,16 @@ namespace avmplus
                             cv = abc->addInt(((LiteralInt*)dv)->value);
                             break;
                         case TAG_literalDouble:
-                        case TAG_literalBoolean:
                             ct = CONSTANT_Double;
                             cv = abc->addDouble(((LiteralDouble*)dv)->value);
+                            break;
+#ifdef VMCFG_FLOAT
+                        case TAG_literalFloat:
+                            ct = CONSTANT_Float;
+                            cv = abc->addFloat(((LiteralFloat*)dv)->value);
+                            break;
+#endif
+                        case TAG_literalBoolean:
                             if (((LiteralBoolean*)dv)->value)
                                 ct = CONSTANT_True;
                             else

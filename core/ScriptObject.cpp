@@ -682,6 +682,16 @@ namespace avmplus
         {
             return traits->core->doubleToAtom(*((const double*)p));
         }
+#ifdef VMCFG_FLOAT
+        else if (sst == SST_float)
+        {
+            return traits->core->floatToAtom(*((const float*)p));
+        }
+        else if (sst == SST_float4)
+        {
+            return traits->core->float4ToAtom(AvmThunkUnbox_FLOAT4(float4_t, *((Atom*)p)) );
+        }
+#endif // VMCFG_FLOAT
         else if (sst == SST_int32)
         {
             return traits->core->intToAtom(*((const int32_t*)p));
@@ -760,6 +770,17 @@ namespace avmplus
         {
             *((double*)p) = AvmCore::number(value);
         }
+#ifdef VMCFG_FLOAT
+        else if (sst == SST_float)
+        {
+            *((float*)p) = AvmCore::singlePrecisionFloat(value);
+        }
+        else if (sst == SST_float4)
+        {
+            float4_t* ptr = reinterpret_cast<float4_t*>(p);
+            AvmCore::float4(ptr, value);
+        }
+#endif // VMCFG_FLOAT
         else if (sst == SST_int32)
         {
             *((int32_t*)p) = AvmCore::integer(value);

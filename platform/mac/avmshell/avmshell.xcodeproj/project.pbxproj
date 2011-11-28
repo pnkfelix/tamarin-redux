@@ -22,6 +22,12 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		0638CA1F141F36630047FB4F /* Float4Class.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0638CA1B141F36630047FB4F /* Float4Class.cpp */; };
+		0638CA20141F36630047FB4F /* FloatClass.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0638CA1D141F36630047FB4F /* FloatClass.cpp */; };
+		0638CA21141F36630047FB4F /* Float4Class.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0638CA1B141F36630047FB4F /* Float4Class.cpp */; };
+		0638CA22141F36630047FB4F /* FloatClass.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0638CA1D141F36630047FB4F /* FloatClass.cpp */; };
+		0684BA2714801585002B92CA /* float4Support.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0684BA2614801585002B92CA /* float4Support.cpp */; };
+		0684BA2814801585002B92CA /* float4Support.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0684BA2614801585002B92CA /* float4Support.cpp */; };
 		0715396D0F507325004E398F /* eval-avmplus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0715396B0F507325004E398F /* eval-avmplus.cpp */; };
 		072EA0EA0F4C1CE9009F11E6 /* eval-abc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 072EA0D20F4C1CE9009F11E6 /* eval-abc.cpp */; };
 		072EA0EB0F4C1CE9009F11E6 /* eval-cogen-expr.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 072EA0D50F4C1CE9009F11E6 /* eval-cogen-expr.cpp */; };
@@ -439,6 +445,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0638CA1B141F36630047FB4F /* Float4Class.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Float4Class.cpp; path = ../../../core/Float4Class.cpp; sourceTree = SOURCE_ROOT; };
+		0638CA1C141F36630047FB4F /* Float4Class.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Float4Class.h; path = ../../../core/Float4Class.h; sourceTree = SOURCE_ROOT; };
+		0638CA1D141F36630047FB4F /* FloatClass.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FloatClass.cpp; path = ../../../core/FloatClass.cpp; sourceTree = SOURCE_ROOT; };
+		0638CA1E141F36630047FB4F /* FloatClass.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FloatClass.h; path = ../../../core/FloatClass.h; sourceTree = SOURCE_ROOT; };
+		0684BA2614801585002B92CA /* float4Support.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = float4Support.cpp; path = ../../../AVMPI/float4Support.cpp; sourceTree = SOURCE_ROOT; };
 		0709B6490F9733B0001A6E61 /* avmshell-features.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "avmshell-features.h"; path = "../../../shell/avmshell-features.h"; sourceTree = SOURCE_ROOT; };
 		0709B64A0F9733B0001A6E61 /* avmshellUnix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = avmshellUnix.cpp; path = ../../../shell/avmshellUnix.cpp; sourceTree = SOURCE_ROOT; };
 		0709B64B0F9733B0001A6E61 /* avmshellWin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = avmshellWin.cpp; path = ../../../shell/avmshellWin.cpp; sourceTree = SOURCE_ROOT; };
@@ -486,7 +497,10 @@
 		072EA1080F4C1D1B009F11E6 /* smoketest.as */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = smoketest.as; path = ../../../eval/smoketest.as; sourceTree = SOURCE_ROOT; };
 		072EA1090F4C1D1B009F11E6 /* smoketest2.as */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = smoketest2.as; path = ../../../eval/smoketest2.as; sourceTree = SOURCE_ROOT; };
 		072EA10A0F4C1D1B009F11E6 /* smoketest3.as */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = smoketest3.as; path = ../../../eval/smoketest3.as; sourceTree = SOURCE_ROOT; };
+		073408DE1473D0D3004B5E76 /* MathUtilsWin-inlines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "MathUtilsWin-inlines.h"; path = "../../win32/MathUtilsWin-inlines.h"; sourceTree = SOURCE_ROOT; };
+		073408DF1473D0D3004B5E76 /* MathUtilsWin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MathUtilsWin.cpp; path = ../../win32/MathUtilsWin.cpp; sourceTree = SOURCE_ROOT; };
 		073739F112A65F5F00F888F6 /* MultinameHashtable-impl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "MultinameHashtable-impl.h"; path = "../../../core/MultinameHashtable-impl.h"; sourceTree = SOURCE_ROOT; };
+		073890AE1473AD7B002A2A98 /* Float.as */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.actionscript; name = Float.as; path = ../../../core/Float.as; sourceTree = SOURCE_ROOT; };
 		073AC650116A5DC000215772 /* ST_mmgc_gcheap.st */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = ST_mmgc_gcheap.st; path = ../../../extensions/ST_mmgc_gcheap.st; sourceTree = SOURCE_ROOT; };
 		075300A510C55E0700D67DA9 /* pcre_avmplus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pcre_avmplus.h; path = ../../../pcre/pcre_avmplus.h; sourceTree = SOURCE_ROOT; };
 		07553E0D1099FB2800F72FB0 /* AbcEnv-inlines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "AbcEnv-inlines.h"; path = "../../../core/AbcEnv-inlines.h"; sourceTree = SOURCE_ROOT; };
@@ -1111,6 +1125,8 @@
 		077494B60F8E2D9B00230F6D /* Non-Mac */ = {
 			isa = PBXGroup;
 			children = (
+				073408DE1473D0D3004B5E76 /* MathUtilsWin-inlines.h */,
+				073408DF1473D0D3004B5E76 /* MathUtilsWin.cpp */,
 				0709B6C90F98DFD8001A6E61 /* symbian-platform.h */,
 				077494B80F8E2DC900230F6D /* unix-platform.h */,
 				077494B70F8E2DBA00230F6D /* win32-platform.h */,
@@ -1330,6 +1346,10 @@
 				079DF8B60F3A88950031D1B4 /* ErrorClass.h */,
 				079DF8B70F3A88950031D1B4 /* ErrorConstants.cpp */,
 				079DF8B80F3A88950031D1B4 /* ErrorConstants.h */,
+				0638CA1B141F36630047FB4F /* Float4Class.cpp */,
+				0638CA1C141F36630047FB4F /* Float4Class.h */,
+				0638CA1D141F36630047FB4F /* FloatClass.cpp */,
+				0638CA1E141F36630047FB4F /* FloatClass.h */,
 				079DF8B90F3A88950031D1B4 /* FunctionClass.cpp */,
 				079DF8BA0F3A88950031D1B4 /* FunctionClass.h */,
 				079DF8BB0F3A88950031D1B4 /* IntClass.cpp */,
@@ -1453,6 +1473,7 @@
 				079DF9100F3A88EA0031D1B4 /* DescribeType.as */,
 				079DF9110F3A88EA0031D1B4 /* Error.as */,
 				079DF9120F3A88EA0031D1B4 /* ErrorConstants.as */,
+				073890AE1473AD7B002A2A98 /* Float.as */,
 				079DF9130F3A88EA0031D1B4 /* Function.as */,
 				D939B10B126E356500522895 /* IDataInput.as */,
 				D939B10C126E356500522895 /* IDataOutput.as */,
@@ -1467,7 +1488,6 @@
 				079DF91A0F3A88EA0031D1B4 /* Vector.as */,
 				079DF91B0F3A88EA0031D1B4 /* VectorImpl.as */,
 				079DF91C0F3A88EA0031D1B4 /* XML.as */,
-				079DF90A0F3A88B10031D1B4 /* actionscript.lang.as */,
 			);
 			name = AS;
 			sourceTree = "<group>";
@@ -1779,6 +1799,7 @@
 				F68C244E13A82C8D00152279 /* PosixMMgcPortUtils.cpp */,
 				F68C243213A82B9800152279 /* SpyUtilsPosix.cpp */,
 				F68C243513A82B9800152279 /* MMgcPortMac.cpp */,
+				0684BA2614801585002B92CA /* float4Support.cpp */,
 				F68C243713A82B9800152279 /* AVMPI.h */,
 				F68C243813A82B9800152279 /* AvmAssert.h */,
 				F68C243913A82B9800152279 /* AvmAssert.cpp */,
@@ -2079,6 +2100,9 @@
 				F68C247113A82EF800152279 /* GenericPortUtils.cpp in Sources */,
 				F68C247213A82EF800152279 /* MacPortUtils.cpp in Sources */,
 				07E7976613BC99EC00E25990 /* d2a.cpp in Sources */,
+				0638CA1F141F36630047FB4F /* Float4Class.cpp in Sources */,
+				0638CA20141F36630047FB4F /* FloatClass.cpp in Sources */,
+				0684BA2714801585002B92CA /* float4Support.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2272,6 +2296,9 @@
 				F68C246F13A82EF800152279 /* GenericPortUtils.cpp in Sources */,
 				F68C247013A82EF800152279 /* MacPortUtils.cpp in Sources */,
 				07E7976513BC99EC00E25990 /* d2a.cpp in Sources */,
+				0638CA21141F36630047FB4F /* Float4Class.cpp in Sources */,
+				0638CA22141F36630047FB4F /* FloatClass.cpp in Sources */,
+				0684BA2814801585002B92CA /* float4Support.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2296,6 +2323,10 @@
 			baseConfigurationReference = 0772CD170F3C3190008DDBB6 /* avmshell64-debug-debugger.xcconfig */;
 			buildSettings = {
 				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"${COMMON_PREPROCESSOR_DEFINITIONS}",
+					DEBUGGER,
+				);
 				GCC_VERSION = 4.0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
@@ -2314,6 +2345,7 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_MODEL_TUNING = G5;
 				INSTALL_PATH = /usr/local/bin;
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = avm;
 			};
 			name = Debug_Debugger;
@@ -2323,6 +2355,10 @@
 			baseConfigurationReference = 0772CD190F3C3190008DDBB6 /* avmshell64-release-debugger.xcconfig */;
 			buildSettings = {
 				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"${COMMON_PREPROCESSOR_DEFINITIONS}",
+					DEBUGGER,
+				);
 				GCC_VERSION = 4.0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
@@ -2339,6 +2375,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_MODEL_TUNING = G5;
 				INSTALL_PATH = /usr/local/bin;
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = avm;
 			};
 			name = Release_Debugger;
@@ -2353,6 +2390,7 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_MODEL_TUNING = G5;
 				INSTALL_PATH = /usr/local/bin;
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = avm;
 			};
 			name = Debug;
@@ -2365,6 +2403,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_MODEL_TUNING = G5;
 				INSTALL_PATH = /usr/local/bin;
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = avm;
 			};
 			name = Release;
@@ -2374,6 +2413,7 @@
 			baseConfigurationReference = 0772CD180F3C3190008DDBB6 /* avmshell64-debug.xcconfig */;
 			buildSettings = {
 				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_PREPROCESSOR_DEFINITIONS = "${COMMON_PREPROCESSOR_DEFINITIONS}";
 				GCC_VERSION = 4.0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
@@ -2387,6 +2427,7 @@
 			baseConfigurationReference = 0772CD1A0F3C3190008DDBB6 /* avmshell64-release.xcconfig */;
 			buildSettings = {
 				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_PREPROCESSOR_DEFINITIONS = "${COMMON_PREPROCESSOR_DEFINITIONS}";
 				GCC_VERSION = 4.0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
@@ -2408,6 +2449,7 @@
 				GCC_MODEL_TUNING = G5;
 				GCC_VERSION = 4.0;
 				INSTALL_PATH = /usr/local/bin;
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = avm;
 			};
 			name = Debug;
@@ -2425,6 +2467,7 @@
 				GCC_MODEL_TUNING = G5;
 				GCC_VERSION = 4.0;
 				INSTALL_PATH = /usr/local/bin;
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = avm;
 			};
 			name = Debug_Debugger;
@@ -2440,6 +2483,7 @@
 				GCC_MODEL_TUNING = G5;
 				GCC_VERSION = 4.0;
 				INSTALL_PATH = /usr/local/bin;
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = avm;
 				ZERO_LINK = NO;
 			};
@@ -2456,6 +2500,7 @@
 				GCC_MODEL_TUNING = G5;
 				GCC_VERSION = 4.0;
 				INSTALL_PATH = /usr/local/bin;
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = avm;
 				ZERO_LINK = NO;
 			};

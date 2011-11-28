@@ -128,8 +128,13 @@ namespace avmplus
     /*static*/ const double MathUtils::kNaN = _nan();
     /*static*/ const double MathUtils::kInfinity = _infinity();
     /*static*/ const double MathUtils::kNegInfinity = _neg_infinity();
+    /*static*/ const float  MathUtils::kFltNaN = float(_nan());
+    /*static*/ const float  MathUtils::kFltInfinity = float(_infinity());
+    /*static*/ const float  MathUtils::kFltNegInfinity = float(_neg_infinity());
 
 #ifdef UNIX
+    // This code exists to support platforms that have no "long long" constants.
+
     /*
      * MathUtils::isNaN and MathUtils::isInfinite are modified versions of
      * s_isNaN.c and s_isInfinite.c, freely usable code by Sun.  Copyright follows:
@@ -193,6 +198,8 @@ namespace avmplus
 
          nan = 7FFx xxxx xxxx xxxx where x != 0
                FFFx xxxx xxxx xxxx
+     
+     * single precision ditto, but exponent is eight bits instead of eleven.
      */
 
     int32_t MathUtils::isInfinite(double x)
@@ -213,15 +220,73 @@ namespace avmplus
 
         return (u.bits64 & ~0x8000000000000000ULL) > 0x7ff0000000000000ULL;
     }
-
+    
     bool MathUtils::isNegZero(double x)
     {
         double_overlay d(x);
 
         return d.bits64 == 0x8000000000000000ULL;
     }
-
 #endif // UNIX
+
+    
+    bool MathUtils::isNaNf(float value)
+    {
+        float_overlay u(value);
+        
+        return (u.word & ~0x80000000UL) > 0x7f800000UL;
+    }
+
+    int32_t MathUtils::isInfinitef(float x)
+    {
+        float_overlay u(x);
+        
+        if ((u.word & 0x7fffffffL) != 0x7F800000L)
+            return 0;
+        if (u.word & 0x80000000L)
+            return -1;
+        else
+            return 1;
+    }
+   
+    bool MathUtils::isNegZerof(float x)
+    {
+        float_overlay f(x);
+        
+        return f.word == 0x80000000UL;
+    }
+    
+    float MathUtils::as3_minf(float x, float y)
+    {
+        if (MathUtils::isNaNf(x))
+            return x;
+        if (MathUtils::isNaNf(y))
+            return y;
+        if (x < y)
+            return x;
+        if (x == y && x == 0.0f && 1.0f/x < 0.0f)
+            return x;  // -0
+        return y;
+    }
+    
+    float MathUtils::as3_maxf(float x, float y)
+    {
+        if (MathUtils::isNaNf(x))
+            return x;
+        if (MathUtils::isNaNf(y))
+            return y;
+        if (x > y)
+            return x;
+        if (x == y && x == 0.0f && 1.0f/x > 0.0f)
+            return x; // +0
+        return y;
+    }
+    
+    float MathUtils::powf(float x, float y)
+    {
+        // We can do better
+        return float(pow(double(x), double(y)));
+    }
 
     int32_t MathUtils::nextPowerOfTwo(int32_t n)
     {

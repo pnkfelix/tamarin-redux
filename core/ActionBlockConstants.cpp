@@ -83,7 +83,7 @@ namespace avmplus
         const char * const constantNames[] = {
             "const-0",
             "utf8",//const int CONSTANT_Utf8         = 0x01;
-            "const-2",
+            "float", // const int CONSTANT_Float = 0x02;
             "int",//const int CONSTANT_Int = 0x03;
             "uint",//const int CONSTANT_UInt = 0x04;
             "private",//const int CONSTANT_PrivateNS = 0x05;
@@ -111,6 +111,7 @@ namespace avmplus
             "multinamelate", //const int CONSTANT_MultinameL        = 0x1B, // o.[], ns, rt name
             "@multinamelate", //CONSTANT_MultinameLA        = 0x1C, // o.@[], ns, rt attr-name
             "typename", //CONSTANT_TypeName = 0x1D
+            "float4", // const int CONSTANT_Float4 = 0x1E;
         };
 
         const char * const traitNames[] = {
@@ -135,6 +136,25 @@ namespace avmplus
 #  define W(x)
 #endif
 
+#ifdef VMCFG_FLOAT
+    const AbcOpcodeInfo opcodeInfoNoFloats[] = {
+    #define ABC_OP_F(o,t,s,i,n) ABC_UNUSED_OP(-1, 0, 0, 0, DISABLED_##n)
+    #define ABC_OP(operandCount, canThrow, stack, internalOnly, nameToken)        { operandCount, canThrow, stack W(WOP_##nameToken) N(#nameToken) },
+    #define ABC_UNUSED_OP(operandCount, canThrow, stack, internalOnly, nameToken) { operandCount, canThrow, stack W(0)               N(#nameToken) },
+
+    #include "opcodes.tbl"
+
+    #undef  ABC_OP
+    #undef  ABC_UNUSED_OP
+    #undef  ABC_OP_F
+    };
+
+    #define ABC_OP_F ABC_OP     // rewrite ABC_OP_F to be a regular opcode
+#else
+    const AbcOpcodeInfo opcodeInfoNoFloats[] = { { -1, 0, 0 W(0) N("0") }, };
+    #define ABC_OP_F(o,t,s,i,n) ABC_UNUSED_OP(-1, 0, 0, 0, DISABLED_##n)
+#endif
+
         const AbcOpcodeInfo opcodeInfo[] = {
         // For stack movement ("stk") only constant movement is accounted for; variable movement,
         // as for arguments to CALL, CONSTRUCT, APPLYTYPE, et al, and for run-time parts of
@@ -147,6 +167,7 @@ namespace avmplus
 
         #undef ABC_OP
         #undef ABC_UNUSED_OP
+        #undef ABC_OP_F
         };
 
         // Some static asserts to make sure the opcode enum in ActionBlockConstants.h is in good order.

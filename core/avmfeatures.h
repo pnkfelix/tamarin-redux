@@ -86,6 +86,7 @@
 #undef AVMPLUS_VERBOSE
 #undef VMCFG_NANOJIT
 #undef FEATURE_NANOJIT
+#undef VMCFG_FLOAT
 #undef VMCFG_OSR
 #undef VMCFG_COMPILEPOLICY
 #undef VMCFG_AOT
@@ -112,8 +113,6 @@
 #undef MMGC_VALGRIND
 #undef VMCFG_SAFEPOINTS
 #undef VMCFG_SWF12
-#undef VMCFG_FLOAT
-#undef VMCFG_FLOAT4
 #undef VMCFG_SWF13
 #undef VMCFG_SWF14
 #undef VMCFG_SWF15
@@ -213,6 +212,14 @@
  *
  * Note that if AVMSYSTEM_UNALIGNED_FP_ACCESS is not set then it is assumed that 64-bit
  * floats require 8-byte alignment.
+ *
+ * Note that AVMSYSTEM_UNALIGNED_FP_ACCESS does not apply to float4 values.  Some SIMD
+ * units have different instructions for aligned and unaligned access; on some
+ * systems the alignment requirement is 16 bytes, on others it's 8 bytes.  But as of
+ * November 2011 all C++ compilers we use will assume such alignment when manipulating
+ * float4 values and will not use the instructions for unaligned access even if
+ * they are available.  C++ code must never assume that unaligned access is OK is
+ * appropriate for float4 data.
  */
 #if !defined AVMSYSTEM_UNALIGNED_FP_ACCESS || AVMSYSTEM_UNALIGNED_FP_ACCESS != 0 && AVMSYSTEM_UNALIGNED_FP_ACCESS != 1
 #  error "AVMSYSTEM_UNALIGNED_FP_ACCESS must be defined and 0 or 1 (only)."
@@ -416,6 +423,15 @@
  */
 #if !defined AVMFEATURE_JIT || AVMFEATURE_JIT != 0 && AVMFEATURE_JIT != 1
 #  error "AVMFEATURE_JIT must be defined and 0 or 1 (only)."
+#endif
+
+
+/* AVMFEATURE_FLOAT
+ *
+ * Enables the types 'float' and 'float4' in the VM.
+ */
+#if !defined AVMFEATURE_FLOAT || AVMFEATURE_FLOAT != 0 && AVMFEATURE_FLOAT != 1
+#  error "AVMFEATURE_FLOAT must be defined and 0 or 1 (only)."
 #endif
 
 
@@ -873,6 +889,14 @@
 #endif
 
 #endif
+#if AVMFEATURE_FLOAT
+#  if !AVMFEATURE_SWF16
+#    error "AVMFEATURE_SWF16 is required for AVMFEATURE_FLOAT"
+#  endif
+#  if AVMFEATURE_AOT
+#    error "AVMFEATURE_AOT is precluded for AVMFEATURE_FLOAT"
+#  endif
+#endif
 #if AVMFEATURE_OSR
 #  if !AVMFEATURE_JIT
 #    error "AVMFEATURE_JIT is required for AVMFEATURE_OSR"
@@ -907,7 +931,11 @@
 #  endif
 #endif
 
-
+#if AVMFEATURE_EVAL
+#  if AVMFEATURE_AOT
+#    error "AVMFEATURE_AOT is precluded for AVMFEATURE_EVAL"
+#  endif
+#endif
 
 
 
@@ -1126,6 +1154,9 @@
 #if AVMFEATURE_JIT
 #  define FEATURE_NANOJIT
 #endif
+#if AVMFEATURE_FLOAT
+#  define VMCFG_FLOAT
+#endif
 #if AVMFEATURE_OSR
 #  define VMCFG_OSR
 #endif
@@ -1203,12 +1234,6 @@
 #endif
 #if AVMFEATURE_SWF12
 #  define VMCFG_SWF12
-#endif
-#if AVMFEATURE_SWF12
-#  define VMCFG_FLOAT
-#endif
-#if AVMFEATURE_SWF12
-#  define VMCFG_FLOAT4
 #endif
 #if AVMFEATURE_SWF13
 #  define VMCFG_SWF13

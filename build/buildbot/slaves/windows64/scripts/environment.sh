@@ -57,10 +57,20 @@ export shell_debug_debugger=$shell_debug_debugger_64
 export shell_selftest=$shell_selftest_64
 
 
-VS_HOME_PATH="/c/Program Files (x86)/Microsoft Visual Studio 9.0"
-VS_HOME="c:\Program Files (x86)\Microsoft Visual Studio 9.0"
+if [ "$VS_HOME" == "" ]
+then
+    VS_HOME="C:\Program Files (x86)\Microsoft Visual Studio 9.0"
+fi
+VS_HOME_PATH=`cygpath -a "$VS_HOME"`
+echo VS_HOME: $VS_HOME
+echo VS_HOME_PATH: $VS_HOME_PATH
 
-export PATH="$VS_HOME_PATH/Common7/IDE:$VS_HOME_PATH/VC/bin/amd64:$VS_HOME_PATH\Common7\Tools:$VS_HOME_PATH/VC/VCPackages:$PATH"
-export INCLUDE="C:\Program Files\Microsoft SDKs\Windows\v6.0\Include;$VS_HOME\VC\atlmfc\include;$VS_HOME\VC\include;"
-export LIB="C:\Program Files\Microsoft SDKs\Windows\v6.0\Lib\x64;$VS_HOME\VC\atlmfc\lib\amd64;$VS_HOME\VC\lib\amd64;"
-export LIBPATH="C:\Program Files\Microsoft SDKs\Windows\v6.0\Lib\x64;$VS_HOME\VC\atlmfc\lib\amd64;$VS_HOME\VC\lib\amd64;"
+if [ "$WINDOWS_SDK" == "" ]
+then
+    WINDOWS_SDK="c:\Program Files\Microsoft SDKs\Windows\v6.0A"
+fi
+
+export PATH="$PATH_PREPEND:$VS_HOME_PATH/Common7/IDE:$VS_HOME_PATH/VC/bin/amd64:$VS_HOME_PATH\Common7\Tools:$VS_HOME_PATH/VC/VCPackages:$PATH"
+export INCLUDE="$WINDOWS_SDK\Include;$VS_HOME\VC\atlmfc\include;$VS_HOME\VC\include;"
+export LIB="$WINDOWS_SDK\Lib\x64;$VS_HOME\VC\atlmfc\lib\amd64;$VS_HOME\VC\lib\amd64;"
+export LIBPATH="$WINDOWS_SDK\Lib\x64;$VS_HOME\VC\atlmfc\lib\amd64;$VS_HOME\VC\lib\amd64;"

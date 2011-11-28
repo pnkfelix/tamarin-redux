@@ -66,6 +66,7 @@ var GLOBAL = "[object global]";
 var PASSED = " PASSED!"
 var FAILED = " FAILED! expected: ";
 var PACKAGELIST = "{public,$1$private}::";
+var ARGUMENTERROR = "ArgumentError: Error #";
 var TYPEERROR = "TypeError: Error #";
 var REFERENCEERROR = "ReferenceError: Error #";
 var RANGEERROR = "RangeError: Error #";
@@ -78,6 +79,10 @@ var    DEBUG =  false;
 
 // Was this compiled with -AS3?  Boolean Value.
 var as3Enabled = ((new Namespace).valueOf != Namespace.prototype.valueOf);
+
+function argumentError( str ){
+    return str.slice(0,ARGUMENTERROR.length+4);
+}
 
 function typeError( str ){
     return str.slice(0,TYPEERROR.length+4);
@@ -205,7 +210,11 @@ function getTestCaseResult(expect,actual) {
     }
     var passed="";
     if (expect == actual) {
-        if ( typeof(expect) != typeof(actual) ){
+        if ( typeof(expect) != typeof(actual)  &&
+             ! ( ( typeof(expect)=="float" && typeof(actual)=="number")
+             || ( typeof(actual)=="float" && typeof(expect)=="number")
+            )
+        ){
         passed = "type error";
         } else {
         passed = "true";
@@ -218,6 +227,14 @@ function getTestCaseResult(expect,actual) {
         if ( Math.abs(actual-expect) < 0.0000001 ) {
             passed = "true";
         }
+        }
+        // If both objects are float, check that the values are the same
+        // within 7 digits of precision.
+        // log_10(2^24) ie 24 bits gives 7.2 digits of decimal precision
+        if (typeof(actual) == "float" && typeof(expect) == "float") {
+            if ( float.abs(actual-expect) < 0.000001 ) {
+                passed = "true";
+            }
         }
     }
     return passed;
@@ -976,7 +993,7 @@ function grabError(err, str) {
 }
 
 function AddErrorTest(desc:String, expectedErr:String, testFunc:Function) {
-    actualErr = null;
+    actualErr = "No errors. None. Nada. All worked fine. Really.";
     try {
         testFunc();
     } catch (e) {

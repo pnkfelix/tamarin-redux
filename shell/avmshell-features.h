@@ -235,15 +235,20 @@
 #endif
 
 #ifndef AVMFEATURE_SWF14
-  #define AVMFEATURE_SWF14 0
+  #define AVMFEATURE_SWF14 1
 #endif
 
 #ifndef AVMFEATURE_SWF15
-  #define AVMFEATURE_SWF15 0
+  #define AVMFEATURE_SWF15 1
 #endif
 
 #ifndef AVMFEATURE_SWF16
-  #define AVMFEATURE_SWF16 0
+  #define AVMFEATURE_SWF16 1
+#endif
+
+#ifndef AVMFEATURE_FLOAT
+  #define AVMFEATURE_FLOAT 1
+  #define VMCFG_GENERIC_FLOAT4 // todo: this should be selected from the avmfeatures system!
 #endif
 
 #ifndef AVMFEATURE_SWF17

@@ -435,6 +435,10 @@ void create_avmplus_peephole(AvmCore* core) { new ST_avmplus_peephole(core); }
 
 // Bugzilla 609145 - VectorObject needs fast inline getter/setters
 // Make sure the APIs, which are used by the Flash Player and AIR only, do not disappear.
+//
+// NOTE, the following comment is stale and we can fix the code, see the code for
+// VectorAccessor further down for how to access a toplevel.
+//
 // We can't test them because we don't have access to a Toplevel*, but we can reference
 // them, and a link error will ensue if they disappear.
 //
@@ -463,21 +467,163 @@ private:
 static const char* ST_names[];
 static const bool ST_explicits[];
 void test0();
+void test1();
+void test2();
+void test3();
+void test4();
 };
 ST_avmplus_vector_accessors::ST_avmplus_vector_accessors(AvmCore* core)
     : Selftest(core, "avmplus", "vector_accessors", ST_avmplus_vector_accessors::ST_names,ST_avmplus_vector_accessors::ST_explicits)
 {}
-const char* ST_avmplus_vector_accessors::ST_names[] = {"getOrSetUintPropertyFast", NULL };
-const bool ST_avmplus_vector_accessors::ST_explicits[] = {false, false };
+const char* ST_avmplus_vector_accessors::ST_names[] = {"getOrSetUintPropertyFast","DataListAccessor_on_int","DataListAccessor_on_float4","VectorAccessor_on_int","VectorAccessor_on_float4", NULL };
+const bool ST_avmplus_vector_accessors::ST_explicits[] = {false,false,false,false,false, false };
 void ST_avmplus_vector_accessors::run(int n) {
 switch(n) {
 case 0: test0(); return;
+case 1: test1(); return;
+case 2: test2(); return;
+case 3: test3(); return;
+case 4: test4(); return;
 }
 }
 void ST_avmplus_vector_accessors::test0() {
 
-// line 65 "ST_avmplus_vector_accessors.st"
+// line 69 "ST_avmplus_vector_accessors.st"
 verifyPass(true, "true", __FILE__, __LINE__);
+
+}
+void ST_avmplus_vector_accessors::test1() {
+
+DataList<int> dl(core->GetGC(), 3);
+dl.add(1);
+dl.add(1);
+dl.add(2);
+dl.add(3);
+dl.add(5);
+dl.add(8);
+dl.add(13);
+DataListAccessor<int> dla(&dl);
+int* xs = dla.addr();
+
+// line 84 "ST_avmplus_vector_accessors.st"
+verifyPass(xs[0] == 1, "xs[0] == 1", __FILE__, __LINE__);
+// line 85 "ST_avmplus_vector_accessors.st"
+verifyPass(xs[1] == 1, "xs[1] == 1", __FILE__, __LINE__);
+// line 86 "ST_avmplus_vector_accessors.st"
+verifyPass(xs[2] == 2, "xs[2] == 2", __FILE__, __LINE__);
+// line 87 "ST_avmplus_vector_accessors.st"
+verifyPass(xs[3] == 3, "xs[3] == 3", __FILE__, __LINE__);
+// line 88 "ST_avmplus_vector_accessors.st"
+verifyPass(xs[4] == 5, "xs[4] == 5", __FILE__, __LINE__);
+// line 89 "ST_avmplus_vector_accessors.st"
+verifyPass(xs[5] == 8, "xs[5] == 8", __FILE__, __LINE__);
+// line 90 "ST_avmplus_vector_accessors.st"
+verifyPass(xs[6] == 13, "xs[6] == 13", __FILE__, __LINE__);
+
+}
+void ST_avmplus_vector_accessors::test2() {
+
+#ifdef VMCFG_FLOAT
+
+DataList<float4_t, 16> dl4(core->GetGC(), 3);
+float4_t x0 = { 1,1,2,3 };
+float4_t x1 = { 5,8,13,21 };
+float4_t x2 = { 34,55,89,144 };
+dl4.add(x0);
+dl4.add(x1);
+dl4.add(x2);
+DataListAccessor<float4_t,16> dla4(&dl4);
+float4_t* x4s = dla4.addr();
+
+// line 106 "ST_avmplus_vector_accessors.st"
+verifyPass(f4_eq_i(x4s[0], x0) == 1, "f4_eq_i(x4s[0], x0) == 1", __FILE__, __LINE__);
+// line 107 "ST_avmplus_vector_accessors.st"
+verifyPass(f4_eq_i(x4s[1], x1) == 1, "f4_eq_i(x4s[1], x1) == 1", __FILE__, __LINE__);
+// line 108 "ST_avmplus_vector_accessors.st"
+verifyPass(f4_eq_i(x4s[2], x2) == 1, "f4_eq_i(x4s[2], x2) == 1", __FILE__, __LINE__);
+
+#else
+
+// line 112 "ST_avmplus_vector_accessors.st"
+verifyPass(true, "true", __FILE__, __LINE__);
+
+#endif
+
+}
+void ST_avmplus_vector_accessors::test3() {
+
+#ifdef AVMSHELL_BUILD
+
+avmshell::ShellCore* c = (avmshell::ShellCore*)core;
+avmshell::ShellToplevel* top = c->shell_toplevel;
+IntVectorObject* vec = top->intVectorClass()->newVector();
+
+vec->_setNativeUintProperty(0, 1);
+vec->_setNativeUintProperty(1, 1);
+vec->_setNativeUintProperty(2, 2);
+vec->_setNativeUintProperty(3, 3);
+vec->_setNativeUintProperty(4, 5);
+vec->_setNativeUintProperty(5, 8);
+vec->_setNativeUintProperty(6, 13);
+
+IntVectorAccessor va(vec);
+int* xs = va.addr();
+
+// line 135 "ST_avmplus_vector_accessors.st"
+verifyPass(xs[0] == 1, "xs[0] == 1", __FILE__, __LINE__);
+// line 136 "ST_avmplus_vector_accessors.st"
+verifyPass(xs[1] == 1, "xs[1] == 1", __FILE__, __LINE__);
+// line 137 "ST_avmplus_vector_accessors.st"
+verifyPass(xs[2] == 2, "xs[2] == 2", __FILE__, __LINE__);
+// line 138 "ST_avmplus_vector_accessors.st"
+verifyPass(xs[3] == 3, "xs[3] == 3", __FILE__, __LINE__);
+// line 139 "ST_avmplus_vector_accessors.st"
+verifyPass(xs[4] == 5, "xs[4] == 5", __FILE__, __LINE__);
+// line 140 "ST_avmplus_vector_accessors.st"
+verifyPass(xs[5] == 8, "xs[5] == 8", __FILE__, __LINE__);
+// line 141 "ST_avmplus_vector_accessors.st"
+verifyPass(xs[6] == 13, "xs[6] == 13", __FILE__, __LINE__);
+
+#else
+
+// line 145 "ST_avmplus_vector_accessors.st"
+verifyPass(true, "true", __FILE__, __LINE__);
+
+#endif // AVMSHELL_BUILD
+
+}
+void ST_avmplus_vector_accessors::test4() {
+
+#if defined VMCFG_FLOAT && defined AVMSHELL_BUILD
+
+avmshell::ShellCore* c = (avmshell::ShellCore*)core;
+avmshell::ShellToplevel* top = c->shell_toplevel;
+Float4VectorObject* vec = top->float4VectorClass()->newVector();
+
+float4_t x0 = { 1,1,2,3 };
+float4_t x1 = { 5,8,13,21 };
+float4_t x2 = { 34,55,89,144 };
+
+vec->_setNativeUintProperty(0, x0);
+vec->_setNativeUintProperty(1, x1);
+vec->_setNativeUintProperty(2, x2);
+
+Float4VectorAccessor va(vec);
+float4_t* x4s = va.addr();
+
+// line 168 "ST_avmplus_vector_accessors.st"
+verifyPass(f4_eq_i(x4s[0], x0) == 1, "f4_eq_i(x4s[0], x0) == 1", __FILE__, __LINE__);
+// line 169 "ST_avmplus_vector_accessors.st"
+verifyPass(f4_eq_i(x4s[1], x1) == 1, "f4_eq_i(x4s[1], x1) == 1", __FILE__, __LINE__);
+// line 170 "ST_avmplus_vector_accessors.st"
+verifyPass(f4_eq_i(x4s[2], x2) == 1, "f4_eq_i(x4s[2], x2) == 1", __FILE__, __LINE__);
+
+#else
+
+// line 174 "ST_avmplus_vector_accessors.st"
+verifyPass(true, "true", __FILE__, __LINE__);
+
+#endif // AVMSHELL_BUILD
 
 }
 void create_avmplus_vector_accessors(AvmCore* core) { new ST_avmplus_vector_accessors(core); }

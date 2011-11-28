@@ -68,7 +68,7 @@ namespace avmplus
         void_itraits->builtinType = BUILTIN_void;
         void_itraits->verifyBindings(NULL);
         void_itraits->resolveSignatures(NULL);
-
+        
 #define DO_BUILTIN(nm, clsnm) \
     do { \
         nm##_itraits = core->domainMgr()->findBuiltinTraitsByName(pool, core->internConstantStringLatin1(clsnm)); \
@@ -87,6 +87,10 @@ namespace avmplus
         DO_BUILTIN(namespace, "Namespace");
 //      DO_BUILTIN(null, "FOO");        // handled above
         DO_BUILTIN(number, "Number");
+#ifdef VMCFG_FLOAT
+        DO_BUILTIN(float, "float");
+        DO_BUILTIN(float4, "float4");
+#endif 
 //      DO_BUILTIN(object, "FOO");      // can't do yet, handled elsewhere
         DO_BUILTIN(qName, "QName");
         DO_BUILTIN(regexp, "RegExp");
@@ -94,6 +98,10 @@ namespace avmplus
         DO_BUILTIN(uint, "uint");
         DO_BUILTIN(vector, "Vector");
         DO_BUILTIN(vectordouble, "Vector$double");
+#ifdef VMCFG_FLOAT
+        DO_BUILTIN(vectorfloat, "Vector$float");
+        DO_BUILTIN(vectorfloat4, "Vector$float4");
+#endif
         DO_BUILTIN(vectorint, "Vector$int");
         DO_BUILTIN(vectorobj, "Vector$object");
         DO_BUILTIN(vectoruint, "Vector$uint");
@@ -115,6 +123,10 @@ namespace avmplus
         xmlList_itraits->set_needsHashtable(false);
 
         vectordouble_itraits->set_names(vectordouble_itraits->ns(), core->kVectorNumber);
+#ifdef VMCFG_FLOAT
+        vectorfloat_itraits->set_names(vectorfloat_itraits->ns(), core->kVectorFloat);
+        vectorfloat4_itraits->set_names(vectorfloat4_itraits->ns(), core->kVectorFloat4);
+#endif
         vectorint_itraits->set_names(vectorint_itraits->ns(), core->kVectorint);
         vectoruint_itraits->set_names(vectoruint_itraits->ns(), core->kVectoruint);
         vectorobj_itraits->set_names(vectorobj_itraits->ns(), core->kVectorAny);
@@ -126,6 +138,10 @@ namespace avmplus
         class_ctraits = findCTraits("Class$", pool);
         math_ctraits = findCTraits("Math$", pool);
         number_ctraits = findCTraits("Number$", pool);
+#ifdef VMCFG_FLOAT
+        float_ctraits = findCTraits("float$", pool);
+        float4_ctraits = findCTraits("float4$", pool);
+#endif // VMCFG_FLOAT
         int_ctraits = findCTraits("int$", pool);
         uint_ctraits = findCTraits("uint$", pool);
         boolean_ctraits = findCTraits("Boolean$", pool);

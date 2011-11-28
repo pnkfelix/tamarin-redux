@@ -1416,7 +1416,7 @@ class RuntestBase(object):
                 self.lock.release()
 
             starttime=time()
-            output=err=""
+            output=err=[]
             while True:
                 if p.poll() is None:
                     if self.testTimeOut>-1 and time()-starttime>self.testTimeOut:

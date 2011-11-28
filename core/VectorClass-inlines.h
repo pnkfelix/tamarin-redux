@@ -45,14 +45,21 @@ namespace avmplus
 {
     // For some hand-written tracers that are used by generated tracers.
 
+#define avmplus_TypedVectorClassXFloatVectorObjectX_isExactInterlock 1
+#define avmplus_TypedVectorClassXFloat4VectorObjectX_isExactInterlock 1
 #define avmplus_TypedVectorClassXDoubleVectorObjectX_isExactInterlock 1
 #define avmplus_TypedVectorClassXIntVectorObjectX_isExactInterlock 1
 #define avmplus_TypedVectorClassXUIntVectorObjectX_isExactInterlock 1
 #define avmplus_TypedVectorClassXObjectVectorObjectX_isExactInterlock 1
+#define avmplus_TypedVectorObjectXDataListXfloatXX_isExactInterlock 1
+#define avmplus_TypedVectorObjectXDataListXfloat4_tXX_isExactInterlock 1
 #define avmplus_TypedVectorObjectXDataListXdoubleXX_isExactInterlock 1
 #define avmplus_TypedVectorObjectXDataListXint32_tXX_isExactInterlock 1
 #define avmplus_TypedVectorObjectXDataListXuint32_tXX_isExactInterlock 1
 #define avmplus_TypedVectorObjectXAtomListX_isExactInterlock 1
+    
+    // To deal with a typedef workaround
+#define avmplus_Float4VectorObjectBaseClass_isExactInterlock 1
     
     // ----------------------------
 
@@ -84,6 +91,16 @@ namespace avmplus
     {
         return 0;
     }
+
+#ifdef VMCFG_FLOAT
+    template<>
+    REALLY_INLINE float4_t TypedVectorConstants<float4_t>::undefinedValue()
+    {
+        float4_t zero = { 0,0,0,0 };
+        return zero;
+    }
+#endif
+
     template<class T>
     REALLY_INLINE T TypedVectorConstants<T>::undefinedValue()
     {
@@ -157,6 +174,38 @@ namespace avmplus
     {
         return core()->doubleToAtom(value);
     }
+
+#ifdef VMCFG_FLOAT
+    REALLY_INLINE void VectorBaseObject::atomToValue(Atom atom, float& value)
+    {
+        value = AvmCore::singlePrecisionFloat(atom);
+    }
+
+    REALLY_INLINE void VectorBaseObject::atomToValueKnown(Atom atom, float& value)
+    {
+        value = AvmCore::singlePrecisionFloat(atom);
+    }
+    
+    REALLY_INLINE Atom VectorBaseObject::valueToAtom(const float& value) const
+    {
+        return core()->floatToAtom(value);
+    }
+
+    REALLY_INLINE void VectorBaseObject::atomToValue(Atom atom, float4_t& value)
+    {
+        AvmCore::float4(&value, atom);
+    }
+    
+    REALLY_INLINE void VectorBaseObject::atomToValueKnown(Atom atom, float4_t& value)
+    {
+        AvmCore::float4(&value, atom);
+    }
+    
+    REALLY_INLINE Atom VectorBaseObject::valueToAtom(const float4_t& value) const
+    {
+        return core()->float4ToAtom(value);
+    }
+#endif
 
     REALLY_INLINE void VectorBaseObject::atomToValue(Atom atom, OpaqueAtom& value)
     {
@@ -321,21 +370,26 @@ namespace avmplus
         return 0;
     }
 
+
     // ----------------------------
 
-    template<class TLIST>
-    REALLY_INLINE VectorAccessor<TLIST>::VectorAccessor(TypedVectorObject<TLIST>* v) : m_vector(v)
+    template<class TLIST, uintptr_t align>
+    REALLY_INLINE VectorAccessor<TLIST, align>::VectorAccessor(TypedVectorObject<TLIST>* v) : m_vector(v)
     {
     }
     
-    template<class TLIST>
-    REALLY_INLINE typename TLIST::TYPE* VectorAccessor<TLIST>::addr()
+    template<class TLIST, uintptr_t align>
+    REALLY_INLINE typename TLIST::TYPE* VectorAccessor<TLIST, align>::addr()
     {
-        return (m_vector != NULL) ? m_vector->m_list.m_data->entries : (typename TLIST::TYPE*)NULL;
+        if (m_vector == NULL)
+            return (typename TLIST::TYPE*)NULL;
+        if (align == 0)
+            return m_vector->m_list.m_data->entries;
+        return (typename TLIST::TYPE*)((uintptr_t(m_vector->m_list.m_data->entries) + (align-1)) & ~(align-1));
     }
 
-    template<class TLIST>
-    REALLY_INLINE uint32_t VectorAccessor<TLIST>::length()
+    template<class TLIST, uintptr_t align>
+    REALLY_INLINE uint32_t VectorAccessor<TLIST, align>::length()
     {
         return (m_vector != NULL) ? m_vector->m_list.length() : 0;
     }

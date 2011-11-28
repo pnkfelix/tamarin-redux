@@ -52,7 +52,7 @@
    Grammar for feature definitions.
 
        features           ::= "<features>" feature* at-least-one* at-most-one* exactly-one* "</features>"
-       feature            ::= "<feature>" desc name defines+ precludes* requires* "</feature>"
+       feature            ::= "<feature>" desc name defines+ precludes* requires* build-flags* "</feature>"
                             | "<tweak>" desc name default defines+ precludes* requires* "</tweak>"
        desc               ::= "<desc>" TEXT "</desc>"
        name               ::= "<name>" TEXT "</name>"
@@ -60,6 +60,7 @@
        defines            ::= "<defines>" TEXT "</defines>"
        precludes          ::= "<precludes>" TEXT "</precludes>"
        requires           ::= "<requires>" TEXT | at-most-one | at-least-one | exactly-one "</requires>"
+       build-flags        ::= <build-flags type="boolean"|"onoff"> TEXT </build-flags>
        at-least-one       ::= "<at-least-one>" name+ "</at-least-one>"
        at-most-one        ::= "<at-most-one>" name+ "</at-most-one>"
        exactly-one        ::= "<exactly-one>" name+ "</exactly-one>"
@@ -108,6 +109,15 @@
        multiple macros; this allows discrimination internally in the
        module to be organized differently than feature definition
        externally.
+
+       A BUILD-FLAGS clause in a FEATURE names a flag that will be passed
+       to the script that compiles the builtins. There are two types of
+       flags that may be passed - "boolean" and "onoff":
+           - A "boolean" flag will always be passed to the compilation script,
+           in the form "TEXT=true" (if the feature is enabled) or "TEXT=false"
+           (if the feature is disabled)
+           - An "onoff" flag will only be passed to the compilation script if
+           the feature is enabled (nothing will be passed if it is disabled)
 
        An AT-LEAST-ONE clause adds a constraint that at least one of
        the features has been turned on.
@@ -225,6 +235,14 @@ var FEATURES =
 
         Note that if AVMSYSTEM_UNALIGNED_FP_ACCESS is not set then it is assumed that 64-bit
         floats require 8-byte alignment.
+        
+        Note that AVMSYSTEM_UNALIGNED_FP_ACCESS does not apply to float4 values.  Some SIMD
+        units have different instructions for aligned and unaligned access; on some 
+        systems the alignment requirement is 16 bytes, on others it's 8 bytes.  But as of
+        November 2011 all C++ compilers we use will assume such alignment when manipulating
+        float4 values and will not use the instructions for unaligned access even if
+        they are available.  C++ code must never assume that unaligned access is OK is
+        appropriate for float4 data.
     </desc>
 
     <name>      AVMSYSTEM_UNALIGNED_FP_ACCESS </name>
@@ -460,6 +478,18 @@ var FEATURES =
     <defines> FEATURE_NANOJIT </defines> <!-- referenced by nanojit module only -->
   </feature>
 
+
+  <feature>
+    <desc> Enables the types 'float' and 'float4' in the VM. </desc>
+    <name> AVMFEATURE_FLOAT  </name>
+    <requires> AVMFEATURE_SWF16 </requires>
+    <defines> VMCFG_FLOAT  </defines>
+    <build-flags type="boolean"> -config CONFIG::VMCFG_FLOAT </build-flags>
+    <build-flags type="onoff"> -abcfuture </build-flags>
+    <build-flags type="onoff"> Float.as </build-flags>
+    <precludes> AVMFEATURE_AOT </precludes> <!-- AOT + float doesn't work yet, byt that will change eventually -->
+  </feature>
+
   <feature>
     <desc> Enables delayed JIT-compilation with on-stack replacement.
            The default OSR compilation strategy either compiles a method eagerly
@@ -494,6 +524,7 @@ var FEATURES =
       <name> AVMSYSTEM_ARM </name>
      </exactly-one>
     </requires>
+    
     <defines> VMCFG_AOT </defines>
     <defines> VMCFG_AOTSHELL </defines>
     <defines> VMCFG_CDECL </defines>
@@ -600,6 +631,7 @@ var FEATURES =
 
     <name> AVMFEATURE_EVAL </name>
     <defines> VMCFG_EVAL </defines>
+    <precludes> AVMFEATURE_AOT </precludes>
   </feature>
 
   <feature>
@@ -711,8 +743,6 @@ var FEATURES =
     <desc> Enabling this will support SWF12 / ABC version 47.12 </desc>
     <name> AVMFEATURE_SWF12 </name>
     <defines> VMCFG_SWF12 </defines>
-    <defines> VMCFG_FLOAT </defines> <!-- Tentative! Intended for use *outside* the VM only, to see if the feature is present -->
-    <defines> VMCFG_FLOAT4 </defines> <!-- Tentative!  Intended for use *outside* the VM only, to see if the feature is present -->
   </feature>
 
   <feature>
@@ -904,6 +934,14 @@ function main() {
     for each ( feature in FEATURES.tweak )
         s += configureFeature(feature);
     s += "    return args\n";
+
+    s += "\ndef builtinBuildFlags(o):\n";
+    s += "    buildFlags = \"\"\n";
+    for each ( feature in FEATURES.feature )
+        s += featureFlags(feature);
+    for each ( feature in FEATURES.tweak )
+        s += featureFlags(feature);
+    s += "    return buildFlags\n";
 
     print('writing ../build/avmfeatures.py');
     File.write("../build/avmfeatures.py", s);
@@ -1124,6 +1162,40 @@ function configureFeature(feature) {
                 "        args += \"" + enable + dependent + "\"\n");
     }
     return "";
+}
+
+function featureFlags(feature) {
+    var len = 0;
+    if (feature.name.indexOf("AVMFEATURE_") == 0)
+        len = 11;
+    else if (feature.name.indexOf("AVMTWEAK_") == 0)
+        len = 9;
+
+    if(len <= 0) return "";
+    if(String(feature["build-flags"]).length <= 0)
+        return "";
+
+    var featureName = feature.name.substring(len).toLowerCase().replace(/_/g,"-");
+    var enable= [];
+    var disable=[];
+    for each ( d in feature["build-flags"]){
+        if(d.@type=="onoff"){
+            enable.push(d);
+        } else if(d.@type == "boolean"){
+            enable.push(d + "=true");
+            disable.push(d + "=false");
+        } else {
+            fail("Unknown build flag type [" + d.@type + "] in feature "+ featureName);
+        }
+    }
+
+    var retval = "    arg = o.getBoolArg(\"" + featureName + "\", False, False)\n" +
+                 "    if (arg == True):\n" +
+                 "        buildFlags += \"" + enable.join(" ") + "\"\n" +
+                 "    if (arg == False):\n" +
+                 "        buildFlags += \"" + disable.join(" ") + "\"\n"
+
+    return retval;
 }
 
 function groupConstraint(x, tagname, condition, english_condition) {
