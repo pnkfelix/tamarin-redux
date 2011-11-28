@@ -1390,20 +1390,6 @@ extern float float_rsqrt_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern float float_private__minValue_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern avmplus::Atom float_private__floatToString_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern avmplus::Atom float_private__convert_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_isGreater_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_isGreaterOrEqual_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_isLess_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_isLessOrEqual_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_isEqual_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_isNotEqual_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_abs_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_max_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_min_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_reciprocal_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_rsqrt_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_sqrt_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_normalize_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_cross_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern float float4_dot_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern float float4_dot2_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern float float4_dot3_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
@@ -1413,7 +1399,6 @@ extern float float4_magnitude2_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern float float4_distance_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern float float4_distance3_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern float float4_distance2_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t float4_private__swizzle_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern float float4_x_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern float float4_y_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern float float4_z_get_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
@@ -1441,7 +1426,6 @@ extern avmplus::Atom flash_utils_ByteArray_readUnsignedShort_thunk(MethodEnv* en
 extern avmplus::Atom flash_utils_ByteArray_readInt_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern avmplus::Atom flash_utils_ByteArray_readUnsignedInt_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern double flash_utils_ByteArray_readFloat_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t flash_utils_ByteArray_readFloat4_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern double flash_utils_ByteArray_readDouble_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern avmplus::Atom flash_utils_ByteArray_readMultiByte_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern avmplus::Atom flash_utils_ByteArray_readUTF_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
@@ -1649,8 +1633,6 @@ extern avmplus::Atom __AS3___vec_Vector_float4_private__spliceHelper_thunk(Metho
 extern avmplus::Atom __AS3___vec_Vector_float4_AS3_unshift_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern avmplus::Atom __AS3___vec_Vector_float4_private__filter_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern avmplus::Atom __AS3___vec_Vector_float4_private__map_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t __AS3___vec_Vector_float4_AS3_pop_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
-extern float4_t __AS3___vec_Vector_float4_AS3_shift_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern avmplus::Atom native_script_function_avmplus_describeTypeJSON_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern avmplus::Atom native_script_function_avmplus_getQualifiedClassName_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
 extern avmplus::Atom native_script_function_avmplus_getQualifiedSuperclassName_thunk(MethodEnv* env, uint32_t argc, Atom* argv);
@@ -5308,26 +5290,6 @@ private:
         REALLY_INLINE bool isType(GCRef<avmplus::ScriptObject> value) \
         { \
             return isTypeImpl(value->atom()); \
-        } \
-        REALLY_INLINE float4_t asType(avmplus::Atom value) \
-        { \
-            avmplus::Atom const result = asTypeImpl(value); \
-            return avmplus::AvmCore::float4(result); \
-        } \
-        REALLY_INLINE float4_t asType(GCRef<avmplus::ScriptObject> value) \
-        { \
-            avmplus::Atom const result = asTypeImpl(value->atom()); \
-            return avmplus::AvmCore::float4(result); \
-        } \
-        REALLY_INLINE float4_t coerceToType(avmplus::Atom value) \
-        { \
-            avmplus::Atom const result = coerceToTypeImpl(value); \
-            return avmplus::AvmCore::float4(result); \
-        } \
-        REALLY_INLINE float4_t coerceToType(GCRef<avmplus::ScriptObject> value) \
-        { \
-            avmplus::Atom const result = coerceToTypeImpl(value->atom()); \
-            return avmplus::AvmCore::float4(result); \
         } \
     private: \
         friend class avmplus::NativeID::SlotOffsetsAndAsserts; \
