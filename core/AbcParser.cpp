@@ -59,6 +59,8 @@ namespace avmplus
         int version;
         int result = canParse(code, &version);
 
+        if(version>= (47<<16))
+            apiVersion = kApiVersion_SWF_16;
 #ifdef AVMPLUS_VERBOSE
         if (core->isVerbose(VB_parse))
             core->console << "major=" << (version&0xFFFF) << " minor=" << (version>>16) << "\n";
@@ -2185,12 +2187,13 @@ namespace avmplus
         if (p < abcStart || p + 15 >= abcEnd )
             toplevel->throwVerifyError(kCorruptABCError);
 
-        float4_overlay f4o;
+        float4_t val;
+        uint32_t* pval = reinterpret_cast<uint32_t*>(&val);
         for(int i=0;i<4;i++){
-            f4o.bits32[i] = p[0] | p[1]<<8 | p[2]<<16 | p[3]<<24;
+            pval[i] = p[0] | p[1]<<8 | p[2]<<16 | p[3]<<24;
             p+=4;
         }
-        return f4o.value;
+        return val;
     }
 #endif
 }
