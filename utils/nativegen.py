@@ -139,6 +139,7 @@ NATIVE              = 0x20
 HAS_ParamNames      = 0x80
 
 CONSTANT_Utf8               = 0x01
+CONSTANT_Float              = 0x02
 CONSTANT_Int                = 0x03
 CONSTANT_UInt               = 0x04
 CONSTANT_PrivateNs          = 0x05
@@ -166,6 +167,7 @@ CONSTANT_StaticProtectedNs  = 0x1A
 CONSTANT_MultinameL         = 0x1B
 CONSTANT_MultinameLA        = 0x1C
 CONSTANT_TypeName           = 0x1D
+CONSTANT_Float4             = 0x1E
 
 TRAIT_Slot          = 0x00
 TRAIT_Method        = 0x01
@@ -189,6 +191,7 @@ CTYPE_STRING        = 6
 CTYPE_NAMESPACE     = 7
 CTYPE_OBJECT        = 8
 CTYPE_FLOAT         = 9
+CTYPE_FLOAT4        = 10
 
 MIN_API_MARK = 0xE000
 MAX_API_MARK = 0xF8FF
@@ -251,6 +254,19 @@ def is_neg_inf(val):
     strValLower = str(val).lower()
     return strValLower.endswith("inf") and strValLower.startswith("-")
 
+class Float4:
+    x = kNaN
+    y = kNaN
+    z = kNaN
+    w = kNaN
+    def __init__(self, x, y, z, w):
+        self.x = x
+        self.y = y
+        self.z = z
+        self.w = w
+    def __str__(self):
+        return str(self.x)+','+str(self.y)+','+str(self.z)+','+str(self.w)
+
 class Error(Exception):
     nm = ""
     def __init__(self, n):
@@ -270,6 +286,7 @@ TYPEMAP_RETTYPE = {
     CTYPE_UINT:         "uint32_t",
     CTYPE_DOUBLE:       "double",
     CTYPE_FLOAT:        "float",
+    CTYPE_FLOAT4:       "float4_t",
     CTYPE_STRING:       "avmplus::String*",
     CTYPE_NAMESPACE:    "avmplus::Namespace*",
 }
@@ -283,6 +300,7 @@ TYPEMAP_RETTYPE_GCREF = {
     CTYPE_UINT:         lambda t: "uint32_t",
     CTYPE_DOUBLE:       lambda t: "double",
     CTYPE_FLOAT:        lambda t: "float",
+    CTYPE_FLOAT4:       lambda t: "float4_t",
     CTYPE_STRING:       lambda t: "GCRef<avmplus::String>",
     CTYPE_NAMESPACE:    lambda t: "GCRef<avmplus::Namespace>",
 }
@@ -296,6 +314,7 @@ TYPEMAP_THUNKRETTYPE = {
     CTYPE_UINT:         "avmplus::Atom(%s)",
     CTYPE_DOUBLE:       "double(%s)",
     CTYPE_FLOAT:        "float(%s)",
+    CTYPE_FLOAT4:       "%s",
     CTYPE_STRING:       "avmplus::Atom(%s)",
     CTYPE_NAMESPACE:    "avmplus::Atom(%s)",
 }
@@ -309,6 +328,7 @@ TYPEMAP_MEMBERTYPE = {
     CTYPE_UINT:         "uint32_t",
     CTYPE_DOUBLE:       "double",
     CTYPE_FLOAT:        "float",
+    CTYPE_FLOAT4:       "float4_t",
     CTYPE_STRING:       "MMgc::GCTraceableObject::GCMember<avmplus::String>",
     CTYPE_NAMESPACE:    "MMgc::GCTraceableObject::GCMember<avmplus::Namespace>",
 }
@@ -322,6 +342,7 @@ TYPEMAP_ARGTYPE = {
     CTYPE_UINT:         "uint32_t",
     CTYPE_DOUBLE:       "double",
     CTYPE_FLOAT:        "float",
+    CTYPE_FLOAT4:       "float4_t",
     CTYPE_STRING:       "avmplus::String*",
     CTYPE_NAMESPACE:    "avmplus::Namespace*",
 }
@@ -335,6 +356,7 @@ TYPEMAP_ARGTYPE_SUFFIX = {
     CTYPE_UINT:         "UINT",
     CTYPE_DOUBLE:       "DOUBLE",
     CTYPE_FLOAT:        "FLOAT",
+    CTYPE_FLOAT4:       "FLOAT4",
     CTYPE_STRING:       "STRING",
     CTYPE_NAMESPACE:    "NAMESPACE",
 }
@@ -348,6 +370,7 @@ TYPEMAP_ARGTYPE_FOR_UNBOX = {
     CTYPE_UINT:         "uint32_t",
     CTYPE_DOUBLE:       "double",
     CTYPE_FLOAT:        "float",
+    CTYPE_FLOAT4:       "float4_t",
     CTYPE_STRING:       "avmplus::String*",
     CTYPE_NAMESPACE:    "avmplus::Namespace*",
 }
@@ -366,6 +389,7 @@ TYPEMAP_TO_ATOM = {
     CTYPE_UINT:         lambda val: "core->uintToAtom(%s)" % val,
     CTYPE_DOUBLE:       lambda val: "core->doubleToAtom(%s)" % val,
     CTYPE_FLOAT:        lambda val: "core->floatToAtom(%s)" % val,
+    CTYPE_FLOAT4:       lambda val: "core->float4ToAtom(%s)" % val,
     CTYPE_STRING:       lambda val: "%s->atom()" % val,
     CTYPE_NAMESPACE:    lambda val: "%s->atom()" % val,
 }
@@ -379,6 +403,7 @@ TYPEMAP_TO_ATOM_NEEDS_CORE = {
     CTYPE_UINT:         True,
     CTYPE_DOUBLE:       True,
     CTYPE_FLOAT:        True,
+    CTYPE_FLOAT4:       True,
     CTYPE_STRING:       False,
     CTYPE_NAMESPACE:    False,
 }
@@ -394,6 +419,7 @@ TYPEMAP_ATOM_TO_GCREF = {
     CTYPE_UINT:         lambda val,t: "avmplus::AvmCore::toUInt32(%s)" % val,
     CTYPE_DOUBLE:       lambda val,t: "avmplus::AvmCore::number(%s)" % val,
     CTYPE_FLOAT:        lambda val,t: "avmplus::AvmCore::singlePrecisionFloat(%s)" % val,
+    CTYPE_FLOAT4:       lambda val,t: "avmplus::AvmCore::float4(%s)" % val,
     CTYPE_STRING:       lambda val,t: "GCRef<avmplus::String>(avmplus::AvmCore::atomToString(%s))" % val,
     CTYPE_NAMESPACE:    lambda val,t: "GCRef<avmplus::Namespace>(avmplus::AvmCore::atomToNamespace(%s))" % val,
 }
@@ -434,6 +460,7 @@ GLUECLASSES_WITHOUT_NS = frozenset((
     'bool',
     'double',
     'float',
+    'float4_t',
     'int32_t',
     'uint32_t'))
 
@@ -528,6 +555,8 @@ class TypeName:
             s += "$double"
         elif t == "float":
             s += "$float"
+        elif t == "float4":
+            s += "$float4"
         else:
             s += "$object"
         return s
@@ -580,11 +609,10 @@ class MethodInfo(MemberInfo):
     def assign_names(self, traits, prefix):
         self.receiver = traits
 
-        if not self.isNative():
-            return
-
         if self == traits.init:
-            raise Error("ctors cannot be native")
+            if self.isNative():
+                raise Error("ctors cannot be native")
+            return
 
         assert(isinstance(self.name, QName))
         self.native_id_name = prefix + ns_prefix(self.name.ns, False) + self.name.name
@@ -838,7 +866,8 @@ BMAP = {
     "Boolean": CTYPE_BOOLEAN,
     "String": CTYPE_STRING,
     "Namespace": CTYPE_NAMESPACE,
-    "float": CTYPE_FLOAT
+    "float": CTYPE_FLOAT,
+    "float4": CTYPE_FLOAT4
 };
 
 class Traits:
@@ -976,6 +1005,16 @@ class ByteArray:
         self.pos += 8
         return r
 
+    def readFloat(self):
+        r = unpack_from("<f", self.data, self.pos)[0]
+        self.pos += 4
+        return r
+
+    def readFloat4(self):
+        r = unpack_from("<4f", self.data, self.pos)[0]
+        self.pos += 16
+        return r
+
     def readBytes(self, lenbytes):
         r = self.data[self.pos:self.pos+lenbytes]
         self.pos += lenbytes
@@ -1008,6 +1047,8 @@ class Abc:
     ints = None
     uints = None
     doubles = None
+    floats = None
+    float4s = None
     strings = None
     namespaces = None
     nssets = None
@@ -1019,10 +1060,12 @@ class Abc:
     classes = None
     scripts = None
     scriptName = ""
+    
     publicNs = Namespace("", CONSTANT_Namespace)
     anyNs = Namespace("*", CONSTANT_Namespace)
     versioned_uris = {}
     is_vm_builtin = False
+    is_float_enabled = False
 
     magic = 0
 
@@ -1033,8 +1076,11 @@ class Abc:
         self.scriptName = scriptName
         self.data = ByteArray(data)
 
-        if self.data.readU16() != 16 or self.data.readU16() != 46:
-            raise Error("Bad Abc Version")
+        self.magic =  self.data.readU16()  | (self.data.readU16()<<16);
+        if (self.magic != ((46<<16)|16)) and (self.magic != ((47<<16)|16)):
+            raise Error("Bad Abc Version "+ str(self.magic))
+        
+        self.is_float_enabled = self.magic >= (47<<16)|16;
 
         self.parseCpool()
 
@@ -1043,6 +1089,10 @@ class Abc:
         self.defaults[CONSTANT_Int] = (self.ints, CTYPE_INT)
         self.defaults[CONSTANT_UInt] = (self.uints, CTYPE_UINT)
         self.defaults[CONSTANT_Double] = (self.doubles, CTYPE_DOUBLE)
+        if(self.is_float_enabled):
+            self.defaults[CONSTANT_Float] = (self.floats, CTYPE_FLOAT)
+            self.defaults[CONSTANT_Float4] = (self.float4s, CTYPE_FLOAT4)
+
         self.defaults[CONSTANT_False] = ({ CONSTANT_False: False }, CTYPE_BOOLEAN)
         self.defaults[CONSTANT_True] = ({ CONSTANT_True: True }, CTYPE_BOOLEAN)
         self.defaults[CONSTANT_Namespace] = (self.namespaces, CTYPE_NAMESPACE)
@@ -1121,6 +1171,14 @@ class Abc:
             elif float(val) >= 0.0 and float(val) <= 4294967295.0 and float(val) == floor(float(val)):
                 ct = CTYPE_UINT
                 val = "%.0fU" % float(val)
+        elif ct == CTYPE_FLOAT:
+            # Python apparently doesn't have isNaN, isInf
+            if is_nan(val):
+                val = "(float)MathUtils::kNaN"
+            elif is_neg_inf(val):
+                val = "(float)MathUtils::kNegInfinity"
+            elif is_pos_inf(val):
+                val = "(float)MathUtils::kInfinity"
         elif ct == CTYPE_STRING:
             for i in range(0, len(self.strings)):
                 if (self.strings[i] == str(val)):
@@ -1132,8 +1190,8 @@ class Abc:
                 val = "false"
             else:
                 val = "true"
-        elif ct == CTYPE_FLOAT:
-        	val = "!!! ERROR, float not handled !!!"
+        elif ct == CTYPE_FLOAT4:
+            val = "!!! ERROR, float4 not handled !!!"  # @todo: fix float4 default parameters
         if str(val) == "None":
             val = "nullObjectAtom"
         return ct,val,rawval
@@ -1159,6 +1217,16 @@ class Abc:
         for i in range(1, n):
             self.doubles[i] = self.data.readDouble()
 
+        if self.is_float_enabled:
+            n = self.data.readU30()
+            self.floats = [ kNaN ] * max(1,n)
+            for i in range(1, n):
+                self.floats[i] = self.data.readFloat()
+            n = self.data.readU30()
+            self.float4s = [ (kNaN,kNaN,kNaN,kNaN) ] * max(1,n)
+            for i in range(1, n):
+                self.float4s[i] = self.data.readFloat4()
+            
         n = self.data.readU30()
         self.strings = [""] * max(1,n)
         for i in range(1, n):
@@ -1473,6 +1541,7 @@ class IndentingPrintWriter:
 NON_POINTER_4_BYTE_SLOT_BUCKET = 0
 POINTER_SLOT_BUCKET = 1
 NON_POINTER_8_BYTE_SLOT_BUCKET = 2
+NON_POINTER_16_BYTE_SLOT_BUCKET = 3
 
 CTYPE_TO_SLOT_SORT_BUCKET = {
     # following types are 4 bytes
@@ -1487,6 +1556,8 @@ CTYPE_TO_SLOT_SORT_BUCKET = {
     CTYPE_NAMESPACE : POINTER_SLOT_BUCKET,
     # doubles are 8 bytes
     CTYPE_DOUBLE : NON_POINTER_8_BYTE_SLOT_BUCKET,
+    # float4s are 16 bytes
+    CTYPE_FLOAT4 : NON_POINTER_16_BYTE_SLOT_BUCKET,
     # slots should never be of type void
     CTYPE_VOID : -1
 }
@@ -1501,6 +1572,7 @@ CTYPE_TO_NEED_FORWARD_DECL = {
     CTYPE_NAMESPACE : True,
     CTYPE_DOUBLE : False,
     CTYPE_FLOAT : False,
+    CTYPE_FLOAT4 : False,
     CTYPE_VOID : False
 }
 
@@ -1508,6 +1580,7 @@ GLUECLASSES_WITHOUT_SLOTS = frozenset((
     'bool',
     'double',
     'float',
+    'float4_t',
     'int32_t',
     'avmplus::Namespace',
     'avmplus::String',
@@ -1516,6 +1589,8 @@ GLUECLASSES_WITHOUT_SLOTS = frozenset((
 GLUECLASSES_WITHOUT_CONSTRUCT_WRAPPERS = frozenset((
     'bool',
     'double',
+    'float',
+    'float4_t',
     'int32_t',
     'uint32_t'))
 
@@ -1605,11 +1680,8 @@ class AbcThunkGen:
             m = self.abc.methods[i]
             if m.native_id_name != None:
                 assert(m.id == i)
-                if m.isNative():
-                    out.println("const uint32_t "+m.native_id_name+" = "+str(m.id)+";");
-                else:
-                    # not sure if we want to expose method id's for non-native methods; emit as comments for now
-                    out.println("/* const uint32_t "+m.native_id_name+" = "+str(m.id)+"; */");
+                out.println("const uint32_t %s = %s; // %s" % (m.native_id_name, m.id, \
+                    "native" if m.isNative() else "abc"))
         out.println('')
 
         for receiver,m in self.all_thunks:
@@ -1654,6 +1726,18 @@ class AbcThunkGen:
         out.println('')
         out.println("/* machine generated file -- do not edit */");
         out.println('')
+
+        if name == 'builtin' :
+            out.println('#ifdef VMCFG_FLOAT')
+            out.println('#ifdef VMCFG_ARM')
+            out.println('#include <arm_neon.h>')
+            out.println('#define float4_ret_t float32x4_t')
+            out.println('#elif defined VMCFG_SSE2')        
+            out.println('#include <xmmintrin.h>')
+            out.println('#define float4_ret_t __m128')
+            out.println('#endif')
+            out.println('#endif')
+            out.println('')
 
         nativeIDNamespaces = opts.nativeIDNS.split('::')
         out.println(' '.join(map(lambda ns: 'namespace %s {' % ns, nativeIDNamespaces)))
@@ -1826,7 +1910,7 @@ class AbcThunkGen:
                 classNS = t.cppns()
                 glueClassName = t.cppname()
                 # special hack because the metadata for the class Math says its instance data is of type double
-                if glueClassName != "double" and glueClassName != "float" :
+                if glueClassName != "double" :
                     cppNamespaceToGlueClasses.setdefault(classNS, set()).add(glueClassName)
                     key = classNS + '::' + glueClassName
                     if not key in glueClassToTraits:
@@ -1865,7 +1949,8 @@ class AbcThunkGen:
         out.println("friend class avmplus::AvmCore;")
         out.println("friend class avmplus::IntVectorClass;")
         out.println("friend class avmplus::UIntVectorClass;")
-        out.println("// friend class avmplus::FloatVectorClass;") # remove comment when adding FloatVectorClass in Tamarin
+        out.println("FLOAT_ONLY(friend class avmplus::FloatVectorClass;)")
+        out.println("FLOAT_ONLY(friend class avmplus::Float4VectorClass;)")
         out.println("friend class avmplus::DoubleVectorClass;")
         out.println("friend class avmplus::ObjectVectorClass;")
         out.indent -= 1
@@ -2161,34 +2246,35 @@ class AbcThunkGen:
             out.println("return isTypeImpl(value->atom());")
             out.indent -= 1
             out.println("}")
-            out.println("REALLY_INLINE %s asType(avmplus::Atom value)" % ret_typedef)
-            out.println("{")
-            out.indent += 1
-            out.println("avmplus::Atom const result = asTypeImpl(value);")
-            out.println("return %s;" % TYPEMAP_ATOM_TO_GCREF[ctype]("result",t.itraits))
-            out.indent -= 1
-            out.println("}")
-            out.println("REALLY_INLINE %s asType(GCRef<avmplus::ScriptObject> value)" % ret_typedef)
-            out.println("{")
-            out.indent += 1
-            out.println("avmplus::Atom const result = asTypeImpl(value->atom());")
-            out.println("return %s;" % TYPEMAP_ATOM_TO_GCREF[ctype]("result",t.itraits))
-            out.indent -= 1
-            out.println("}")
-            out.println("REALLY_INLINE %s coerceToType(avmplus::Atom value)" % ret_typedef)
-            out.println("{")
-            out.indent += 1
-            out.println("avmplus::Atom const result = coerceToTypeImpl(value);")
-            out.println("return %s;" % TYPEMAP_ATOM_TO_GCREF[ctype]("result",t.itraits))
-            out.indent -= 1
-            out.println("}")
-            out.println("REALLY_INLINE %s coerceToType(GCRef<avmplus::ScriptObject> value)" % ret_typedef)
-            out.println("{")
-            out.indent += 1
-            out.println("avmplus::Atom const result = coerceToTypeImpl(value->atom());")
-            out.println("return %s;" % TYPEMAP_ATOM_TO_GCREF[ctype]("result",t.itraits))
-            out.indent -= 1
-            out.println("}")
+            if(ctype != CTYPE_FLOAT4): # we can't emit these for float4_t, but fortunately we don't need them.
+                out.println("REALLY_INLINE %s asType(avmplus::Atom value)" % ret_typedef)
+                out.println("{")
+                out.indent += 1
+                out.println("avmplus::Atom const result = asTypeImpl(value);")
+                out.println("return %s;" % TYPEMAP_ATOM_TO_GCREF[ctype]("result",t.itraits))
+                out.indent -= 1
+                out.println("}")
+                out.println("REALLY_INLINE %s asType(GCRef<avmplus::ScriptObject> value)" % ret_typedef)
+                out.println("{")
+                out.indent += 1
+                out.println("avmplus::Atom const result = asTypeImpl(value->atom());")
+                out.println("return %s;" % TYPEMAP_ATOM_TO_GCREF[ctype]("result",t.itraits))
+                out.indent -= 1
+                out.println("}")
+                out.println("REALLY_INLINE %s coerceToType(avmplus::Atom value)" % ret_typedef)
+                out.println("{")
+                out.indent += 1
+                out.println("avmplus::Atom const result = coerceToTypeImpl(value);")
+                out.println("return %s;" % TYPEMAP_ATOM_TO_GCREF[ctype]("result",t.itraits))
+                out.indent -= 1
+                out.println("}")
+                out.println("REALLY_INLINE %s coerceToType(GCRef<avmplus::ScriptObject> value)" % ret_typedef)
+                out.println("{")
+                out.indent += 1
+                out.println("avmplus::Atom const result = coerceToTypeImpl(value->atom());")
+                out.println("return %s;" % TYPEMAP_ATOM_TO_GCREF[ctype]("result",t.itraits))
+                out.indent -= 1
+                out.println("}")
             out.indent -= 1
 
         # "cpp_vis" is used to sort the visibility of the cpp wrapper functions.
@@ -2354,7 +2440,7 @@ class AbcThunkGen:
         visitedGlueClasses.add(t.fqcppname())
         if (t.fqcppname() in GLUECLASSES_WITHOUT_SLOTS):
             return
-        
+
         sortedSlots,slotsTypeInfo = self.sortSlots(t)
         self.emitDeclareSlotClass(out, t, sortedSlots, slotsTypeInfo)
         
@@ -2595,22 +2681,24 @@ class AbcThunkGen:
         if m.kind == TRAIT_Setter:
             ret_ctype = CTYPE_VOID
         # for return types of thunks, everything but double maps to Atom
-        if ret_ctype != CTYPE_DOUBLE and ret_ctype!= CTYPE_FLOAT :
+        if ret_ctype != CTYPE_DOUBLE and ret_ctype != CTYPE_FLOAT and ret_ctype != CTYPE_FLOAT4:
             thunk_ret_ctype = CTYPE_ATOM
         else:
             thunk_ret_ctype = ret_ctype
-        decl = "%s %s_thunk(MethodEnv* env, uint32_t argc, Atom* argv)" % (TYPEMAP_RETTYPE[thunk_ret_ctype], m.native_id_name)
+        rettype_str = "float4_ret_t" if CTYPE_FLOAT4 == ret_ctype else TYPEMAP_RETTYPE[thunk_ret_ctype]
+        decl = "%s %s_thunk(MethodEnv* env, uint32_t argc, Atom* argv)" % (rettype_str, m.native_id_name)
         return ret_traits,ret_ctype,thunk_ret_ctype,decl
 
     def emitThunkProto(self, out, receiver, m):
         ret_traits,ret_ctype,thunk_ret_ctype,decl = self.thunkInfo(m)
-        out.println('extern ' + decl + ";");
+        if(thunk_ret_ctype != CTYPE_FLOAT4):
+            out.println('extern ' + decl + ";");
 
     def emitThunkBody(self, out, receiver, m):
         ret_traits,ret_ctype,thunk_ret_ctype,decl = self.thunkInfo(m)
 
         unbox_receiver = self.calc_unbox_this(m)
-
+        
         out.println(decl);
         out.println("{");
         out.indent += 1;
@@ -2621,6 +2709,11 @@ class AbcThunkGen:
         param_count = len(m.paramTypes);
         optional_count = m.optional_count;
 
+        unbox_reference = "";
+        if(receiver.ctype == CTYPE_FLOAT4):
+            receiver = receiver.ctraits; 
+            m.receiver = receiver;
+            unbox_reference = "&";
         argtraits = self.argTraits(receiver, m)
 
         argszprev = "0"
@@ -2642,10 +2735,11 @@ class AbcThunkGen:
 
         arg0_typedef = argtraits[0].cpp_argument_name()
         assert(argtraits[0].ctype in [CTYPE_OBJECT,CTYPE_STRING,CTYPE_NAMESPACE])
+
         if unbox_receiver:
             val = "AvmThunkUnbox_AvmAtomReceiver("+arg0_typedef+", argv[argoff0])";
         else:
-            val = "AvmThunkUnbox_AvmReceiver("+arg0_typedef+", argv[argoff0])";
+            val = "AvmThunkUnbox_AvmReceiver("+arg0_typedef+", "+unbox_reference+"argv[argoff0])";
         args.append((val, arg0_typedef))
 
         for i in range(1, len(argtraits)):
@@ -2666,7 +2760,8 @@ class AbcThunkGen:
                     coercename = argtraits[i].fqcppname()
                     if coercename != None:
                         val = "(%s*)%s" % (coercename, val)
-            args.append((val, arg_typedef))
+            out.println("%s arg%d = %s;" % (arg_typedef, i, val))
+            args.append(("arg%d"%i, arg_typedef))
 
         if m.needRest():
             args.append(("(argc <= "+str(param_count)+" ? NULL : argv + argoffV)", "Atom*"))
@@ -2682,8 +2777,10 @@ class AbcThunkGen:
             rec_type = m.receiver.cpp_argument_name()
         out.println("%s const obj = %s;" % (rec_type, args[0][0]))
 
-        if ret_ctype != CTYPE_VOID:
+        if ret_ctype != CTYPE_VOID and ret_ctype != CTYPE_FLOAT4:
             out.prnt("%s const ret = " % ret_traits.cpp_return_name())
+        elif ret_ctype != CTYPE_VOID: # i.e., is float4
+            out.println("float4_ret_t ret;")
 
         if m.receiver == None:
             out.prnt("%s(obj" % m.native_method_name)
@@ -2696,6 +2793,9 @@ class AbcThunkGen:
             out.prnt("obj->%s(" % native_method_name)
             need_comma = False
 
+        if(ret_ctype == CTYPE_FLOAT4):
+            out.prnt("(float4_t*)&ret")
+            need_comma = True
         if len(args) > 1:
             out.println("")
             out.indent += 1

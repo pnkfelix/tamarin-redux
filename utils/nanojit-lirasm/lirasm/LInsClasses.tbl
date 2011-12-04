@@ -131,5 +131,26 @@ CL_64(  LCALL_V_IQD,    1)  // 99%  LIR_icall or LIR_qcall
 
 CL___(  LLABEL,         1)  //100%  LIR_label
 
+CL___(  LIMM_F,         1)  // 101%  LIR_float
+CL___(  LOP_F_F,        1)  // 102%  LIR_fnegf
+CL___(  LOP_F_FF,       1)  // 103%  LIR_faddf, etc.
+CL___(  LOP_F_BFF,      1)  // 104%  LIR_cmovf
+CL___(  LOP_B_FF,       1)  // 105%  LIR_eqf, LIR_ltf, etc
+CL___(  LOP_F_I,        1)  // 106%  LIR_i2f, LIR_ui2f
+CL___(  LOP_I_F,        1)  // 107%  LIR_f2i
+CL___(  LOP_D_F,        1)  // 108%  LIR_f2d
+CL___(  LOP_F_D,        1)  // 109%  LIR_d2f
+CL___(  LST_F,          1)  // 110%  LIR_stf
+CL___(  LLD_F,          1)  // 111%  LIR_ldf
+
+CL___(  LIMM_F4,        1)  // 112%  LIR_float
+CL___(  LOP_F4_F4,      1)  // 113%  LIR_fnegf4
+CL___(  LOP_F4_F4F4,    1)  // 114%  LIR_faddf4, etc.
+CL___(  LOP_F4_BF4F4,   1)  // 115%  LIR_cmovf4
+CL___(  LOP_B_F4F4,     1)  // 116%  LIR_eqf4
+CL___(  LOP_F4_F,       1)  // 117%  LIR_f4x, LIR_f4y, LIR_f4z, LIR_f4w
+CL___(  LOP_F_F4,       1)  // 118%  LIR_f2f4
+CL___(  LST_F4,         1)  // 110%  LIR_stf4
+CL___(  LLD_F4,         1)  // 111%  LIR_ldf4
 
 #undef CL_64

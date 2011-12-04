@@ -43,18 +43,31 @@
 
 namespace avmplus
 {
+    // These methods appear to be unused
+    // The implementations of max, min, maxf, and minf do not follow the spec
+    // in some cases with signed zero arguments.
+    // BEGIN
     REALLY_INLINE double MathUtils::infinity() { return kInfinity; }
     REALLY_INLINE double MathUtils::neg_infinity() { return kNegInfinity; }
     REALLY_INLINE double MathUtils::max(double x, double y) { return (x > y) ? x : y; }
     REALLY_INLINE double MathUtils::min(double x, double y) { return (x < y) ? x : y; }
     REALLY_INLINE double MathUtils::nan() { return kNaN; }
 
-    #if !defined(WIN32) || !defined(AVMPLUS_IA32)
+    REALLY_INLINE float  MathUtils::maxf(float x, float y) { return (x > y) ? x : y; }
+    REALLY_INLINE float  MathUtils::minf(float x, float y) { return (x < y) ? x : y; }
+    // END
+
+#if !defined(WIN32) || !defined(AVMPLUS_IA32)
     REALLY_INLINE double MathUtils::round(double value)
     {
         return MathUtils::floor(value + 0.5);
     }
-    #endif // !defined(WIN32) || !defined(AVMPLUS_IA32)
+#endif // !defined(WIN32) || !defined(AVMPLUS_IA32)
+
+    REALLY_INLINE float MathUtils::roundf(float value)
+    {
+        return MathUtils::floorf(value + 0.5f);
+    }
 
     REALLY_INLINE bool MathUtils::isNaNInline(double d)
     {

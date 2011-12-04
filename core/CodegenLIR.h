@@ -307,7 +307,7 @@ namespace avmplus
        void jitCodePosUpdate(uint32_t pos);
        #endif /* VTUNE */
 
-    private:
+    protected:
         friend struct JitInitVisitor;
         MethodInfo *info;
         const MethodSignaturep ms;
@@ -364,10 +364,10 @@ namespace avmplus
 #endif
 #ifdef DEBUG
         /** jit_sst is an array of sst_mask bytes, used to double check that we
-         *  are modelling storage types the same way the verifier did for us.
+         *  are modeling storage types the same way the verifier did for us.
          *  Mismatches are caught in writeOpcodeVerified() after the Verifier has
          *  updated FrameValue.sst_mask. */
-        uint8_t *jit_sst;   // array of SST masks to sanity check with FrameState
+        uint16_t *jit_sst;   // array of SST masks to sanity check with FrameState
         ValidateWriter* validate3; // ValidateWriter for method body.
 #endif
 
@@ -377,10 +377,12 @@ namespace avmplus
         LIns* atomToNativeRep(Traits *, LIns *i);
         LIns* ptrToNativeRep(Traits*, LIns*);
         LIns* loadAtomRep(int i);
-        LIns* leaIns(int32_t d, LIns *base);
         LIns* localGet(int i);
         LIns* localGetp(int i);
         LIns* localGetd(int i);
+        LIns* localGetf(int i); // Aborts if float not enabled
+        LIns* localGetf4(int i);  // Aborts if float not enabled
+        LIns* localGetf4Addr(int i);  // Aborts if float not enabled
         LIns* localCopy(int i); // sniff's type from FrameState
         void branchToLabel(LOpcode op, LIns *cond, CodegenLabel& label);
         LIns* branchJovToLabel(LOpcode op, LIns *a, LIns *b, CodegenLabel& label);
@@ -396,11 +398,15 @@ namespace avmplus
         LIns* storeAtomArgs(int count, int index);
         LIns* storeAtomArgs(LIns *obj, int count, int index);
         LIns* promoteNumberIns(Traits *t, int i);
+#ifdef VMCFG_FLOAT
+        LIns* promoteFloatIns(Traits *t, int i);
+        LIns* promoteFloat4Ins(Traits *t, int i);
+#endif // VMCFG_FLOAT
         LIns* loadVTable(LIns* obj, Traits* t);
         LIns* cmpEq(const CallInfo *fid, int lhsi, int rhsi);
         LIns* cmpLt(int lhsi, int rhsi);
         LIns* cmpLe(int lhsi, int rhsi);
-        LIns* cmpOptimization(int lhsi, int rhsi, LOpcode icmp, LOpcode ucmp, LOpcode fcmp);
+        LIns* cmpOptimization(int lhsi, int rhsi, LOpcode icmp, LOpcode ucmp, LOpcode fcmp, bool strictOperation = false);
         debug_only( bool isPointer(int i); )
         void emitSetPc(const uint8_t* pc);
         void emitSampleCheck();
@@ -432,8 +438,14 @@ namespace avmplus
         LIns* Ins(LOpcode op, LIns *a);
         LIns* i2dIns(LIns* v);
         LIns* ui2dIns(LIns* v);
-        LIns* binaryIns(LOpcode op, LIns *a, LIns *b);
         LIns* callIns(const CallInfo *, uint32_t argc, ...);
+
+#ifdef VMCFG_FLOAT
+         /* Handle 1- and 2-operand numeric operations. Assumption: "number"/"int" is the "fastpath",
+            the rest may be slow (should really be typed if the user wants speed)   */
+        void emitNumericOp1(int32_t op1, const LIREmitter &emitIns);
+        void emitNumericOp2(int32_t op1, int32_t op2, const LIREmitter& emitIns);
+#endif // VMCFG_FLOAT
 
         /** emit a constructor call, and early bind if possible */
         void emitConstruct(int argc, LIns* ctor, Traits* ctraits);
@@ -473,6 +485,10 @@ namespace avmplus
         void emitIntConst(int index, int32_t c, Traits* type);
         void emitPtrConst(int index, void* c, Traits* type);
         void emitDoubleConst(int index, const double* pd);
+#ifdef VMCFG_FLOAT
+        void emitFloatConst(int index, const float f);
+        void emitFloat4Const(int index, const float4_t* pf4);
+#endif // VMCFG_FLOAT
         void emitGetslot(int slot, int ptr_index, Traits *slotType);
         void emitSetslot(AbcOpcode opcode, int slot, int ptr_index);
         void emitSetslot(AbcOpcode opcode, int slot, int ptr_index, LIns* value);
@@ -498,6 +514,12 @@ namespace avmplus
         LIns* convertToString(int i, bool preserveNull);
         LIns* coerceToString(int i);
         LIns* coerceToNumber(int i);
+#ifdef VMCFG_FLOAT
+        LIns* coerceToFloat(int i);
+        LIns* coerceToFloat4(int i);
+        LIns* coerceToNumeric(int i);
+        bool matchShuffler(MethodInfo* m, uint8_t* shuffle_mask);
+#endif // VMCFG_FLOAT
         LIns* loadFromSlot(int ptr_index, int slot, Traits* slotType);
         LIns* coerceToType(int i, Traits*);
         void emitInitializers();
@@ -541,6 +563,39 @@ namespace avmplus
         void emitIntMathMax(Traits* result);
         void emitStringLength(Traits* result);
 
+#ifdef VMCFG_FLOAT
+        // helpers
+        void emitFloatUnary(Traits* result, LOpcode op);
+        void emitFloat4unary(Traits*, LOpcode opcode);
+        void emitFloat4binary(Traits*, LOpcode opcode);
+        LIns* magnitude(LOpcode dot_op, LIns* x);
+        void emitMagnitude(Traits* result, LOpcode dot_op);
+        void emitDistance(Traits* result, LOpcode dot_op);
+
+        // emitters for inline float/float4 functions
+        void emitFloatAbs(Traits* result);
+        void emitFloatReciprocal(Traits* result);
+        void emitFloatRsqrt(Traits* result);
+        void emitFloatSqrt(Traits* result);
+        void emitFloat4abs(Traits* result);
+        void emitFloat4max(Traits* result);
+        void emitFloat4min(Traits* result);
+        void emitFloat4reciprocal(Traits* result);
+        void emitFloat4rsqrt(Traits* result);
+        void emitFloat4sqrt(Traits* result);
+        void emitFloat4normalize(Traits* result);
+        void emitFloat4cross(Traits* result);
+        void emitFloat4dot(Traits* result);
+        void emitFloat4dot2(Traits* result);
+        void emitFloat4dot3(Traits* result);
+        void emitFloat4magnitude(Traits* result);
+        void emitFloat4magnitude2(Traits* result);
+        void emitFloat4magnitude3(Traits* result);
+        void emitFloat4distance(Traits* result);
+        void emitFloat4distance2(Traits* result);
+        void emitFloat4distance3(Traits* result);
+#endif
+
         LIns *optimizeIndexArgumentType(int32_t sp, Traits** indexType);
 
     public:
@@ -560,6 +615,7 @@ namespace avmplus
         void writeNip(const FrameState* state, const uint8_t *pc);
         void writeCheckNull(const FrameState* state, uint32_t index);
         void writeCoerce(const FrameState* state, uint32_t index, Traits *type);
+        void writeCoerceToNumeric(const FrameState* state, uint32_t index);
         void writePrologue(const FrameState* state, const uint8_t *pc, CodegenDriver*);
         void writeEpilogue(const FrameState* state);
         void writeBlockStart(const FrameState* state);

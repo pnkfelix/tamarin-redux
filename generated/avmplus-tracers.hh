@@ -668,6 +668,174 @@ bool EvalErrorObject::gcTrace(MMgc::GC* gc, size_t _xact_cursor)
 }
 
 
+#if defined(VMCFG_FLOAT)
+
+#ifdef DEBUG
+MMgc::GCTracerCheckResult Float4Class::gcTraceOffsetIsTraced(uint32_t off) const
+{
+    MMgc::GCTracerCheckResult result;
+    (void)off;
+    (void)result;
+    if((result = ClassClosure::gcTraceOffsetIsTraced(off)) != MMgc::kOffsetNotFound)
+        return result;
+    return MMgc::kOffsetNotFound;
+}
+#endif // DEBUG
+
+bool Float4Class::gcTrace(MMgc::GC* gc, size_t _xact_cursor)
+{
+    (void)gc;
+    (void)_xact_cursor;
+#ifndef GC_TRIVIAL_TRACER_Float4Class
+    m_slots_Float4Class.gcTracePrivateProperties(gc);
+#endif
+    ClassClosure::gcTrace(gc, 0);
+    (void)(avmplus_ClassClosure_isExactInterlock != 0);
+    return false;
+}
+
+#endif // defined(VMCFG_FLOAT)
+
+#if defined(VMCFG_FLOAT)
+
+#ifdef DEBUG
+MMgc::GCTracerCheckResult Float4VectorClass::gcTraceOffsetIsTraced(uint32_t off) const
+{
+    MMgc::GCTracerCheckResult result;
+    (void)off;
+    (void)result;
+    if((result = TypedVectorClass<Float4VectorObject>::gcTraceOffsetIsTraced(off)) != MMgc::kOffsetNotFound)
+        return result;
+    return MMgc::kOffsetNotFound;
+}
+#endif // DEBUG
+
+bool Float4VectorClass::gcTrace(MMgc::GC* gc, size_t _xact_cursor)
+{
+    (void)gc;
+    (void)_xact_cursor;
+#ifndef GC_TRIVIAL_TRACER_Float4VectorClass
+    m_slots_Float4VectorClass.gcTracePrivateProperties(gc);
+#endif
+    TypedVectorClass<Float4VectorObject>::gcTrace(gc, 0);
+    (void)(avmplus_TypedVectorClassXFloat4VectorObjectX_isExactInterlock != 0);
+    return false;
+}
+
+#endif // defined(VMCFG_FLOAT)
+
+#if defined(VMCFG_FLOAT)
+
+#ifdef DEBUG
+MMgc::GCTracerCheckResult Float4VectorObject::gcTraceOffsetIsTraced(uint32_t off) const
+{
+    MMgc::GCTracerCheckResult result;
+    (void)off;
+    (void)result;
+    if((result = Float4VectorObjectBaseClass::gcTraceOffsetIsTraced(off)) != MMgc::kOffsetNotFound)
+        return result;
+    return MMgc::kOffsetNotFound;
+}
+#endif // DEBUG
+
+bool Float4VectorObject::gcTrace(MMgc::GC* gc, size_t _xact_cursor)
+{
+    (void)gc;
+    (void)_xact_cursor;
+#ifndef GC_TRIVIAL_TRACER_Float4VectorObject
+    m_slots_Float4VectorObject.gcTracePrivateProperties(gc);
+#endif
+    Float4VectorObjectBaseClass::gcTrace(gc, 0);
+    (void)(avmplus_Float4VectorObjectBaseClass_isExactInterlock != 0);
+    return false;
+}
+
+#endif // defined(VMCFG_FLOAT)
+
+#if defined(VMCFG_FLOAT)
+
+#ifdef DEBUG
+MMgc::GCTracerCheckResult FloatClass::gcTraceOffsetIsTraced(uint32_t off) const
+{
+    MMgc::GCTracerCheckResult result;
+    (void)off;
+    (void)result;
+    if((result = ClassClosure::gcTraceOffsetIsTraced(off)) != MMgc::kOffsetNotFound)
+        return result;
+    return MMgc::kOffsetNotFound;
+}
+#endif // DEBUG
+
+bool FloatClass::gcTrace(MMgc::GC* gc, size_t _xact_cursor)
+{
+    (void)gc;
+    (void)_xact_cursor;
+#ifndef GC_TRIVIAL_TRACER_FloatClass
+    m_slots_FloatClass.gcTracePrivateProperties(gc);
+#endif
+    ClassClosure::gcTrace(gc, 0);
+    (void)(avmplus_ClassClosure_isExactInterlock != 0);
+    return false;
+}
+
+#endif // defined(VMCFG_FLOAT)
+
+#if defined(VMCFG_FLOAT)
+
+#ifdef DEBUG
+MMgc::GCTracerCheckResult FloatVectorClass::gcTraceOffsetIsTraced(uint32_t off) const
+{
+    MMgc::GCTracerCheckResult result;
+    (void)off;
+    (void)result;
+    if((result = TypedVectorClass<FloatVectorObject>::gcTraceOffsetIsTraced(off)) != MMgc::kOffsetNotFound)
+        return result;
+    return MMgc::kOffsetNotFound;
+}
+#endif // DEBUG
+
+bool FloatVectorClass::gcTrace(MMgc::GC* gc, size_t _xact_cursor)
+{
+    (void)gc;
+    (void)_xact_cursor;
+#ifndef GC_TRIVIAL_TRACER_FloatVectorClass
+    m_slots_FloatVectorClass.gcTracePrivateProperties(gc);
+#endif
+    TypedVectorClass<FloatVectorObject>::gcTrace(gc, 0);
+    (void)(avmplus_TypedVectorClassXFloatVectorObjectX_isExactInterlock != 0);
+    return false;
+}
+
+#endif // defined(VMCFG_FLOAT)
+
+#if defined(VMCFG_FLOAT)
+
+#ifdef DEBUG
+MMgc::GCTracerCheckResult FloatVectorObject::gcTraceOffsetIsTraced(uint32_t off) const
+{
+    MMgc::GCTracerCheckResult result;
+    (void)off;
+    (void)result;
+    if((result = TypedVectorObject< DataList<float> >::gcTraceOffsetIsTraced(off)) != MMgc::kOffsetNotFound)
+        return result;
+    return MMgc::kOffsetNotFound;
+}
+#endif // DEBUG
+
+bool FloatVectorObject::gcTrace(MMgc::GC* gc, size_t _xact_cursor)
+{
+    (void)gc;
+    (void)_xact_cursor;
+#ifndef GC_TRIVIAL_TRACER_FloatVectorObject
+    m_slots_FloatVectorObject.gcTracePrivateProperties(gc);
+#endif
+    TypedVectorObject< DataList<float> >::gcTrace(gc, 0);
+    (void)(avmplus_TypedVectorObjectXDataListXfloatXX_isExactInterlock != 0);
+    return false;
+}
+
+#endif // defined(VMCFG_FLOAT)
+
 
 #ifdef DEBUG
 MMgc::GCTracerCheckResult FunctionClass::gcTraceOffsetIsTraced(uint32_t off) const
@@ -2950,6 +3118,12 @@ const uint32_t PoolObject::gcTracePointerOffsets[] = {
     offsetof(PoolObject, _methods),
     offsetof(PoolObject, _scripts),
     offsetof(PoolObject, cpool_double),
+#if defined(VMCFG_FLOAT)
+    offsetof(PoolObject, cpool_float),
+#endif
+#if defined(VMCFG_FLOAT)
+    offsetof(PoolObject, cpool_float4),
+#endif
     offsetof(PoolObject, cpool_int),
 #if !defined(AVMPLUS_64BIT)
     offsetof(PoolObject, cpool_int_atoms),
@@ -2995,6 +3169,16 @@ MMgc::GCTracerCheckResult PoolObject::gcTraceOffsetIsTraced(uint32_t off) const
     if((result = cpool_double.gcTraceOffsetIsTraced(off - offsetof(PoolObject,cpool_double))) != MMgc::kOffsetNotFound) {
         return result;
     }
+#if defined(VMCFG_FLOAT)
+    if((result = cpool_float.gcTraceOffsetIsTraced(off - offsetof(PoolObject,cpool_float))) != MMgc::kOffsetNotFound) {
+        return result;
+    }
+#endif
+#if defined(VMCFG_FLOAT)
+    if((result = cpool_float4.gcTraceOffsetIsTraced(off - offsetof(PoolObject,cpool_float4))) != MMgc::kOffsetNotFound) {
+        return result;
+    }
+#endif
     if((result = cpool_int.gcTraceOffsetIsTraced(off - offsetof(PoolObject,cpool_int))) != MMgc::kOffsetNotFound) {
         return result;
     }
@@ -3023,7 +3207,7 @@ MMgc::GCTracerCheckResult PoolObject::gcTraceOffsetIsTraced(uint32_t off) const
     if((result = metadata_infos.gcTraceOffsetIsTraced(off - offsetof(PoolObject,metadata_infos))) != MMgc::kOffsetNotFound) {
         return result;
     }
-    return MMgc::GC::CheckOffsetIsInList(off,gcTracePointerOffsets,22);
+    return MMgc::GC::CheckOffsetIsInList(off,gcTracePointerOffsets,24);
 }
 #endif // DEBUG
 
@@ -3041,6 +3225,12 @@ bool PoolObject::gcTrace(MMgc::GC* gc, size_t _xact_cursor)
     _methods.gcTrace(gc);
     _scripts.gcTrace(gc);
     cpool_double.gcTrace(gc);
+#if defined(VMCFG_FLOAT)
+    cpool_float.gcTrace(gc);
+#endif
+#if defined(VMCFG_FLOAT)
+    cpool_float4.gcTrace(gc);
+#endif
     cpool_int.gcTrace(gc);
 #if !defined(AVMPLUS_64BIT)
     cpool_int_atoms.gcTrace(gc);
@@ -3354,6 +3544,12 @@ const uint32_t Toplevel::gcTracePointerOffsets[] = {
     offsetof(Toplevel, _booleanClass),
     offsetof(Toplevel, _builtinClasses),
     offsetof(Toplevel, _classClass),
+#if defined(VMCFG_FLOAT)
+    offsetof(Toplevel, _float4Class),
+#endif
+#if defined(VMCFG_FLOAT)
+    offsetof(Toplevel, _floatClass),
+#endif
     offsetof(Toplevel, _functionClass),
     offsetof(Toplevel, _intClass),
     offsetof(Toplevel, _mainEntryPoint),
@@ -3373,7 +3569,7 @@ MMgc::GCTracerCheckResult Toplevel::gcTraceOffsetIsTraced(uint32_t off) const
     if((result = _traitsToAliasMap.gcTraceOffsetIsTraced(off - offsetof(Toplevel,_traitsToAliasMap))) != MMgc::kOffsetNotFound) {
         return result;
     }
-    return MMgc::GC::CheckOffsetIsInList(off,gcTracePointerOffsets,14);
+    return MMgc::GC::CheckOffsetIsInList(off,gcTracePointerOffsets,16);
 }
 #endif // DEBUG
 
@@ -3386,6 +3582,12 @@ bool Toplevel::gcTrace(MMgc::GC* gc, size_t _xact_cursor)
     gc->TraceLocation(&_booleanClass);
     gc->TraceLocation(&_builtinClasses);
     gc->TraceLocation(&_classClass);
+#if defined(VMCFG_FLOAT)
+    gc->TraceLocation(&_float4Class);
+#endif
+#if defined(VMCFG_FLOAT)
+    gc->TraceLocation(&_floatClass);
+#endif
     gc->TraceLocation(&_functionClass);
     gc->TraceLocation(&_intClass);
     gc->TraceLocation(&_mainEntryPoint);

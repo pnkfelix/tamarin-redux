@@ -196,8 +196,14 @@ namespace avmplus
         kVECTORINT,
         kVECTORUINT,
         kVECTORDOUBLE,
-        kVECTOROBJ
+        kVECTOROBJ,
+        
+        
+        
+        kLASTENUMELEMENT/// KEEP THIS ONE THE LAST, SO THAT THE ASSERTION WORKS!
     };
+    /* using MMGC_STATIC_ASSERT for lack of a better one */
+    MMGC_STATIC_ASSERT(kLASTENUMELEMENT <=16); 
 
     static Traits* argTraitsFromType(const AvmCore* core, int32_t n)
     {

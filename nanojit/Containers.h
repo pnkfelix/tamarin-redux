@@ -256,11 +256,54 @@ namespace nanojit
         }
     };
 
+    /** The default hash function assumes bitwise equality,
+     *  so that is what we implement here.  Note that float,
+     *  double, and float4 types would not normally compare
+     *  bitwise (due to 0 vs. -0 and NaNs), but that we want
+     *  bitwise semantics for CSE and pools, for example.
+     */
+
+    template <class K> struct DefaultKeysEqual {
+        static bool keysEqual(const K& x, const K& y) {
+            return VMPI_memcmp(&x, &y, sizeof(K)) == 0;
+        }
+    };
+
+    template <class K> struct DefaultKeysEqual<K*> {
+        static bool keysEqual(K* x, K* y) {
+            return x == y;
+        }
+    };
+
+    template <> struct DefaultKeysEqual<int32_t> {
+        static bool keysEqual(int32_t x, int32_t y) {
+            return x == y;
+        }
+    };
+
+    template <> struct DefaultKeysEqual<uint32_t> {
+        static bool keysEqual(uint32_t x, uint32_t y) {
+            return x == y;
+        }
+    };
+
+    template <> struct DefaultKeysEqual<int64_t> {
+        static bool keysEqual(int64_t x, int64_t y) {
+            return x == y;
+        }
+    };
+
+    template <> struct DefaultKeysEqual<uint64_t> {
+        static bool keysEqual(uint64_t x, uint64_t y) {
+            return x == y;
+        }
+    };
+
     /** Bucket hashtable with a fixed # of buckets (never rehash)
      *  Intended for use when a reasonable # of buckets can be estimated ahead of time.
      *  Note that operator== is used to compare keys.
      */
-    template<class K, class T, class H=DefaultHash<K> > class HashMap {
+    template<class K, class T, class H=DefaultHash<K>, class E=DefaultKeysEqual<K> > class HashMap {
         Allocator& allocator;
         size_t nbuckets;
         class Node {
@@ -275,7 +318,7 @@ namespace nanojit
         Node* find(K k, size_t &i) {
             i = H::hash(k) % nbuckets;
             for (Seq<Node>* p = buckets[i]; p != NULL; p = p->tail) {
-                if (p->head.key == k)
+                if (E::keysEqual(p->head.key, k))
                     return &p->head;
             }
             return NULL;
@@ -304,7 +347,7 @@ namespace nanojit
                 n->value = v;
                 return;
             }
-            buckets[i] = new (allocator) Seq<Node>(Node(k,v), buckets[i]);
+            buckets[i] = new (allocator, sizeof(K)) Seq<Node>(Node(k,v), buckets[i]);
         }
 
         /** return v for element k, or T(0) if k is not present */
@@ -326,7 +369,7 @@ namespace nanojit
             size_t i = H::hash(k) % nbuckets;
             Seq<Node>** prev = &buckets[i];
             for (Seq<Node>* p = buckets[i]; p != NULL; p = p->tail) {
-                if (p->head.key == k) {
+                if (E::keysEqual(p->head.key, k)) {
                     (*prev) = p->tail;
                     return;
                 }

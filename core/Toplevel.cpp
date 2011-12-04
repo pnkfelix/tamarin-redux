@@ -61,6 +61,14 @@ namespace avmplus
         {
             switch (atomKind(atom))
             {
+#ifdef VMCFG_FLOAT
+            case kSpecialBibopType:
+                if(bibopKind(atom)==kBibopFloatType)
+                    return floatClass()->prototypePtr();
+                if(bibopKind(atom)==kBibopFloat4Type)
+                    return float4Class()->prototypePtr();
+                // fall thru to default
+#endif
             default:
 
             case kNamespaceType:
@@ -110,6 +118,14 @@ namespace avmplus
             case kDoubleType:
                 // ISSUE what about int?
                 return core()->traits.number_itraits;
+#ifdef VMCFG_FLOAT
+            case kSpecialBibopType:
+                AvmAssert(atom != AtomConstants::undefinedAtom);
+                if(bibopKind(atom) == kBibopFloatType)
+                    return core()->traits.float_itraits;
+                if(bibopKind(atom) == kBibopFloat4Type)
+                    return core()->traits.float4_itraits;
+#endif
             }
         }
         else
@@ -432,6 +448,7 @@ namespace avmplus
         return itraits;
     }
 
+    // Keep in sync with related methods.  See comments at Toplevel::getproperty.
     Atom Toplevel::in_operator(Atom nameatom, Atom obj)
     {
         AvmCore* core = this->core();
@@ -440,20 +457,29 @@ namespace avmplus
         bool has_interned = false;
         if (!AvmCore::isDictionaryLookup(nameatom, obj))
         {
-            Stringp name;
-
             if (avmplus::atomIsIntptr(nameatom) &&
                 avmplus::atomCanBeUint32(nameatom))
             {
-                ScriptObject* o = (atomKind(obj) == kObjectType) ?
-                    AvmCore::atomToScriptObject(obj) :
-                    this->toPrototype(obj);
+#ifdef VMCFG_FLOAT
+                if (AvmCore::isFloat4(obj))
+                {
+                    uint32_t index = uint32_t(avmplus::atomGetIntptr(nameatom));
+                    if (index != 4294967295U)
+                        return (index <= 3 ? trueAtom : falseAtom);
+                }
+#endif
+                ScriptObject* o;
+                if (atomKind(obj) != kObjectType)
+                    o = this->toPrototype(obj);
+                else
+                    o = AvmCore::atomToScriptObject(obj);
+                
                 return o->hasUintProperty((uint32_t)atomGetIntptr(nameatom)) ?
                     trueAtom :
                     falseAtom;
             }
 
-            name = core->intern(nameatom);
+            Stringp name = core->intern(nameatom);
             has_interned = true;
 
             // ISSUE should we try this on each object on the proto chain or just the first?
@@ -465,6 +491,16 @@ namespace avmplus
             nameatom = name->atom();
         }
 
+#ifdef VMCFG_FLOAT
+        if (AvmCore::isFloat4(obj))
+        {
+            uint32_t index;
+            // getIndexFromAtom is not defined on negative values
+            if (AvmCore::getIndexFromAtom(nameatom, &index))
+                return (index <= 3 ? trueAtom : falseAtom);
+        }
+#endif
+        
         ScriptObject* o = atomKind(obj)==kObjectType ?
                 AvmCore::atomToScriptObject(obj) :
                 this->toPrototype(obj);
@@ -485,6 +521,7 @@ namespace avmplus
         return falseAtom;
     }
 
+    // Keep in sync with related methods.  See comments at Toplevel::getproperty.
     bool Toplevel::hasproperty(Atom obj, const Multiname* multiname, VTable* vtable)
     {
         const Binding propBinding = getBinding(vtable->traits, multiname);
@@ -495,6 +532,15 @@ namespace avmplus
             {
                 if (multiname->isValidDynamicName())
                 {
+#ifdef VMCFG_FLOAT
+                    // See FIXME in Toplevel::getproperty for why this is "correct".
+                    if (AvmCore::isFloat4(obj))
+                    {
+                        uint32_t index;
+                        if (AvmCore::getIndexFromAtom(multiname->getName()->atom(), &index))
+                            return index <= 3;
+                    }
+#endif
                     // Property does not have binding.  Might be a dynamic property.
                     // Have to walk the prototype chain.
                     const ScriptObject* curObj = AvmCore::isObject(obj) ?
@@ -524,6 +570,7 @@ namespace avmplus
         return result;
     }
 
+    // Keep in sync with related methods.  See comments at Toplevel::getproperty.
     bool Toplevel::deleteproperty(Atom obj, const Multiname* multiname, VTable* vtable) const
     {
         const Binding propBinding = getBinding(vtable->traits, multiname);
@@ -546,6 +593,19 @@ namespace avmplus
                         result = o->deleteMultinameProperty(multiname);
                     }
                 }
+#ifdef VMCFG_FLOAT
+                else if (AvmCore::isFloat4(obj))
+                {
+                    // See FIXME in Toplevel::getproperty for why this is "correct".
+                    if (multiname->isValidDynamicName())
+                    {
+                        uint32_t index;
+                        if (AvmCore::getIndexFromAtom(multiname->getName()->atom(), &index))
+                            if (index<= 3)
+                                return false;
+                    }
+                }
+#endif
             }
             break;
 
@@ -573,6 +633,25 @@ namespace avmplus
         return result;
     }
 
+    /* Many methods together implement the property lookup mechanism and
+     * need to be kept in sync when something changes; the introduction of float4,
+     * which has numeric-named fixed properties, is an example of such a change.
+     *
+     * The methods are at least these (please extend this list as necessary):
+     *
+     *   Toplevel::getproperty
+     *   Toplevel::hasproperty
+     *   Toplevel::deleteproperty
+     *   Toplevel::in_operator
+     *   Toplevel::setproperty_b
+     *   MethodEnv::getpropertylate_i
+     *   MethodEnv::getpropertylate_u
+     *   MethodEnv::getpropertylate_d
+     *   MethodEnv::haspropertylate_i
+     *   MethodEnv::haspropertylate_u
+     *   constructprop                   (instr.cpp)
+     *   call_prim_dynamic               (instr-inlines.h)
+     */
     Atom Toplevel::getproperty(Atom obj, const Multiname* multiname, VTable* vtable)
     {
         Binding b = getBinding(vtable->traits, multiname);
@@ -607,8 +686,47 @@ namespace avmplus
             }
             else
             {
-                // primitive types are not dynamic, so we can go directly
-                // to their __proto__ object.  but they are sealed, so fail if
+#ifdef VMCFG_FLOAT
+                // Handle number-named properties on float4 objects.
+                //
+                // FIXME (Bugzilla 695055):
+                //
+                // This is a mess because the property name, if not int, has already been 
+                // converted to string, so we cannot distinguish between 1.5 and "1.5", yet
+                // the float4 spec requires that we disallow the former and allow the latter.
+                //
+                // The decision is not local: the JIT will sometimes call getpropertylate_d if the
+                // property is a double, but other times call getproperty (or other helpers);
+                // the interpreter on the other hand calls getproperty in all cases when it does
+                // not call getUintProperty directly on the object.
+                //
+                // Of course, if the argument is a float then the jit will go through getproperty,
+                // yet we must handle 1f as well as we handle 1.
+                //
+                // For now, then, we handle strings that parse as integer (getIndexFromAtom is
+                // actually too restrictive, because it caps the index value at 2^32-2, but at
+                // least it can be applied uniformly) and let other strings pass through to
+                // prototype lookup.  This is not correct but it's a minor issue in practice.
+
+                if (AvmCore::isFloat4(obj))
+                {
+                    if (multiname->isValidDynamicName())
+                    {
+                        uint32_t index;
+                        if (AvmCore::getIndexFromAtom(multiname->getName()->atom(), &index))
+                        {
+                            float4_t f4 = AvmCore::atomToFloat4(obj);
+                            const float* pf4 = reinterpret_cast<const float*>(&f4);
+                            if (index <= 3)
+                                return core()->floatToAtom(pf4[index]);
+                            throwRangeError(kOutOfRangeError, core()->uintToString(index), core()->uintToString(4));
+                        }
+                    }
+                }
+#endif // VMCFG_FLOAT
+                
+                // Primitive types are not dynamic, so we can go directly
+                // to their __proto__ object.  But they are sealed, so fail if
                 // the property is not found on the proto chain.
 
                 if (multiname->isValidDynamicName())
@@ -650,6 +768,7 @@ namespace avmplus
         setproperty_b(obj,multiname,value,vtable,b);
     }
 
+    // Keep in sync with related methods.  See comments at Toplevel::getproperty.
     void Toplevel::setproperty_b(Atom obj, const Multiname* multiname, Atom value, VTable* vtable, Binding b) const
     {
         switch (AvmCore::bindingKind(b))
@@ -704,7 +823,7 @@ namespace avmplus
             }
             else
             {
-                // obj represents a primitive Number, Boolean, int, or String, and primitives
+                // obj represents a primitive Number, Boolean, float, float4, int, or String, and primitives
                 // are sealed and final.  Cannot add dynamic vars to them.
 
                 // property could not be found and created.

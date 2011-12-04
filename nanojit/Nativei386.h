@@ -52,8 +52,10 @@
 #define count_pop() _nvprof("x86-pop",1); count_instr();
 #define count_st() _nvprof("x86-st",1); count_instr();
 #define count_stq() _nvprof("x86-stq",1); count_instr();
+#define count_stf4() _nvprof("x86-stf4",1); count_instr();
 #define count_ld() _nvprof("x86-ld",1); count_instr();
 #define count_ldq() _nvprof("x86-ldq",1); count_instr();
+#define count_ldf4() _nvprof("x86-ldf4",1); count_instr();
 #define count_call() _nvprof("x86-call",1); count_instr();
 #define count_calli() _nvprof("x86-calli",1); count_instr();
 #define count_prolog() _nvprof("x86-prolog",1); count_instr();
@@ -74,8 +76,10 @@
 #define count_pop()
 #define count_st()
 #define count_stq()
+#define count_stf4()
 #define count_ld()
 #define count_ldq()
+#define count_ldf4()
 #define count_call()
 #define count_calli()
 #define count_prolog()
@@ -93,18 +97,21 @@
 
 namespace nanojit
 {
-    const int NJ_MAX_REGISTERS = 24; // gpregs, x87 regs, xmm regs
+    const int      NJ_MAX_REGISTERS      = 24;// gpregs, x87 regs, xmm regs
+    const uint32_t NJ_MAX_F4ARGS_IN_REGS =  3;// xmm0,xmm1,xmm2
 
     #define NJ_MAX_STACK_ENTRY           4096
     #define NJ_MAX_PARAMETERS               1
 
-    #define NJ_USES_IMMD_POOL          1
+    #define NJ_USES_IMMD_POOL               1
+    #define NJ_USES_IMMF4_POOL              1
 
     #define NJ_JTBL_SUPPORTED               1
     #define NJ_EXPANDED_LOADSTORE_SUPPORTED 1
     #define NJ_F2I_SUPPORTED                1
     #define NJ_SOFTFLOAT_SUPPORTED          0
     #define NJ_DIVI_SUPPORTED               1
+    #define RA_PREFERS_LSREG                1
     
         // Preserve a 16-byte stack alignment, to support the use of
         // SSE instructions like MOVDQA (if not by Tamarin itself,
@@ -153,7 +160,7 @@ namespace nanojit
     static const uint32_t FirstRegNum = 0;
     static const uint32_t LastRegNum = 16;
 
-    typedef int RegisterMask;
+    typedef uint32_t RegisterMask;
 
     static const int NumSavedRegs = 3;
     static const RegisterMask SavedRegs   = 1<<REGNUM(rEBX) | 1<<REGNUM(rEDI) | 1<<REGNUM(rESI);
@@ -166,6 +173,9 @@ namespace nanojit
     static const RegisterMask FpRegs      = x87Regs | XmmRegs;
     static const RegisterMask ScratchRegs = 1<<REGNUM(rEAX) | 1<<REGNUM(rECX) | 1<<REGNUM(rEDX) |
                                             FpRegs;
+    #define                   FpDRegs       FpRegs
+    #define                   FpSRegs       FpRegs
+    #define                   FpQRegs       XmmRegs
 
     static const RegisterMask AllowableByteRegs = 1<<REGNUM(rEAX) | 1<<REGNUM(rECX) |
                                                   1<<REGNUM(rEDX) | 1<<REGNUM(rEBX);
@@ -181,14 +191,14 @@ namespace nanojit
 
     #define DECLARE_PLATFORM_STATS()
 
-    #define DECLARE_PLATFORM_REGALLOC()
+    #define DECLARE_PLATFORM_REGALLOC()               \
+        const static Register argRegs[2], retRegs[2];
 
     #define JCC32 0x0f
     #define JMP8  0xeb
     #define JMP32 0xe9
 
     #define DECLARE_PLATFORM_ASSEMBLER()    \
-        const static Register argRegs[2], retRegs[2]; \
         int32_t max_stk_args;\
         debug_only( int32_t _fpuStkDepth; ) \
         debug_only( int32_t _sv_fpuStkDepth; ) \
@@ -196,6 +206,9 @@ namespace nanojit
         void nativePageSetup();\
         void underrunProtect(int);\
         bool hardenNopInsertion(const Config& c) { return c.harden_nop_insertion; } \
+        void asm_cmpf4(LIns *cond);  \
+        void asm_immf(Register r, int32_t i, float f, bool canClobberCCs); \
+        void asm_immf4(Register r, const float4_t& f4, bool canClobberCCs);\
         void asm_immi(Register r, int32_t val, bool canClobberCCs);\
         void asm_stkarg(LIns* p, int32_t& stkd);\
         void asm_farg(LIns*, int32_t& stkd);\
@@ -230,14 +243,22 @@ namespace nanojit
         } \
         void OPCODE2(int32_t opc2) { /* Length: 2 bytes.  */ \
             NanoAssert(unsigned(opc2) <= 0xffff); \
+            NanoAssert(unsigned(opc2) > 0xff); \
             *(--_nIns) = uint8_t(opc2); \
             *(--_nIns) = uint8_t(opc2 >> 8); \
         } \
         void OPCODE3(int32_t opc3) { /* Length: 3 bytes.  */ \
             NanoAssert(unsigned(opc3) <= 0xffffff); \
+            NanoAssert(unsigned(opc3) > 0xffff); \
             *(--_nIns) = uint8_t(opc3); \
             *(--_nIns) = uint8_t(opc3 >> 8); \
             *(--_nIns) = uint8_t(opc3 >> 16); \
+        } \
+        void OPCODE4(int32_t opc4) { /* Length: 4 bytes.  */ \
+            *(--_nIns) = uint8_t(opc4); \
+            *(--_nIns) = uint8_t(opc4 >> 8); \
+            *(--_nIns) = uint8_t(opc4 >> 16); \
+            *(--_nIns) = uint8_t(opc4 >> 24); \
         } \
         void MODRM(int32_t mod, int32_t ro, int32_t rm) { /* Length: 1 byte. */ \
             NanoAssert(unsigned(mod) < 4 && unsigned(ro) < 8 && unsigned(rm) < 8); \
@@ -409,8 +430,59 @@ namespace nanojit
         void JNO(NIns* t); \
         void SSE(int32_t c, Register d, Register s); \
         void SSEm(int32_t c, Register r, int32_t d, Register b); \
+        void SSEs(int32_t c, Register d, Register s); \
         void SSEsib(int32_t c, Register rr, int32_t d, Register rb, Register ri, int32_t scale); \
         void LDSDm(Register r, const double* addr); \
+    void SSEu8_4(int32_t c, Register d, Register s, uint8_t imm); \
+    void SSEu8_3(int32_t c, Register d, Register s, uint8_t imm); \
+		void SSEu8_2(int32_t c, Register d, Register s, uint8_t imm); \
+		void SSEsm(int32_t c, Register r, int32_t d, Register b); \
+		void SSEssib(int32_t c, Register rr, int32_t d, Register rb, Register ri, int32_t scale); \
+		void LDSSm(Register r, const float* addr); \
+		void LDPSm(Register r, const float4_t* addr); \
+		void SSE_LDUPS(Register r, int32_t d, Register b); \
+		void SSE_LDUPSsib(Register r, int32_t d, Register rb, Register ri, int32_t scale); \
+		void SSE_STUPS(int32_t d, Register b, Register r); \
+		void SSE_CVTSI2SS(Register xr, Register gr); \
+		void SSE_CVTTSS2SI(Register gr, Register xr); \
+		void SSE_MOVSS(Register rd, Register rs); \
+		void SSE_PMOVMSKB(Register rd, Register rs); \
+		void SSE_ADDSS(Register rd, Register rs); \
+		void SSE_SUBSS(Register rd, Register rs); \
+		void SSE_MULSS(Register rd, Register rs); \
+		void SSE_DIVSS(Register rd, Register rs); \
+		void SSE_ADDPS(Register rd, Register rs); \
+		void SSE_SUBPS(Register rd, Register rs); \
+		void SSE_MULPS(Register rd, Register rs); \
+		void SSE_DIVPS(Register rd, Register rs); \
+    void SSE_RCPPS(Register rd, Register rs); \
+    void SSE_RCPSS(Register rd, Register rs); \
+    void SSE_RSQRTPS(Register rd, Register rs); \
+    void SSE_RSQRTSS(Register rd, Register rs); \
+    void SSE_SQRTPS(Register rd, Register rs); \
+    void SSE_SQRTSS(Register rd, Register rs); \
+    void SSE_SQRTSD(Register rd, Register rs); \
+    void SSE_MINPS(Register rd, Register rs); \
+    void SSE_MAXPS(Register rd, Register rs); \
+    void SSE_DPPS(Register rd, Register rs, uint8_t imm); \
+		void SSE_PSHUFD(Register rd, Register rs, uint8_t imm); \
+		void SSE_UCOMISS(Register rl, Register rr); \
+		void SSE_CMPNEQPS(Register rl, Register rr); \
+		void SSE_XORPS(Register r, const uint32_t* maskaddr); \
+		void SSE_ANDPS(Register r, const uint32_t* maskaddr); \
+\
+		void FCOM32(bool p, int32_t d, Register b); \
+		void FLD32sm(const float* dm); \
+		void FADD32( int32_t d, Register b); \
+		void FSUB32( int32_t d, Register b); \
+		void FSUBR32(int32_t d, Register b); \
+		void FMUL32( int32_t d, Register b); \
+		void FDIV32( int32_t d, Register b); \
+		void FDIVR32(int32_t d, Register b); \
+		void FADD32dm( const float *dm); \
+		void FSUBR32dm(const float* dm); \
+		void FMUL32dm( const float* dm); \
+		void FDIVR32dm(const float* dm); \
         void SSE_LDQ( Register r, int32_t d, Register b); \
         void SSE_LDSS(Register r, int32_t d, Register b); \
         void SSE_LDQsib(Register r, int32_t d, Register rb, Register ri, int32_t scale); \
@@ -426,6 +498,7 @@ namespace nanojit
         void SSE_CVTSS2SD(Register xr, Register gr); \
         void SSE_CVTDQ2PD(Register d, Register r); \
         void SSE_MOVD(Register d, Register s); \
+        void SSE_MOVAPS(Register rd, Register rs); \
         void SSE_MOVSD(Register rd, Register rs); \
         void SSE_ADDSD(Register rd, Register rs); \
         void SSE_ADDSDm(Register r, const double* addr); \
@@ -434,6 +507,7 @@ namespace nanojit
         void SSE_DIVSD(Register rd, Register rs); \
         void SSE_UCOMISD(Register rl, Register rr); \
         void SSE_XORPD(Register r, const uint32_t* maskaddr); \
+        void SSE_ANDPD(Register r, const uint32_t* maskaddr); \
         void SSE_XORPDr(Register rd, Register rs); \
         void fpu_push(); \
         void fpu_pop(); \

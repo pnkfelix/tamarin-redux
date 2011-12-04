@@ -382,6 +382,40 @@ namespace avmplus
 
     // ----------------------------
 
+#ifdef VMCFG_FLOAT
+    class GC_AS3_EXACT(FloatVectorClass, TypedVectorClass<FloatVectorObject>)
+    {
+    private:
+        explicit FloatVectorClass(VTable* vtable);
+    public:
+        REALLY_INLINE static FloatVectorClass* create(MMgc::GC* gc, VTable* cvtable)
+        {
+            return new (gc, MMgc::kExact, cvtable->getExtraSize()) FloatVectorClass(cvtable);
+        }
+
+        GC_NO_DATA(FloatVectorClass)
+
+        DECLARE_SLOTS_FloatVectorClass;
+    };
+
+    class GC_AS3_EXACT(Float4VectorClass, TypedVectorClass<Float4VectorObject>)
+    {
+    private:
+        explicit Float4VectorClass(VTable* vtable);
+    public:
+        REALLY_INLINE static Float4VectorClass* create(MMgc::GC* gc, VTable* cvtable)
+        {
+            return new (gc, MMgc::kExact, cvtable->getExtraSize()) Float4VectorClass(cvtable);
+        }
+        
+        GC_NO_DATA(Float4VectorClass)
+        
+        DECLARE_SLOTS_Float4VectorClass;
+    };
+#endif
+
+    // ----------------------------
+
     class GC_AS3_EXACT(ObjectVectorClass, TypedVectorClass<ObjectVectorObject>)
     {
     private:
@@ -461,6 +495,16 @@ namespace avmplus
         void atomToValueKnown(Atom atom, double& value);
         Atom valueToAtom(const double& value) const;
 
+#ifdef VMCFG_FLOAT
+        void atomToValue(Atom atom, float& value);
+        void atomToValueKnown(Atom atom, float& value);
+        Atom valueToAtom(const float& value) const;
+
+        void atomToValue(Atom atom, float4_t& value);
+        void atomToValueKnown(Atom atom, float4_t& value);
+        Atom valueToAtom(const float4_t& value) const;
+#endif // VMCFG_FLOAT
+
         void atomToValue(Atom atom, OpaqueAtom& value);
         void atomToValueKnown(Atom atom, OpaqueAtom& value);
         Atom valueToAtom(const OpaqueAtom& value) const;
@@ -488,7 +532,7 @@ namespace avmplus
         friend class CodegenLIR;
         friend class ObjectVectorObject;
         template<class OBJ> friend class TypedVectorClass;
-        template<class TLISTVA> friend class VectorAccessor;
+        template<class TLISTVA, uintptr_t align> friend class VectorAccessor;
 
     public:
         typedef TLIST LIST;
@@ -515,8 +559,10 @@ namespace avmplus
         void _spliceHelper(uint32_t insertPoint, uint32_t insertCount, uint32_t deleteCount, Atom args, uint32_t offset);
         uint32_t AS3_push(Atom* argv, int argc);
         typename TLIST::TYPE AS3_pop();
+        void AS3_pop(typename TLIST::TYPE *);
         uint32_t AS3_unshift(Atom* argv, int argc);
         typename TLIST::TYPE AS3_shift();
+        void AS3_shift(typename TLIST::TYPE *);
 
         // ScriptObject method overrides
         virtual bool hasAtomProperty(Atom name) const;
@@ -608,7 +654,7 @@ namespace avmplus
     // without intermediate copying). Note that it is explicitly legal to pass
     // a NULL VectorObject to the ctor (which will cause addr() to also return NULL
     // and length() to return 0). This class must be used only on the stack.
-    template<class TLIST>
+    template<class TLIST, uintptr_t align=0>
     class VectorAccessor
     {
     public:
@@ -700,6 +746,59 @@ namespace avmplus
 
     // ----------------------------
 
+#ifdef VMCFG_FLOAT
+    class GC_AS3_EXACT(FloatVectorObject, TypedVectorObject< DataList<float> >)
+    {
+    protected:
+        explicit FloatVectorObject(VTable* ivtable, ScriptObject* delegate);
+
+    public:
+        REALLY_INLINE static FloatVectorObject* create(MMgc::GC* gc, VTable* ivtable, ScriptObject* delegate)
+        {
+            return new (gc, MMgc::kExact, ivtable->getExtraSize()) FloatVectorObject(ivtable, delegate);
+        }
+
+        // AS3 native function implementations
+        FloatVectorObject* newThisType();
+
+        // ------------------------ DATA SECTION BEGIN
+    private:
+        GC_NO_DATA(FloatVectorObject)
+
+            DECLARE_SLOTS_FloatVectorObject;
+        // ------------------------ DATA SECTION END
+    };
+    typedef VectorAccessor< DataList<float> > FloatVectorAccessor;
+
+    // Macros and templates don't mix
+    typedef TypedVectorObject< DataList<float4_t, 16> > Float4VectorObjectBaseClass;
+    
+    class GC_AS3_EXACT(Float4VectorObject, Float4VectorObjectBaseClass)
+    {
+    protected:
+        explicit Float4VectorObject(VTable* ivtable, ScriptObject* delegate);
+        
+    public:
+        REALLY_INLINE static Float4VectorObject* create(MMgc::GC* gc, VTable* ivtable, ScriptObject* delegate)
+        {
+            return new (gc, MMgc::kExact, ivtable->getExtraSize()) Float4VectorObject(ivtable, delegate);
+        }
+        
+        // AS3 native function implementations
+        Float4VectorObject* newThisType();
+        
+        // ------------------------ DATA SECTION BEGIN
+    private:
+        GC_NO_DATA(Float4VectorObject)
+        
+        DECLARE_SLOTS_Float4VectorObject;
+        // ------------------------ DATA SECTION END
+    };
+    typedef VectorAccessor< DataList<float4_t, 16>, 16 > Float4VectorAccessor;
+#endif
+
+    // ----------------------------
+
     class GC_AS3_EXACT(ObjectVectorObject, TypedVectorObject< AtomList >)
     {
     protected:
@@ -742,6 +841,7 @@ namespace avmplus
             atomToValueKnown(value, tmp);
             m_list.setPointer(index, (AtomList::TYPE)tmp);
         }
+
 
         // AS3 native function implementations
         ObjectVectorObject* newThisType();
