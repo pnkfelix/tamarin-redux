@@ -76,7 +76,7 @@ namespace avmplus
         // thro=1  means the instruction may throw an exception
         // calls=1 means the topmost value on the stack is an argument count
         // push=n means the instruction pushes n values (after popping).  Current limit is 7
-        // pop=n means the instruction pops n values.  Current limit is 3
+        // pop=n means the instruction pops n values.  Current limit is 7
         // pop_ex=1 means the instruction may pop more values than shown in the pop column,
         //    there is custom logic elsewhere to handle it.  Usually it means there is a
         //    multiname operand
@@ -127,7 +127,7 @@ namespace avmplus
         {    1,    0,    0,   1,    0,   1,   2,   0,    0,    0         N("hasnext") },
         {    1,    0,    0,   0,    0,   1,   0,   0,    0,    0         N("pushnull") },        // 0x20
         {    1,    0,    0,   0,    0,   1,   0,   0,    0,    0         N("pushundefined") },
-        {    0,    0,    0,   0,    0,   0,   0,   0,    0,    0         N("0x22") },
+        {    2,    0,    0,   0,    0,   1,   0,   0,    0,    0         N("pushfloat") },
         {    1,    0,    0,   1,    0,   1,   2,   0,    0,    0         N("nextvalue") },
         {    0,    0,    0,   0,    0,   0,   0,   0,    0,    0         N("0x24") },            // pushbyte
         {    0,    0,    0,   0,    0,   0,   0,   0,    0,    0         N("0x25") },            // pushshort
@@ -177,7 +177,7 @@ namespace avmplus
         {    1,    0,    0,   0,    0,   1,   1,   0,    0,    0         N("sxi8") },
         {    1,    0,    0,   0,    0,   1,   1,   0,    0,    0         N("sxi16") },
         {    2,    0,    0,   1,    0,   1,   1,   0,    0,    0         N("applytype") },
-        {    0,    0,    0,   0,    0,   0,   0,   0,    0,    0         N("0x54") },
+        {    2,    0,    0,   0,    0,   1,   0,   0,    0,    0         N("pushfloat4") },
         {    2,    0,    0,   1,    1,   1,   0,   0,    0,    0         N("newobject") },
         {    2,    0,    0,   1,    1,   1,   0,   0,    0,    0         N("newarray") },
         {    1,    0,    0,   1,    0,   1,   0,   0,    0,    0         N("newactivation") },
@@ -214,9 +214,9 @@ namespace avmplus
         {    1,    0,    0,   1,    0,   1,   1,   0,    0,    0         N("convert_b") },
         {    1,    0,    0,   1,    0,   1,   1,   0,    0,    0         N("convert_o") },
         {    1,    0,    0,   1,    0,   1,   1,   0,    0,    0         N("checkfilter") },
-        {    0,    0,    0,   0,    0,   0,   0,   0,    0,    0         N("0x79") },
-        {    0,    0,    0,   0,    0,   0,   0,   0,    0,    0         N("0x7A") },
-        {    0,    0,    0,   0,    0,   0,   0,   0,    0,    0         N("0x7B") },
+        {    1,    0,    0,   1,    0,   1,   1,   0,    0,    0         N("convert_f") },
+        {    1,    0,    0,   1,    0,   1,   1,   0,    0,    0         N("unplus") },
+        {    1,    0,    0,   1,    0,   1,   1,   0,    0,    0         N("convert_f4") },
         {    0,    0,    0,   0,    0,   0,   0,   0,    0,    0         N("0x7C") },
         {    0,    0,    0,   0,    0,   0,   0,   0,    0,    0         N("0x7D") },
         {    0,    0,    0,   0,    0,   0,   0,   0,    0,    0         N("0x7E") },
@@ -404,6 +404,7 @@ namespace avmplus
         {    1,    0,    0,   0,    0,   0,   0,   0,    0,    0         N("debugexit") },
         {    1,    0,    0,   1,    0,   1,   1,   0,    0,    0         N("lix8") },
         {    1,    0,    0,   1,    0,   1,   1,   0,    0,    0         N("lix16") },
+        {    1,    0,    0,   1,    0,   0,   0,   0,    0,    0         N("float4") },
         // DO NOT ALTER OR MOVE THE NEXT LINE.
         // END
     };

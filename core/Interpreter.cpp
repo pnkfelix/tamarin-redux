@@ -105,7 +105,10 @@ namespace avmplus
 #define IS_DOUBLE(v)         (((v) & 7) == kDoubleType)
 #define IS_BOOLEAN(v)        (((v) & 7) == kBooleanType)
 #define IS_STRING(v)         (((v) & 7) == kStringType)
-
+#ifdef VMCFG_FLOAT
+#define IS_FLOAT(v)          ((((v) & 7) == kSpecialBibopType) && ((v)!=AtomConstants::undefinedAtom) && bibopKind(v)==kBibopFloatType)
+#define IS_FLOAT4(v)         ((((v) & 7) == kSpecialBibopType) && ((v)!=AtomConstants::undefinedAtom) && bibopKind(v)==kBibopFloat4Type)
+#endif // VMCFG_FLOAT
 // note that the argument to SIGN_EXTEND is expected to be upshifted 3 bits (not a "raw" intptr),
 // but it doesn't expect or require the tag bits to be set properly.
 #ifdef AVMPLUS_64BIT
@@ -126,8 +129,19 @@ namespace avmplus
 #define INT32_VALUE(v)       int32_t(atomGetIntptr(v))
 #define UINT32_VALUE(v)      uint32_t(atomGetIntptr(v))
 #define DOUBLE_VALUE(v)      (*(double*)((v) ^ kDoubleType))
-#define IS_BOTH_INTEGER(a,b) ((((a ^ kIntptrType) | (b ^ kIntptrType)) & 7) == 0) // less control flow but more registers -- which is better?
-#define IS_BOTH_DOUBLE(a,b)  ((((a ^ kDoubleType) | (b ^ kDoubleType)) & 7) == 0)
+#ifdef VMCFG_FLOAT
+#define FLOAT_VALUE(v)       (*(float*)((v) ^ kSpecialBibopType))
+#endif
+#define IS_BOTH_KIND(a,b,k) (((( (a) ^ (k) ) | ( (b) ^ (k) )) & 7) == 0) // less control flow but more registers -- which is better?
+#define IS_BOTH_INTEGER(a,b) IS_BOTH_KIND(a,b,kIntptrType) 
+#define IS_BOTH_DOUBLE(a,b)  IS_BOTH_KIND(a,b,kDoubleType)  
+#ifdef VMCFG_FLOAT
+#define IS_BOTH_BIBOP(a,b,k) IS_BOTH_KIND(a,b,kSpecialBibopType) && \
+                             ((a)!=AtomConstants::undefinedAtom) && ((b)!=AtomConstants::undefinedAtom) \
+                             && bibopKind(a)==k && bibopKind(b)==k
+#define IS_BOTH_FLOAT(a,b)   IS_BOTH_BIBOP(a,b,kBibopFloatType)
+#define IS_BOTH_FLOAT4(a,b)  IS_BOTH_BIBOP(a,b,kBibopFloat4Type)
+#endif // VMCFG_FLOAT
 
 #ifdef VMCFG_WORDCODE
 #  define WORD_CODE_ONLY(x)  x
@@ -327,8 +341,13 @@ namespace avmplus
              III(0x07, L_dxnslate)
              III(0x08, L_kill)
              XXX(0x09) /* OP_label */
+#ifdef VMCFG_FLOAT
+             III(0x0A, L_lf32x4)
+             III(0x0B, L_sf32x4)
+#else
              XXX(0x0A)
              XXX(0x0B)
+#endif
              III(0x0C, L_ifnlt)
              III(0x0D, L_ifnle)
              III(0x0E, L_ifngt)
@@ -351,7 +370,11 @@ namespace avmplus
              III(0x1F, L_hasnext)
              III(0x20, L_pushnull)
              III(0x21, L_pushundefined)
+#ifdef VMCFG_FLOAT
+             III(0x22, L_pushfloat)
+#else
              XXX(0x22)
+#endif             
              III(0x23, L_nextvalue)
              XXX(0x24) /* OP_pushbyte */
              XXX(0x25) /* OP_pushshort */
@@ -401,7 +424,11 @@ namespace avmplus
              IIM(0x51, L_sxi8)
              IIM(0x52, L_sxi16)
              III(0x53, L_applytype)
+#ifdef VMCFG_FLOAT
+             III(0x54, L_pushfloat4)
+#else
              XXX(0x54)
+#endif             
              III(0x55, L_newobject)
              III(0x56, L_newarray)
              III(0x57, L_newactivation)
@@ -438,9 +465,15 @@ namespace avmplus
              III(0x76, L_convert_b)
              III(0x77, L_convert_o)
              III(0x78, L_checkfilter)
+#ifdef VMCFG_FLOAT
+             III(0x79, L_convert_f)
+             III(0x7A, L_unplus)
+             III(0x7B, L_convert_f4)
+#else
              XXX(0x79)
              XXX(0x7A)
              XXX(0x7B)
+#endif             
              XXX(0x7C)
              XXX(0x7D)
              XXX(0x7E)
@@ -633,6 +666,11 @@ namespace avmplus
 #endif
              III(0x135, L_lix8)
              III(0x136, L_lix16)
+#ifdef VMCFG_FLOAT
+             III(0x137, L_float4)
+#else
+             XXX(0x137)
+#endif
 #  if defined GNUC_THREADING
             };
             AvmAssert(opcode_labels[0x18] == &&L_ifge);
@@ -973,6 +1011,9 @@ namespace avmplus
         int32_t i32l;               // ditto
         float f2l;                  // ditto
         double d2l;                 // ditto
+#ifdef VMCFG_FLOAT
+        float4_t f4l;               // ditto
+#endif
         Atom a1l;                   // ditto
 #ifndef VMCFG_WORDCODE
         register uint32_t tmp_u30;
@@ -1153,6 +1194,19 @@ namespace avmplus
                 NEXT;
             }
 
+#ifdef VMCFG_FLOAT
+            INSTR(pushfloat) {
+                AvmAssertMsg( pool->hasFloatSupport(), "float instruction(pushfloat), but float support disabled");
+                *(++sp) = kSpecialBibopType|(uintptr_t)pool->cpool_float[(uint32_t)U30ARG];
+                NEXT;
+            }
+                    
+            INSTR(pushfloat4) {
+                AvmAssertMsg( pool->hasFloatSupport(), "float instruction(pushfloat4), but float support disabled");
+                *(++sp) = kSpecialBibopType|(uintptr_t)pool->cpool_float4[(uint32_t)U30ARG];
+                NEXT;
+            }
+#endif
             INSTR(pushnamespace) {
                 *(++sp) = pool->cpool_ns[(uint32_t)U30ARG]->atom();
                 NEXT;
@@ -1244,6 +1298,34 @@ namespace avmplus
                 NEXT;
             }
 
+#ifdef VMCFG_FLOAT
+            INSTR(convert_f) {
+                // Note the instruction may be generated from the verifier.
+                if (!IS_FLOAT(sp[0])) {
+                    SAVE_EXPC;
+                    sp[0] = core->floatAtom(sp[0]);
+                }
+                NEXT;
+            }
+
+            INSTR(convert_f4) {
+                // Note the instruction may be generated from the verifier.
+                if (!IS_FLOAT4(sp[0])) {
+                    SAVE_EXPC;
+                    sp[0] = core->float4Atom(sp[0]);
+                }
+                NEXT;
+            }                    
+       
+            INSTR(unplus) {
+                // Note the instruction may be generated from the verifier.
+                if (!IS_FLOAT(sp[0]) && !IS_FLOAT4(sp[0])) {
+                    SAVE_EXPC;
+                    sp[0] = core->numericAtom(sp[0]);
+                } 
+                NEXT;
+            }
+#endif
 #ifndef VMCFG_WORDCODE  /* Jump table forwards to convert_d */
             INSTR(coerce_d) {
                 goto convert_d_impl;
@@ -1286,6 +1368,13 @@ namespace avmplus
                     }
                 }
                 SAVE_EXPC;
+#ifdef VMCFG_FLOAT
+                if(pool->hasFloatSupport() ){
+                    SAVE_EXPC;
+                    sp[0] = op_negate(core, a1);
+                    NEXT;
+                }
+#endif
                 sp[0] = core->doubleToAtom(-AvmCore::number(a1));
                 NEXT;
             }
@@ -1390,8 +1479,27 @@ namespace avmplus
         dest = core->doubleToAtom(DOUBLE_VALUE(a1) + DOUBLE_VALUE(a2)); \
         NEXT; \
     } \
+FLOAT_ONLY(\
+    else if (pool->hasFloatSupport() ) { \
+       if ( IS_BOTH_FLOAT(a1, a2) ) {\
+            dest = core->floatToAtom(FLOAT_VALUE(a1) + FLOAT_VALUE(a2)); \
+            NEXT; \
+       }\
+       if(IS_BOTH_FLOAT4(a1,a2)){\
+            float4_decl_v(a1);\
+            float4_decl_v(a2);\
+            \
+            dest = core->float4ToAtom( f4_add(a1v,a2v) ); \
+            NEXT;\
+       }\
+    } else { /* pool doesn't have float support */ \
+        SAVE_EXPC; \
+        dest = op_add_nofloat(core, a1, a2);\
+        NEXT;\
+    }\
+)\
     SAVE_EXPC; \
-    dest = toplevel->add2(a1, a2); \
+    dest = op_add(core, a1, a2);\
     NEXT
 
 // Subtract 1 from a1 if a1 is a fixnum and computation does not overflow.
@@ -1416,7 +1524,25 @@ namespace avmplus
             increment_impl:
                 a1 = *a2p;
                 FAST_INC_MAYBE(a1,*a2p);    // note, *a2p is lvalue here
-                *a2p = core->numberAtom(a1);
+#ifdef VMCFG_FLOAT
+                if(pool->hasFloatSupport() ) {
+                    a1 = *a2p = core->numericAtom(a1);
+                    if( IS_FLOAT(a1) ){
+                        *a2p = core->floatToAtom(FLOAT_VALUE(a1) + 1.0f );
+                        NEXT;
+                    }
+                    if( IS_FLOAT4(a1) ){
+                        float4_t one = { 1,1,1,1 };
+                        *a2p = core->float4ToAtom( f4_add(AvmCore::atomToFloat4(a1), one ) );
+                        NEXT;
+                    }
+                    AvmAssert( IS_DOUBLE(a1) || IS_INTEGER(a1) );
+                } else 
+#endif // VMCFG_FLOAT
+                {
+                    *a2p = core->numberAtom(a1);
+                }
+
                 core->increment_d(a2p, 1);
                 NEXT;
             }
@@ -1452,7 +1578,24 @@ namespace avmplus
             decrement_impl:
                 a1 = *a2p;
                 FAST_DEC_MAYBE(a1,*a2p);    // note, *a2p is lvalue here
-                *a2p = core->numberAtom(a1);
+#ifdef VMCFG_FLOAT
+                if( pool->hasFloatSupport() ) {
+                    a1 = *a2p = core->numericAtom(a1);
+                    if( IS_FLOAT(a1) ){
+                        *a2p = core->floatToAtom(FLOAT_VALUE(a1) - 1.0f );
+                        NEXT;
+                    }
+                    if( IS_FLOAT4(a1) ){
+                        float4_t one = { 1,1,1,1 };
+                        *a2p = core->float4ToAtom( f4_sub(AvmCore::atomToFloat4(a1), one ) );
+                        NEXT;
+                    }
+                    AvmAssert( IS_DOUBLE(a1) || IS_INTEGER(a1) );
+                } else
+#endif // VMCFG_FLOAT
+                {
+                    *a2p = core->numberAtom(a1);
+                }
                 core->increment_d(a2p, -1);
                 NEXT;
             }
@@ -1532,6 +1675,22 @@ namespace avmplus
                     NEXT;
                 }
                 SAVE_EXPC;
+#ifdef VMCFG_FLOAT
+                if (pool->hasFloatSupport()){
+                    a1 = core->numericAtom(a1);
+                    a2 = core->numericAtom(a2);
+                    if( IS_BOTH_FLOAT(a1, a2) ) {
+                        sp[0] = core->floatToAtom(FLOAT_VALUE(a1) - FLOAT_VALUE(a2));
+                        NEXT;
+                    }
+                    if(AvmCore::isFloat4(a1) || AvmCore::isFloat4(a2)){
+                        float4_decl_v(a1);
+                        float4_decl_v(a2);
+                        sp[0] = core->float4ToAtom( f4_sub(a1v,a2v) ); 
+                        NEXT;
+                    }
+                }
+#endif // VMCFG_FLOAT
                 d1 = AvmCore::number(a1);
                 d2 = AvmCore::number(a2);
                 sp[0] = core->doubleToAtom(d1 - d2);
@@ -1571,10 +1730,26 @@ namespace avmplus
 #endif
                 // OPTIMIZEME - multiplication of small integers might be optimized?
                 if (IS_BOTH_DOUBLE(a1, a2)) {
-                    sp[0] = core->doubleToAtom(DOUBLE_VALUE(a1) * DOUBLE_VALUE(a2)); \
+                    sp[0] = core->doubleToAtom(DOUBLE_VALUE(a1) * DOUBLE_VALUE(a2)); 
                     NEXT;
                 }
                 SAVE_EXPC;
+#ifdef VMCFG_FLOAT
+                if (pool->hasFloatSupport()){
+                    a1 = core->numericAtom(a1);
+                    a2 = core->numericAtom(a2);
+                    if(IS_BOTH_FLOAT(a1, a2)) {
+                        sp[0] = core->floatToAtom(FLOAT_VALUE(a1) * FLOAT_VALUE(a2)); 
+                        NEXT;
+                    }
+                    if(AvmCore::isFloat4(a1) || AvmCore::isFloat4(a2)){
+                        float4_decl_v(a1);
+                        float4_decl_v(a2);
+                        sp[0] = core->float4ToAtom( f4_mul(a1v,a2v) ); 
+                        NEXT;
+                    }
+                }
+#endif // VMCFG_FLOAT
                 d1 = AvmCore::number(a1);
                 d2 = AvmCore::number(a2);
                 sp[0] = core->doubleToAtom(d1 * d2);
@@ -1606,6 +1781,22 @@ namespace avmplus
                     NEXT;
                 }
                 SAVE_EXPC;
+#ifdef VMCFG_FLOAT
+                if(pool->hasFloatSupport()) {
+                    a1 = core->numericAtom(a1);
+                    a2 = core->numericAtom(a2);
+                    if(IS_BOTH_FLOAT(a1, a2)) {
+                        sp[0] = core->floatToAtom(FLOAT_VALUE(a1) / FLOAT_VALUE(a2)); 
+                        NEXT;
+                    }
+                    if(AvmCore::isFloat4(a1) || AvmCore::isFloat4(a2)){
+                        float4_decl_v(a1);
+                        float4_decl_v(a2);
+                        sp[0] = core->float4ToAtom( f4_div(a1v, a2v) ); 
+                        NEXT;
+                    }
+                }
+#endif // VMCFG_FLOAT
                 d1 = AvmCore::number(a1);
                 d2 = AvmCore::number(a2);
                 sp[0] = core->doubleToAtom(d1 / d2);
@@ -1632,7 +1823,29 @@ namespace avmplus
                     sp[0] = core->doubleToAtom(MathUtils::mod(DOUBLE_VALUE(a1), DOUBLE_VALUE(a2)));
                     NEXT;
                 }
+
                 SAVE_EXPC;
+#ifdef VMCFG_FLOAT
+                if( pool->hasFloatSupport() ) {
+                    a1 = core->numericAtom(a1);
+                    a2 = core->numericAtom(a2);
+                    if( IS_BOTH_FLOAT(a1, a2) ) {
+                        sp[0] = core->floatToAtom( (float) MathUtils::mod(FLOAT_VALUE(a1), FLOAT_VALUE(a2))); 
+                        NEXT;
+                    }
+                    if(AvmCore::isFloat4(a1) || AvmCore::isFloat4(a2)){
+                        float4_t x; AvmCore::float4(&x, a1);
+                        float4_t y; AvmCore::float4(&y, a2);
+                        float rx = (float) MathUtils::mod(f4_x(x), f4_x(y));
+                        float ry = (float) MathUtils::mod(f4_y(x), f4_y(y));
+                        float rz = (float) MathUtils::mod(f4_z(x), f4_z(y));
+                        float rw = (float) MathUtils::mod(f4_w(x), f4_w(y));
+                        float4_t res = {rx,ry,rz,rw};
+                        sp[0] = core->float4ToAtom( res ); 
+                        NEXT;
+                    }
+                }
+#endif // VMCFG_FLOAT
                 d1 = AvmCore::number(a1);
                 d2 = AvmCore::number(a2);
                 sp[0] = core->doubleToAtom(MathUtils::mod(d1, d2));
@@ -1815,6 +2028,10 @@ namespace avmplus
         b1 = a1 numeric_cmp a2; \
     else if (IS_BOTH_DOUBLE(a1, a2)) \
         b1 = DOUBLE_VALUE(a1) numeric_cmp DOUBLE_VALUE(a2); \
+FLOAT_ONLY(\
+    else if (IS_BOTH_FLOAT(a1, a2) && pool->hasFloatSupport()) \
+        b1 = FLOAT_VALUE(a1) numeric_cmp FLOAT_VALUE(a2); \
+)\
     else \
         b1 = generic_cmp
 
@@ -2257,7 +2474,36 @@ namespace avmplus
             avmplus::mop_##call(envDomain->globalMemoryBase() + (addr), value);
 #endif
 
+#if defined(VMCFG_LITTLE_ENDIAN)
+    // Note, this depends on one of three conditions being true:
+    //  - float4_t is a generic structure type that is not mapped directly
+    //    to the SIMD type, and ByteArray storage is 4-byte aligned
+    //  - SIMD loads/stores to unaligned addresses is OK
+    //  - ByteArray storage is 16-byte aligned
+    #define MOPS_LOAD_F4(addr, call, result) \
+            addr &= ~15; \
+            MOPS_RANGE_CHECK(addr, float4_t); \
+            union { const uint8_t* p8; const float4_t* p; }; \
+            p8 = envDomain->globalMemoryBase() + (addr); \
+            result = *p;
 
+    #define MOPS_STORE_F4(addr, call, value) \
+            addr &= ~15; \
+            MOPS_RANGE_CHECK(addr, float4_t); \
+            union { const uint8_t* p8; float4_t* p; }; \
+            p8 = envDomain->globalMemoryBase() + (addr); \
+            *p = (value);
+#else
+    #define MOPS_LOAD_F4(addr, call, result) \
+            addr &= ~15; \
+            MOPS_RANGE_CHECK(addr, float4_t); \
+            avmplus::mop_##call(&result, envDomain->globalMemoryBase() + (addr));
+
+    #define MOPS_STORE_F4(addr, call, value) \
+            addr &= ~15; \
+            MOPS_RANGE_CHECK(addr, float4_t); \
+            avmplus::mop_##call(envDomain->globalMemoryBase() + (addr), value);
+#endif
 
             // loads
 #ifdef VMCFG_WORDCODE
@@ -2306,10 +2552,19 @@ namespace avmplus
 
             INSTR(lf64) {
                 i1 = AvmCore::integer(sp[0]);       // i1 = addr
-                MOPS_LOAD_FP(i1, double, lf64, d2l);        // d2l = addr
+                MOPS_LOAD_FP(i1, double, lf64, d2l);        // d2l = result
                 sp[0] = core->doubleToAtom(d2l);
                 NEXT;
             }
+
+#ifdef VMCFG_FLOAT
+            INSTR(lf32x4) {
+                i1 = AvmCore::integer(sp[0]);       // i1 = addr
+                MOPS_LOAD_F4(i1, lf32x4, f4l);        // f4l = result
+                sp[0] = core->float4ToAtom(f4l);
+                NEXT;
+            }
+#endif
 
             // stores
             INSTR(si8) {
@@ -2352,6 +2607,16 @@ namespace avmplus
                 NEXT;
             }
 
+#ifdef VMCFG_FLOAT
+            INSTR(sf32x4) {
+                i1 = AvmCore::integer(sp[0]);
+                AvmCore::float4(&f4l, sp[-1]);
+                MOPS_STORE_F4(i1, sf32x4, f4l);
+                sp -= 2;
+                NEXT;
+            }
+#endif
+                   
             // delete property using multiname
             INSTR(deleteproperty) {
                 SAVE_EXPC;
@@ -3240,8 +3505,22 @@ namespace avmplus
                 }
                 NEXT;
             }
-
+                    
+#ifdef VMCFG_FLOAT
+            INSTR(float4) {
+                // Does not pop its arguments but replaces the top argument by the result,
+                // the stack is cleaned up by subsequent code.  This mess is brought upon
+                // us by Verifier::emitCallpropertySlot(), primarily.
+                float4_t result;
+                result.w = AvmCore::singlePrecisionFloat(sp[0]);
+                result.z = AvmCore::singlePrecisionFloat(sp[-1]);
+                result.y = AvmCore::singlePrecisionFloat(sp[-2]);
+                result.x = AvmCore::singlePrecisionFloat(sp[-3]);
+                sp[0] = core->float4ToAtom(result);
+                NEXT;
+            }
 #endif
+#endif  // VMCFG_WORDCODE
 #if defined SWITCH_DISPATCH
             } // switch
             // illegal instruction or accidental break

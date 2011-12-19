@@ -155,6 +155,9 @@ namespace avmplus
     class HeapMultiname;
     class InlineHashtable;
     class IntVectorObject;
+#ifdef VMCFG_FLOAT
+    class FloatVectorObject;
+#endif    
     class DoubleVectorObject;
     class UIntVectorObject;
     class ObjectVectorObject;
@@ -225,7 +228,7 @@ namespace avmplus
     class DynamicPropertyOutputClass;
     class DynamicPropertyOutputObject;
 
-    template<class TLIST> class VectorAccessor;
+    template<class TLIST, uintptr_t align> class VectorAccessor;
 
     struct WordOpcodeAttr;
 
@@ -243,6 +246,18 @@ namespace avmplus
 
 #ifdef VMCFG_AOT
 struct ABCInfo;
+#endif
+
+#ifdef VMCFG_FLOAT
+#   ifndef FLOAT_ONLY
+#       define FLOAT_ONLY(...) __VA_ARGS__
+#       define IFFLOAT(a,b)  a
+#   endif
+#else 
+#   ifndef FLOAT_ONLY
+#       define FLOAT_ONLY(...)
+#       define IFFLOAT(a,b)  b
+#   endif
 #endif
 
 #include "avm.h"
@@ -281,6 +296,7 @@ namespace avmplus
 #include "Sampler.h"
 #include "../nanojit/njconfig.h"
 #include "Coder.h"
+#include "../AVMPI/float4Support.h"
 #include "exec.h"
 #include "api-versions.h"
 #include "AvmCore.h"
@@ -316,6 +332,10 @@ namespace avmplus
 #include "BooleanClass.h"
 #include "NumberClass.h"
 #include "IntClass.h"
+#ifdef VMCFG_FLOAT
+#include "FloatClass.h"
+#include "Float4Class.h"
+#endif
 #include "ArrayClass.h"
 #include "ObjectClass.h"
 #include "StringClass.h"

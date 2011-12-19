@@ -443,10 +443,12 @@ namespace avmplus
         }
     }
 
-    void WordcodeEmitter::writeNip(const FrameState* state, const uint8_t *pc)
+    void WordcodeEmitter::writeNip(const FrameState* state, const uint8_t *pc, uint8_t offset)
     {
-        write(state, pc, OP_swap);
-        write(state, pc, OP_pop);
+        while (offset--) {
+            write(state, pc, OP_swap);
+            write(state, pc, OP_pop);
+        }
     }
 
     void WordcodeEmitter::writeCheckNull(const FrameState*, uint32_t)
@@ -517,9 +519,9 @@ namespace avmplus
         switch (opcode) {
         case OP_coerce_a:
         case OP_nop:
-                case OP_bkpt:
-                case OP_bkptline:
-                case OP_timestamp:
+        case OP_bkpt:
+        case OP_bkptline:
+        case OP_timestamp:
             // do nothing, all values on stack are atoms
             break;
         case OP_label:
@@ -543,6 +545,10 @@ namespace avmplus
         case OP_coerce_s:
         case OP_coerce_o:
         case OP_convert_o:
+#ifdef VMCFG_FLOAT
+        case OP_convert_f:
+        case OP_convert_f4:
+#endif
         case OP_istypelate:
         case OP_newactivation:
         case OP_popscope:
@@ -572,6 +578,9 @@ namespace avmplus
         case OP_multiply_i:
         case OP_negate:
         case OP_negate_i:
+#ifdef VMCFG_FLOAT
+        case OP_unplus:
+#endif
         case OP_bitand:
         case OP_bitor:
         case OP_bitxor:
@@ -591,11 +600,17 @@ namespace avmplus
         case OP_li32:
         case OP_lf32:
         case OP_lf64:
+#ifdef VMCFG_FLOAT
+        case OP_lf32x4:
+#endif
         case OP_si8:
         case OP_si16:
         case OP_si32:
         case OP_sf32:
         case OP_sf64:
+#ifdef VMCFG_FLOAT
+        case OP_sf32x4:
+#endif
         case OP_getglobalscope:
         case OP_convert_s:
         case OP_esc_xelem:
@@ -616,6 +631,10 @@ namespace avmplus
         case OP_pushstring:
         case OP_pushdouble:
         case OP_pushnamespace:
+#ifdef VMCFG_FLOAT
+        case OP_pushfloat:
+        case OP_pushfloat4:
+#endif
         case OP_getlocal:
         case OP_setlocal:
         case OP_inclocal:
@@ -723,6 +742,24 @@ namespace avmplus
 
     void WordcodeEmitter::writeCoerce(const FrameState*, uint32_t, Traits*)
     {}
+
+    void WordcodeEmitter::writeCoerceToNumeric(const FrameState*, uint32_t)
+    {
+#ifdef VMCFG_FLOAT
+        emitOp0(NULL, WOP_unplus);      // NULL is dodgy but happens to work
+#else
+        emitOp0(NULL, WOP_convert_d);   // NULL is dodgy but happens to work
+#endif
+    }
+
+    void WordcodeEmitter::writeCoerceToFloat4(const FrameState*, uint32_t)
+    {
+#ifdef VMCFG_FLOAT
+        emitOp0(NULL, WOP_float4);      // NULL is dodgy but happens to work
+#else
+        AvmAssert(!"Should not happen");
+#endif
+    }
 
     void WordcodeEmitter::emitOp1(const uint8_t *pc, WordOpcode opcode)
     {

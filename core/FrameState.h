@@ -74,6 +74,7 @@ namespace avmplus
         // Length is frameConsts->frameSize, one entry per local, scope, and stack operand.
     private:
         FrameValue *locals;
+        MethodInfo* info;
     public:
         FrameState* wl_next; // next block in verifier->worklist.  ideally this is only accessed by Verifier.
         const uint8_t* abc_pc;  // pointer into abc bytecode
@@ -89,7 +90,7 @@ namespace avmplus
         bool wl_pending;    // true if this is in verifier->worklist.  Verifier::checkTarget() sets to true.
 
     public:
-        FrameState(MethodSignaturep);
+        FrameState(MethodSignaturep, MethodInfo*);
         ~FrameState();
 
         void init(const FrameState* other);

@@ -244,6 +244,22 @@ REALLY_INLINE /*static*/ bool AvmCore::isFloat4(Atom atom)
 REALLY_INLINE /*static*/ bool AvmCore::isNumber(Atom atom)
 {
     MMGC_STATIC_ASSERT(kIntptrType == 6 && kDoubleType == 7);
+    return (atom&6) == kIntptrType;
+}
+
+REALLY_INLINE /*static*/ bool AvmCore::isNumeric(Atom atom)
+{
+    MMGC_STATIC_ASSERT(kIntptrType == 6 && kDoubleType == 7 && kSpecialBibopType == 4 && kBooleanType == 5);
+    MMGC_STATIC_ASSERT(trueAtom == 13 && falseAtom == 5 && undefinedAtom == 4);
+    /* the assumption here is that the value "12" is never a legal (bibop) atom */
+    /* the second assumption is that all kSpecialBibopTypes, except undefinedAtom, are numeric */
+    /* Finally, the third assumption is that the Boolean type has only two values: trueAtom and falseAtom */
+    return isNumber(atom) || (((uintptr_t)atom > (uintptr_t)trueAtom) && (atom & kSpecialBibopType));
+}
+
+REALLY_INLINE /*static*/ bool AvmCore::isNumberOrFloat(Atom atom)
+{
+    MMGC_STATIC_ASSERT(kIntptrType == 6 && kDoubleType == 7);
     return (atom&6) == kIntptrType || (atomKind(atom)==kSpecialBibopType && atom!=AtomConstants::undefinedAtom && bibopKind(atom)==kBibopFloatType);
 }
 
@@ -339,6 +355,34 @@ REALLY_INLINE Atom AvmCore::intAtom(Atom atom)
 {
     return intToAtom(AvmCore::integer(atom));
 }
+
+#ifdef VMCFG_FLOAT
+REALLY_INLINE Atom AvmCore::floatToAtom(float n)
+{
+    // Note: "Number" handles some integer values w/out allocation
+    // But we allocate floats even for integers that would fit in an Atom; 
+    // that's because "int" is a Number, but 'int' is not a float!
+
+    return allocFloat(n);
+}
+
+REALLY_INLINE Atom AvmCore::float4ToAtom(const float4_t& n)
+{
+    return allocFloat4(n);
+}
+
+REALLY_INLINE Atom AvmCore::floatAtom(Atom atom)
+{
+    return floatToAtom(AvmCore::singlePrecisionFloat(atom));
+}
+
+REALLY_INLINE Atom AvmCore::float4Atom(Atom atom)
+{
+    float4_t val;
+    float4(&val,atom);
+    return float4ToAtom(val);
+}
+#endif // VMCFG_FLOAT
 
 REALLY_INLINE Atom AvmCore::uintAtom(Atom atom)
 {
@@ -465,6 +509,20 @@ REALLY_INLINE /*static*/ double AvmCore::atomToDouble(Atom atom)
     return *(const double*)atomPtr(atom);
 }
 
+#ifdef VMCFG_FLOAT
+REALLY_INLINE /*static*/ float AvmCore::atomToFloat(Atom atom)
+{
+    AvmAssert(isFloat(atom));
+    return *(const float*)atomPtr(atom);
+}
+
+REALLY_INLINE /*static*/ float4_t AvmCore::atomToFloat4(Atom atom)
+{
+    AvmAssert(isFloat4(atom));
+    return AvmThunkUnbox_FLOAT4(float4_t, *(Atom*)atomPtr(atom));
+}
+#endif // VMCFG_FLOAT
+
 /**
  * Convert an Atom of kStringType to a Stringp
  * @param atom atom to convert.  Note that the Atom
@@ -528,6 +586,24 @@ REALLY_INLINE Atom AvmCore::allocDouble(double n)
     *d = n;
     return kDoubleType | (uintptr_t)d;
 }
+
+#ifdef VMCFG_FLOAT
+REALLY_INLINE Atom AvmCore::allocFloat(float n)
+{
+    float *f = (float*) GetGC()->AllocFloat();
+    *f = n;
+    return kSpecialBibopType | (uintptr_t)f;
+}
+
+REALLY_INLINE Atom AvmCore::allocFloat4(const float4_t& n)
+{
+    float4_t *f = (float4_t*) GetGC()->AllocFloat4();
+    AvmAssert( (((uintptr_t)f) & 0xf) == 0);
+    *f = n;
+    return kSpecialBibopType | (uintptr_t)f;
+}
+#endif // VMCFG_FLOAT
+
 
 REALLY_INLINE uint32_t AvmCore::lookupCacheTimestamp() const
 {

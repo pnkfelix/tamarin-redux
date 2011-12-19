@@ -43,22 +43,26 @@
 namespace avmplus
 {
 
-#define OBJECT_TYPE     (core->traits.object_itraits)
-#define CLASS_TYPE      (core->traits.class_itraits)
-#define FUNCTION_TYPE   (core->traits.function_itraits)
-#define ARRAY_TYPE      (core->traits.array_itraits)
-#define STRING_TYPE     (core->traits.string_itraits)
-#define NUMBER_TYPE     (core->traits.number_itraits)
-#define INT_TYPE        (core->traits.int_itraits)
-#define UINT_TYPE       (core->traits.uint_itraits)
-#define BOOLEAN_TYPE    (core->traits.boolean_itraits)
-#define VOID_TYPE       (core->traits.void_itraits)
-#define NULL_TYPE       (core->traits.null_itraits)
-#define NAMESPACE_TYPE  (core->traits.namespace_itraits)
-#define VECTORINT_TYPE  (core->traits.vectorint_itraits)
-#define VECTORUINT_TYPE (core->traits.vectoruint_itraits)
-#define VECTORDOUBLE_TYPE       (core->traits.vectordouble_itraits)
-#define VECTOROBJ_TYPE  (core->traits.vectorobj_itraits)
+#define OBJECT_TYPE       (core->traits.object_itraits)
+#define CLASS_TYPE        (core->traits.class_itraits)
+#define FUNCTION_TYPE     (core->traits.function_itraits)
+#define ARRAY_TYPE        (core->traits.array_itraits)
+#define STRING_TYPE       (core->traits.string_itraits)
+#define NUMBER_TYPE       (core->traits.number_itraits)
+#define FLOAT_TYPE        (core->traits.float_itraits)
+#define FLOAT4_TYPE       (core->traits.float4_itraits)
+#define INT_TYPE          (core->traits.int_itraits)
+#define UINT_TYPE         (core->traits.uint_itraits)
+#define BOOLEAN_TYPE      (core->traits.boolean_itraits)
+#define VOID_TYPE         (core->traits.void_itraits)
+#define NULL_TYPE         (core->traits.null_itraits)
+#define NAMESPACE_TYPE    (core->traits.namespace_itraits)
+#define VECTORINT_TYPE    (core->traits.vectorint_itraits)
+#define VECTORUINT_TYPE   (core->traits.vectoruint_itraits)
+#define VECTORDOUBLE_TYPE (core->traits.vectordouble_itraits)
+#define VECTORFLOAT_TYPE  (core->traits.vectorfloat_itraits)
+#define VECTORFLOAT4_TYPE (core->traits.vectorfloat4_itraits)
+#define VECTOROBJ_TYPE    (core->traits.vectorobj_itraits)
 
 const int kBufferPadding = 16;
 
@@ -173,6 +177,16 @@ const int kBufferPadding = 16;
         uint64_t bits64;
     };
 
+    union float_overlay
+    {
+        float_overlay() {}
+        float_overlay(float f) { value=f; }
+        float_overlay(uint32_t v) { word=v; }
+        
+        float value;
+        uint32_t word;
+    };
+    
     // Regular expression compilation cache.
     //
     // The cache is used by AvmCore and is a cache for compiled regular expressions.
@@ -298,6 +312,7 @@ const int kBufferPadding = 16;
             kSWF13,             // SWF13 (Flash Player TBD Serrano)
             kSWF14,             // SWF14 (Flash Player TBD Anza)
             kSWF15,             // SWF15 (Flash Player TBD Brannan)
+            kSWF16,             // SWF16 (Flash Player TBD Cyril)
 
             VersionCount,
 
@@ -731,6 +746,11 @@ const int kBufferPadding = 16;
         GCMember<String> kboolean;
         GCMember<String> kvoid;
         GCMember<String> knumber;
+#ifdef VMCFG_FLOAT
+        GCMember<String> kfloat;
+        GCMember<String> kfloat4;
+        GCMember<String> knumeric;
+#endif
         GCMember<String> kstring;
         GCMember<String> kuri;
         GCMember<String> kprefix;
@@ -763,6 +783,8 @@ const int kBufferPadding = 16;
         GCMember<String> kindex;
         GCMember<String> kinput;
         GCMember<String> kemptyCtor;
+        GCMember<String> kMath;
+        GCMember<String> kNumber;
 
         GCMember<String> kAsterisk;     // '*'
         GCMember<String> kColon;        // ':'
@@ -771,12 +793,28 @@ const int kBufferPadding = 16;
         GCMember<String> kzero;         // '0'  - 'kZero' conflicts with MMgc
         GCMember<String> kClassS;       // 'Class$'
         GCMember<String> kVectorNumber; // 'Vector.<Number>'
+#ifdef VMCFG_FLOAT
+        GCMember<String> kVectorFloat;  // 'Vector.<float>'
+        GCMember<String> kVectorFloat4; // 'Vector.<float4>'
+#endif
         GCMember<String> kVectorint;    // 'Vector.<int>'
         GCMember<String> kVectoruint;   // 'Vector.<uint>'
         GCMember<String> kVectorAny;    // 'Vector.<*>'
+#ifdef VMCFG_FLOAT
+        GCMember<String> kx;            // Used
+        GCMember<String> ky;            //   for
+        GCMember<String> kz;            //     JSON
+        GCMember<String> kw;            //       formatting
+#endif
 
         Atom kNaN;
-
+#ifdef VMCFG_FLOAT
+        Atom kFltNaN;
+        Atom kFltOne;                   // needed for increment
+        Atom kFltMinusOne;              // needed for decrement
+        Atom kFlt4NaN;
+#endif
+        
         GCMember<String> cachedChars[128];
         /*@}*/
 
@@ -1159,6 +1197,12 @@ const int kBufferPadding = 16;
         /** Helper method; returns true if atom's type is Number */
         static bool isNumber(Atom atom);
 
+        /** Helper method; returns true if atom's type is Number or Float*/
+        static bool isNumberOrFloat(Atom atom);
+
+        /** Helper method; returns true if atom's type is Number or Float or Float4*/
+        static bool isNumeric(Atom atom);
+
         /** Helper method; returns true if atom's type is boolean */
         static bool isBoolean(Atom atom);
 
@@ -1311,6 +1355,25 @@ const int kBufferPadding = 16;
          */
         static int32_t integer(Atom atom);
 
+#ifdef VMCFG_FLOAT
+        /**
+         * Converts the passed atom to a 32-bit float number.
+         * If the atom is already an float, it is simply
+         * decoded.  Otherwise, it is coerced to the float type
+         * and returned.  
+         */
+        static float singlePrecisionFloat(Atom atom);
+
+       /**
+         * Converts the passed atom to 4 32-bit float numbers (a float4_t).
+         * If the atom is already an float4, it is simply
+         * decoded.  Otherwise, it is coerced to the float4 type
+         * and returned.  
+         */
+        static void float4(float4_t* retval, Atom atom);
+#define float4_decl_v(var) float4_t var##v; AvmCore::float4(&var##v,var);        
+#endif
+
         // convert atom to integer when we know it is already a legal signed-32 bit int value
         static int32_t integer_i(Atom a);
 
@@ -1319,6 +1382,10 @@ const int kBufferPadding = 16;
 
         static int integer_d(double d);
         Atom doubleToAtom(double n);
+#ifdef VMCFG_FLOAT
+        Atom floatToAtom(float n);
+        Atom float4ToAtom(const float4_t& n);
+#endif
 
 #if defined (AVMPLUS_IA32) || defined(AVMPLUS_AMD64)
         static int integer_d_sse2(double d);
@@ -1337,6 +1404,8 @@ const int kBufferPadding = 16;
         Atom intAtom(Atom atom);
 
         Atom uintAtom(Atom atom);
+        Atom floatAtom(Atom atom);
+        Atom float4Atom(Atom atom);
 
         /**
          * Converts the passed atom to a C++ bool.
@@ -1503,6 +1572,12 @@ const int kBufferPadding = 16;
 
         /** OP_tonumber; ES3 ToNumber */
         Atom numberAtom(Atom atom);
+
+        /** AS3 ToNumeric             */
+        Atom numericAtom(Atom atom);
+
+        // actual implementation for numberAtom/numericAtom - avoids code duplication
+        template<bool> Atom numericAtomImpl(Atom atom); 
 
         /**
          * ES3's internal ToNumber() function for internal use
@@ -1761,7 +1836,11 @@ const int kBufferPadding = 16;
 
         static Namespacep atomToNamespace(Atom atom);
 
-        static double atomToDouble(Atom atom);
+        static double   atomToDouble(Atom atom);
+#ifdef VMCFG_FLOAT
+        static float    atomToFloat (Atom atom);
+        static float4_t atomToFloat4(Atom atom);
+#endif // 
 
         /**
          * Convert an Atom of kStringType to a Stringp
@@ -1859,6 +1938,10 @@ const int kBufferPadding = 16;
         Stringp internString(Stringp s);
         Stringp internString(Atom atom);
         Stringp internInt(int n);
+#ifdef VMCFG_FLOAT
+        Stringp internFloat(float f);
+        Stringp internFloat4(const float4_t& f);
+#endif
         Stringp internDouble(double d);
         Stringp internUint32(uint32_t ui);
 
@@ -1901,12 +1984,20 @@ const int kBufferPadding = 16;
         Stringp uintToString(uint32_t i);
         Stringp intToString(int i);
         Stringp doubleToString(double d);
+#ifdef VMCFG_FLOAT
+        Stringp floatToString(float f);
+        Stringp float4ToString(const float4_t& f);
+#endif
         Stringp concatStrings(Stringp s1, Stringp s2);
 
         Atom uintToAtom(uint32_t n);
         Atom intToAtom(int32_t n);
 
         Atom allocDouble(double n);
+#ifdef VMCFG_FLOAT
+        Atom allocFloat(float n);
+        Atom allocFloat4(const float4_t& n);
+#endif
 
         void rehashStrings(int newlen);
         void rehashNamespaces(int newlen, bool canFail=false);

@@ -98,6 +98,8 @@ namespace avmplus
     #define AvmThunkUnbox_STRING(t,r)         ((t)(r))
     #define AvmThunkUnbox_VOID(t,r)           (error ??? illegal)
     #define AvmThunkUnbox_DOUBLE(t,r)         AvmThunkUnbox_double_impl(&(r))
+    #define AvmThunkUnbox_FLOAT(t,r)         (*(const t*)(&(r)))
+    #define AvmThunkUnbox_FLOAT4(t,r)        (*(const t*)(&(r)))
 
     #define AvmThunkArgSize_OBJECT          1
     #define AvmThunkArgSize_BOOLEAN         1
@@ -107,10 +109,13 @@ namespace avmplus
     #define AvmThunkArgSize_ATOM            1
     #define AvmThunkArgSize_STRING          1
     #define AvmThunkArgSize_VOID            (error ??? illegal)
+    #define AvmThunkArgSize_FLOAT           1
 #ifdef AVMPLUS_64BIT
     #define AvmThunkArgSize_DOUBLE          1
+    #define AvmThunkArgSize_FLOAT4          2
 #else
     #define AvmThunkArgSize_DOUBLE          2
+    #define AvmThunkArgSize_FLOAT4          4
 #endif
 
     REALLY_INLINE double AvmThunkUnbox_double_impl(const Atom* b)

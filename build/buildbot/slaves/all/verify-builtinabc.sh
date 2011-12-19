@@ -60,12 +60,12 @@ echo "`java -jar $ASC`"
 echo ""
 
 FILES="builtin.abc builtin.cpp builtin.h"
-BUILDER="builtin.py"
+BUILDER="builtin.py $BUILTIN_BUILDFLAGS"
 BUILDER_DIR="core"
 verify_generated_files $FILES $BUILDER $BUILDER_DIR
 
 FILES="shell_toplevel.abc shell_toplevel.cpp shell_toplevel.h"
-BUILDER="shell_toplevel.py"
+BUILDER="shell_toplevel.py $BUILTIN_BUILDFLAGS"
 BUILDER_DIR="shell"
 verify_generated_files $FILES $BUILDER $BUILDER_DIR
 

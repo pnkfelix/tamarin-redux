@@ -267,8 +267,8 @@ namespace avmplus
 
         // zero out stack area for unused scopes:
         if (scopeTop < stackBase) {
-            void* p = ((char*) jitFramePointer + scopeTop * VARSIZE);
-            size_t nbytes = (stackBase - scopeTop) * VARSIZE;
+            void* p = ((char*) jitFramePointer + (scopeTop << VARSHIFT(env->method)));
+            size_t nbytes = (stackBase - scopeTop) << VARSHIFT(env->method);
             VMPI_memset(p, 0, nbytes);
         }
 
@@ -336,7 +336,7 @@ namespace avmplus
 
         // Unbox the value and store in jit vars[].
         AvmAssert(isValidAtom(value, atom));
-        Atom* addr = (Atom *) ((char *) jitFramePointer + (index * VARSIZE));
+        Atom* addr = (Atom *) ((char *) jitFramePointer + (index << VARSHIFT(env->method)));
         Traits* type = value.traits;
         BaseExecMgr::unbox1(atom, type, addr);
 
@@ -397,6 +397,16 @@ namespace avmplus
         return BaseExecMgr::interpFPR(env, argc, ap);
     }
 
+#ifdef VMCFG_FLOAT
+    // intercept call to interpreter increment invocation counter
+    float4_t OSR::osrInterpVECR(MethodEnv* env, int argc, uint32_t *ap)
+    {
+        if (countInvoke(env))
+            return (*env->_implVECR)(env, argc, ap);
+        return BaseExecMgr::interpVECR(env, argc, ap);
+    }
+#endif
+
     // intercept call to interpreter increment invocation counter
     Atom OSR::osrInvokeInterp(MethodEnv* env, int argc, Atom* argv)
     {
@@ -420,6 +430,16 @@ namespace avmplus
             return (*env->_implFPR)(env, argc, ap);
         return BaseExecMgr::initInterpFPR(env, argc, ap);
     }
+
+#ifdef VMCFG_FLOAT
+    // OSR tramp for invoking a constructor that returns a FPR
+    float4_t OSR::osrInitInterpVECR(MethodEnv* env, int argc, uint32_t *ap)
+    {
+        if (countInvoke(env))
+            return (*env->_implVECR)(env, argc, ap);
+        return BaseExecMgr::initInterpVECR(env, argc, ap);
+    }
+#endif
 
     // intercept call to interpreter increment invocation counter
     Atom OSR::osrInitInvokeInterp(MethodEnv* env, int argc, Atom* argv)

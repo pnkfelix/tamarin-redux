@@ -58,6 +58,8 @@
     #pragma warning(disable:4512) // assignment operator could not be generated
     #pragma warning(disable:4611) // interaction between '_setjmp' and C++ object destruction is non-portable
     #pragma warning(disable:4725) // instruction may be inaccurate on some Pentiums
+    #pragma warning(disable:4324) // padding was added at the end of a structure because you specified a __declspec(align) value.
+    #pragma warning(disable:4800) // forcing value to bool 'true' or 'false' - bogus performance warning
 
     // enable some that are off even in /W4 mode, but are still handy
     #pragma warning(default:4242)   // 'identifier' : conversion from 'type1' to 'type2', possible loss of data
@@ -206,6 +208,7 @@ typedef void *maddr_ptr;
     #include "JITProfiling.h"
   #endif
 #endif
+
 
 // Windows doesn't support inttypes.h or most C99 types directly
 typedef __int8              int8_t;

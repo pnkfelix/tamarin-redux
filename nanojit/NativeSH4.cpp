@@ -578,7 +578,7 @@ namespace nanojit
         asm_cond(inst);
     }
 
-    void Assembler::asm_fneg(LIns *inst) {
+    void Assembler::asm_neg_abs(LIns *inst) {
         Register result_reg  = prepareResultReg(inst, FpRegs);
         Register operand_reg = findRegFor(inst->oprnd1(), FpRegs);
 
@@ -676,6 +676,64 @@ namespace nanojit
         SH4_lds_FPUL(operand1_reg);
 
         freeResourcesOf(inst);
+    }
+
+    void Assembler::asm_ui2f(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_ui2f not yet supported for this architecture");
+    }
+    void Assembler::asm_i2f(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_i2f not yet supported for this architecture");
+    }
+    void Assembler::asm_f2i(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_f2i not yet supported for this architecture");
+    }
+    void Assembler::asm_f2d(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_f2d not yet supported for this architecture");
+    }
+    void Assembler::asm_d2f(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_d2f not yet supported for this architecture");
+    }
+    void Assembler::asm_immf(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_immf not yet supported for this architecture");
+    }
+    void Assembler::asm_immf4(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_immf4 not yet supported for this architecture");
+    }
+    void Assembler::asm_f2f4(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_f2f4 not yet supported for this architecture");
+    }
+    void Assembler::asm_ffff2f4(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_ffff2f4 not yet supported for this architecture");
+    }
+    void Assembler::asm_f4comp(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "LIR_f4comp not yet supported for this architecture");
+    }
+    void Assembler::asm_condf4(LIns *ins) {
+        (void)ins;
+        NanoAssertMsg(0, "asm_condf4 not yet supported for this architecture");
+    }
+    void
+        Assembler::asm_load128(LIns* ins)
+    {
+        (void)ins;
+        NanoAssertMsg(0, "asm_load128 not yet supported for this architecture");
+    }
+
+    void
+        Assembler::asm_store128(LOpcode op, LIns* value, int dr, LIns* base)
+    {
+        (void)op; (void)value;(void)dr;(void)base;
+        NanoAssertMsg(0, "asm_store128 not yet supported for this architecture");
     }
 
     void Assembler::asm_immi(LIns *inst) {
@@ -874,6 +932,15 @@ namespace nanojit
         freeResourcesOf(inst);
     }
 
+    RegisterMask RegAlloc::nRegCopyCandidates(Register r, RegisterMask allow) {
+        if(rmask(r) & GpRegs)
+            return allow & GpRegs;
+        if(rmask(r) & FpRegs)
+            return allow & FpRegs;
+        NanoAssert(false); // How did we get here?
+        return RegisterMask(0);
+    }
+    
     void Assembler::asm_nongp_copy(Register dest_reg, Register src_reg) {
         NanoAssert(IsFpReg(dest_reg) && IsFpReg(src_reg));
 
@@ -958,7 +1025,7 @@ namespace nanojit
         freeResourcesOf(inst);
     }
 
-    bool Assembler::canRemat(LIns* inst) {
+    bool RegAlloc::canRemat(LIns* inst) {
         return inst->isImmI() || inst->isop(LIR_allocp);
     }
 

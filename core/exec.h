@@ -95,6 +95,9 @@ enum Runmode {
 // and boxes results.  Typically the caller is JIT code.
 typedef uintptr_t (*GprMethodProc)(MethodEnv*, int32_t, uint32_t *);
 typedef double (*FprMethodProc)(MethodEnv*, int32_t, uint32_t *);
+#ifdef VMCFG_FLOAT
+typedef float4_t (*VecrMethodProc)(MethodEnv*, int32_t, uint32_t *);
+#endif
 
 // Signature for invocation when callee coerces & boxes;
 // the caller is calling an unknown function with an unknown signature.
@@ -111,9 +114,29 @@ typedef double (*FprImtThunkProc)(class ImtThunkEnv*, int argc, uint32_t* args, 
  * enough to hold double, int, pointers, or Atom on 32-bit or 64-bit cpus.
  * This is an aspect of the JIT implementation, but is defined here because
  * the debugger boxing/unboxing code in MethodInfo needs to know it.
+ * Note: for VMCFG_FLOAT we use a function call, to decide the size of a variable
+ * per method (if method uses float4, then 16 bytes; otherwise, 8 bytes)
+ * Also: instead of actually defining VARSIZE, we define VARSHIFT (either 3 or 4)
+ * because shifts are faster than multiplications/divisions, when the second 
+ * operand is a variable (and it's trivial to derive 'size' from 'shift', and 
+ * we only actually need VARSIZE in asserts - everywhere else we just shift).
  */
-static const size_t VARSIZE = 8;
+#ifdef VMCFG_FLOAT
+#define VARSHIFT(ptr) ptr->varShift()
+#else
+#define VARSHIFT(ptr) 3
+#endif
 
+#ifdef VMCFG_GENERIC_FLOAT4
+typedef float4_t (*VecrThunkProc)(void* thunk, MethodEnv* env, int32_t argc, uint32_t* argv);
+
+#ifdef DEBUGGER
+extern const VecrMethodProc debugEnterVECR_adapter;
+#endif
+extern const VecrMethodProc verifyEnterVECR_adapter;
+extern const VecrThunkProc thunkEnterVECR_adapter;
+#endif
+    
 /**
  * Compute number of bytes needed for the unboxed representation
  * of this argument value when passed on the stack.
@@ -157,6 +180,14 @@ private:
     // Trampolines that verify on first call:
     static uintptr_t verifyEnterGPR(MethodEnv*, int32_t argc, uint32_t* args);
     static double verifyEnterFPR(MethodEnv*, int32_t argc, uint32_t* args);
+#ifdef VMCFG_FLOAT
+public:
+    static float4_t verifyEnterVECR(MethodEnv*, int32_t argc, uint32_t* args);
+    static float4_t debugEnterExitWrapperV(MethodEnv* env, int32_t argc, uint32_t* argv);
+    static float4_t interpVECR(MethodEnv* method, int argc, uint32_t *ap);
+    static float4_t initInterpVECR(MethodEnv*, int, uint32_t*);
+private:    
+#endif
     static Atom verifyInvoke(MethodEnv*, int32_t argc, Atom* args);
     static void verifyOnCall(MethodEnv*); // helper called by verify trampolines
 
@@ -432,8 +463,9 @@ protected:
 
 private:
     union {
-        GprMethodProc _implGPR;
-        FprMethodProc _implFPR;
+        GprMethodProc  _implGPR;
+        FprMethodProc  _implFPR;
+        FLOAT_ONLY(VecrMethodProc _implVECR;)
     };
     /** pointer to invoker used when callee must coerce args. */
     AtomMethodProc _invoker;
@@ -462,6 +494,7 @@ private:
     union {
         GprMethodProc   _implGPR;
         FprMethodProc   _implFPR;
+        FLOAT_ONLY(VecrMethodProc  _implVECR;)
         GprImtThunkProc _implImtGPR;
     };
 
