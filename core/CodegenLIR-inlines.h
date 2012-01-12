@@ -72,11 +72,6 @@ REALLY_INLINE LIns* CodegenLIR::ui2dIns(LIns* v)
     return lirout->ins1(LIR_ui2d, v);
 }
 
-REALLY_INLINE LIns* CodegenLIR::binaryIns(LOpcode op, LIns *a, LIns *b)
-{
-    return lirout->ins2(op,a,b);
-}
-
 REALLY_INLINE bool InvokerCompiler::copyArgs()
 {
     return args_out->isop(LIR_allocp);
@@ -115,6 +110,21 @@ REALLY_INLINE C* CacheBuilder<C>::allocateCacheSlot(const Multiname* name)
         caches.add(c);
     }
     return c;
+}
+
+REALLY_INLINE bool CodegenLIR::haveSSE2() const
+{
+#if defined AVMPLUS_IA32
+#  ifdef VMCFG_SSE2
+    return core->config.njconfig.i386_sse2; // sse2 based on cpuid & config
+#  else // !VMCFG_SSE2
+    return true; // x86-32 with SSE2 guaranteed
+#endif
+#elif defined AVMPLUS_AMD64
+    return true;  // x86-64 has SSE2
+#else
+    return false; // non-x86 family
+#endif
 }
 
 } // namespace

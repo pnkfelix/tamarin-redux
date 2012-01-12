@@ -488,6 +488,10 @@ namespace avmplus
             case OP_pushint:
             case OP_pushuint:
             case OP_pushdouble:
+#ifdef VMCFG_FLOAT
+            case OP_pushfloat:
+            case OP_pushfloat4:
+#endif
             case OP_pushnamespace:
             case OP_dxns:
             case OP_label:
@@ -518,6 +522,11 @@ namespace avmplus
             case OP_convert_i:
             case OP_convert_u:
             case OP_convert_d:
+#ifdef VMCFG_FLOAT
+            case OP_convert_f:
+            case OP_convert_f4:
+            case OP_unplus:
+#endif
             case OP_convert_b:
             case OP_convert_o:
             case OP_convert_s:
@@ -538,6 +547,10 @@ namespace avmplus
             case OP_sxi1:
             case OP_sxi8:
             case OP_sxi16:
+#ifdef VMCFG_FLOAT
+            case OP_lf32x4:
+            case OP_sf32x4:
+#endif
             case OP_pushwith:
             case OP_lookupswitch:
             case OP_increment:
@@ -897,12 +910,12 @@ namespace avmplus
             // this can occur when an activation scope inside a class instance method
             // contains a nested getter, setter, or method.  In that case the scope
             // is not captured when the containing function is verified.  This isn't a
-            // bug because such nested functions aren't suppported by AS3.  This
+            // bug because such nested functions aren't supported by AS3.  This
             // verify error is how we don't let those constructs run.
             verifyFailed(kNoScopeError, core->toErrorString(info));
         }
 
-        state = mmfx_new( FrameState(ms) );
+        state = mmfx_new( FrameState(ms, info));
 
         // initialize method param types.
         // We already verified param_count is a legal register so
@@ -947,7 +960,8 @@ namespace avmplus
             coder->writeFixExceptionsAndLabels(state, pc);
 
             AbcOpcode opcode = (AbcOpcode) *pc;
-            if (opcodeInfo[opcode].operandCount == -1)
+            const AbcOpcodeInfo* opcodeInfoPtr = FLOAT_ONLY(!pool->hasFloatSupport() ? opcodeInfoNoFloats :) opcodeInfo;
+            if (opcodeInfoPtr[opcode].operandCount == -1)
                 verifyFailed(kIllegalOpcodeError, core->toErrorString(info), core->toErrorString(opcode), core->toErrorString((int)(pc-code_pos)));
 
             state->abc_pc = pc;
@@ -1169,6 +1183,7 @@ namespace avmplus
 
             case OP_pushint:
                 checkStack(0,1);
+                // FIXME: zero check is incorrect but traditional
                 if (imm30 == 0 || imm30 >= pool->constantIntCount)
                     verifyFailed(kCpoolIndexRangeError, core->toErrorString(imm30), core->toErrorString(pool->constantIntCount));
                 coder->write(state, pc, opcode, INT_TYPE);
@@ -1177,6 +1192,7 @@ namespace avmplus
 
             case OP_pushuint:
                 checkStack(0,1);
+                // FIXME: zero check is incorrect but traditional
                 if (imm30 == 0 || imm30 >= pool->constantUIntCount)
                     verifyFailed(kCpoolIndexRangeError, core->toErrorString(imm30), core->toErrorString(pool->constantUIntCount));
                 coder->write(state, pc, opcode, UINT_TYPE);
@@ -1185,11 +1201,32 @@ namespace avmplus
 
             case OP_pushdouble:
                 checkStack(0,1);
+                // FIXME: zero check is incorrect but traditional
                 if (imm30 == 0 || imm30 >= pool->constantDoubleCount)
                     verifyFailed(kCpoolIndexRangeError, core->toErrorString(imm30), core->toErrorString(pool->constantDoubleCount));
                 coder->write(state, pc, opcode, NUMBER_TYPE);
                 state->push(NUMBER_TYPE, true);
                 break;
+
+#ifdef VMCFG_FLOAT
+            case OP_pushfloat:
+                checkStack(0,1);
+                // FIXME: zero check is incorrect but traditional
+                if (imm30 == 0 || imm30 >= pool->constantFloatCount)
+                    verifyFailed(kCpoolIndexRangeError, core->toErrorString(imm30), core->toErrorString(pool->constantFloatCount));
+                coder->write(state, pc, opcode, FLOAT_TYPE);
+                state->push(FLOAT_TYPE, true);
+                break;
+
+            case OP_pushfloat4:
+                checkStack(0,1);
+                // FIXME: zero check is incorrect but traditional
+                if (imm30 == 0 || imm30 >= pool->constantFloat4Count)
+                    verifyFailed(kCpoolIndexRangeError, core->toErrorString(imm30), core->toErrorString(pool->constantFloat4Count));
+                coder->write(state, pc, opcode, FLOAT4_TYPE);
+                state->push(FLOAT4_TYPE, true);
+                break;
+#endif
 
             case OP_pushnamespace:
                 checkStack(0,1);
@@ -1254,11 +1291,31 @@ namespace avmplus
 
             case OP_inclocal:
             case OP_declocal:
-                //checkStack(0,0);
-                checkLocal(imm30);
-                emitCoerce(NUMBER_TYPE, imm30);
-                coder->write(state, pc, opcode);
+            {
+                Traits* retType = NUMBER_TYPE;
+                bool already_coerced = false;
+#ifdef VMCFG_FLOAT
+                if(pool->hasFloatSupport())
+                {
+                    FrameValue& v = checkLocal(imm30);
+                    BuiltinType bt = Traits::getBuiltinType(v.traits);
+                    if(bt == BUILTIN_none || bt == BUILTIN_any || bt == BUILTIN_object)
+                    {
+                        emitCoerceToNumeric(imm30);
+                        retType = OBJECT_TYPE;
+                        already_coerced = true;
+                    }
+                    else if(bt == BUILTIN_float || bt == BUILTIN_float4)
+                        retType = v.traits;
+                    else
+                        retType = NUMBER_TYPE;
+                }
+#endif // VMCFG_FLOAT
+                if(!already_coerced)
+                    emitCoerce(retType, imm30);
+                coder->write(state, pc, opcode, retType);
                 break;
+            }
 
             case OP_inclocal_i:
             case OP_declocal_i:
@@ -1391,15 +1448,27 @@ namespace avmplus
                     break;
                 }
 
-                if( obj.traits == VECTORINT_TYPE  || obj.traits == VECTORUINT_TYPE ||
-                    obj.traits == VECTORDOUBLE_TYPE )
+                if(obj.traits == VECTORINT_TYPE
+                   || obj.traits == VECTORUINT_TYPE
+                   || obj.traits == VECTORDOUBLE_TYPE 
+#ifdef VMCFG_FLOAT
+                   || obj.traits == VECTORFLOAT_TYPE
+                   || obj.traits == VECTORFLOAT4_TYPE
+#endif
+                   )
                 {
                     bool attr = multiname.isAttr();
                     Traits* indexType = state->value(state->sp()-1).traits;
 
                     // NOTE a dynamic name should have the same version as the current pool
                     bool maybeIntegerIndex = !attr && multiname.isRtname() && multiname.containsAnyPublicNamespace();
-                    if( maybeIntegerIndex && (indexType == UINT_TYPE || indexType == INT_TYPE || indexType == NUMBER_TYPE) )
+                    if( maybeIntegerIndex && (indexType == UINT_TYPE
+                                              || indexType == INT_TYPE
+                                              || indexType == NUMBER_TYPE
+#ifdef VMCFG_FLOAT
+                                              || indexType == FLOAT_TYPE   // float indices are always absorbed by the vector
+#endif
+                                              ) )
                     {
                         if(obj.traits == VECTORINT_TYPE)
                             emitCoerce(INT_TYPE, state->sp());
@@ -1407,6 +1476,12 @@ namespace avmplus
                             emitCoerce(UINT_TYPE, state->sp());
                         else if(obj.traits == VECTORDOUBLE_TYPE)
                             emitCoerce(NUMBER_TYPE, state->sp());
+#ifdef VMCFG_FLOAT
+                        else if(obj.traits == VECTORFLOAT_TYPE)
+                            emitCoerce(FLOAT_TYPE, state->sp());
+                        else if(obj.traits == VECTORFLOAT4_TYPE)
+                            emitCoerce(FLOAT4_TYPE, state->sp());
+#endif
                     }
                 }
 
@@ -1603,6 +1678,46 @@ namespace avmplus
                 state->setType(sp, type, v.notNull);
                 break;
             }
+#ifdef VMCFG_FLOAT
+            case OP_convert_f:
+            {
+                checkStack(1,1);
+                FrameValue &v = state->value(sp);
+                Traits *type = FLOAT_TYPE;
+                coder->write(state, pc, opcode, type);
+                state->setType(sp, type, v.notNull);
+                break;
+            }
+            case OP_convert_f4:
+            {
+                checkStack(1,1);
+                FrameValue &v = state->value(sp);
+                Traits *type = FLOAT4_TYPE;
+                coder->write(state, pc, opcode, type);
+                state->setType(sp, type, v.notNull);
+                break;
+            }
+            case OP_unplus:
+            {
+                checkStack(1,1);
+                FrameValue &v = state->value(sp);
+                BuiltinType bt = Traits::getBuiltinType(v.traits);
+                Traits* type = v.traits;
+                if(bt == BUILTIN_none || bt == BUILTIN_any || bt == BUILTIN_object)
+                {
+                    emitCoerceToNumeric(sp);
+                    type = OBJECT_TYPE;
+                }
+                else if(bt != BUILTIN_float && bt != BUILTIN_float4)
+                {
+                    emitCoerce(NUMBER_TYPE, sp);
+                    type = NUMBER_TYPE;
+                }
+                coder->write(state, pc, opcode, type);
+                state->setType(sp, type, true);
+                break;
+            }
+#endif   // VMCFG_FLOAT
             case OP_coerce_s:
             {
                 checkStack(1,1);
@@ -2146,15 +2261,20 @@ namespace avmplus
                 FrameValue& lhs = state->peek(2);
                 Traits *lhst = lhs.traits;
                 Traits *rhst = rhs.traits;
-                if (rhst && rhst->isNumeric() && lhst && !lhst->isNumeric())
-                {
-                    // convert lhs to Number
-                    emitCoerce(NUMBER_TYPE, state->sp()-1);
-                }
-                else if (lhst && lhst->isNumeric() && rhst && !rhst->isNumeric())
-                {
-                    // promote rhs to Number
-                    emitCoerce(NUMBER_TYPE, state->sp());
+
+                if(lhst && rhst ){
+                    // We assume is that number-to-number comparison yields the same result as float-to-float comparison
+                    // Also, float4 will be coerced to number, and this is ok.
+                    if (!lhst->isNumeric()  && rhst->isNumeric() )
+                    {
+                        // convert lhs to Number
+                        emitCoerce(NUMBER_TYPE, state->sp()-1);
+                    }
+                    else if (lhst->isNumeric() && !rhst->isNumeric())
+                    {
+                        // promote rhs to Number
+                        emitCoerce(NUMBER_TYPE, state->sp());
+                    }
                 }
                 coder->write(state, pc, opcode, BOOLEAN_TYPE);
                 state->pop_push(2, BOOLEAN_TYPE);
@@ -2192,9 +2312,30 @@ namespace avmplus
                 }
                 else if (lhst && lhst->isNumeric() && rhst && rhst->isNumeric())
                 {
-                    coder->write(state, pc, OP_add, NUMBER_TYPE);
-                    state->pop_push(2, NUMBER_TYPE);
-                }
+                    Traits* type = NUMBER_TYPE;
+#ifdef VMCFG_FLOAT
+                    if(pool->hasFloatSupport())
+                    {
+                        if(lhst == FLOAT4_TYPE || rhst == FLOAT4_TYPE)
+                            type = FLOAT4_TYPE; // float4 + anything numeric gives float4
+                        else
+                        if(rhst->isNumberType() || lhst->isNumberType())
+                            type = NUMBER_TYPE;
+                        else 
+                        if(rhst == FLOAT_TYPE && lhst == FLOAT_TYPE)
+                            type = FLOAT_TYPE;
+                        else 
+                        {
+                            // the result is "NUMERIC" because at least one is NUMERIC and the other is NUMERIC or FLOAT.
+                            emitCoerceToNumeric(sp);
+                            emitCoerceToNumeric(sp-1);
+                            type = OBJECT_TYPE;
+                        }
+                    }
+#endif // VMCFG_FLOAT
+                    coder->write(state, pc, OP_add, type);
+                    state->pop_push(2, type, true);
+                } 
                 else
                 {
                     coder->write(state, pc, OP_add, OBJECT_TYPE);
@@ -2209,25 +2350,75 @@ namespace avmplus
             case OP_subtract:
             case OP_divide:
             case OP_multiply:
-                checkStack(2,1);
-                emitCoerce(NUMBER_TYPE, sp-1);
-                emitCoerce(NUMBER_TYPE, sp);
-                coder->write(state, pc, opcode);
-                state->pop_push(2, NUMBER_TYPE);
-                break;
+                {
+                    checkStack(2,1);
+                    Traits* type = NUMBER_TYPE;
+                    bool already_coerced = false;
+#ifdef VMCFG_FLOAT
+                    if(pool->hasFloatSupport())
+                    {
+                        FrameValue& rhs = state->peek(1);
+                        FrameValue& lhs = state->peek(2);
+                        BuiltinType lhst = Traits::getBuiltinType(lhs.traits);
+                        BuiltinType rhst = Traits::getBuiltinType(rhs.traits);
+                        /* If both are floats, operate on float. 
+                           If any is float4, operate on float4.
+                           If both types are known (and not Object), operate on number.
+                           Otherwise - convert to numeric */
+                        if(lhst == BUILTIN_float && rhst == BUILTIN_float)
+                            type = FLOAT_TYPE;
+                        else if(lhst == BUILTIN_float4 || rhst == BUILTIN_float4)
+                            type = FLOAT4_TYPE;
+                        else if(lhst != BUILTIN_none && lhst != BUILTIN_object && lhst != BUILTIN_any && rhst != BUILTIN_none && rhst != BUILTIN_object && rhst != BUILTIN_any)
+                            type = NUMBER_TYPE;
+                        else
+                        {
+                            emitCoerceToNumeric(sp-1);
+                            emitCoerceToNumeric(sp);
+                            already_coerced = true;
+                            type = OBJECT_TYPE;
+                        }
+                    }
+#endif
+                    if(!already_coerced)
+                    {
+                        emitCoerce(type, sp-1);
+                        emitCoerce(type, sp);
+                    }
+                    coder->write(state, pc, opcode, type);
+                    state->pop_push(2, type);
+                    break;
+                }
 
             case OP_negate:
-                checkStack(1,1);
-                emitCoerce(NUMBER_TYPE, sp);
-                coder->write(state, pc, opcode);
-                break;
-
             case OP_increment:
             case OP_decrement:
+                {
                 checkStack(1,1);
-                emitCoerce(NUMBER_TYPE, sp);
-                coder->write(state, pc, opcode);
+                Traits* retType = NUMBER_TYPE;
+                bool already_coerced = false;
+#ifdef VMCFG_FLOAT
+                if(pool->hasFloatSupport())
+                {
+                    FrameValue& v = state->peek(1);
+                    BuiltinType bt = Traits::getBuiltinType(v.traits);
+                    if(bt == BUILTIN_none || bt == BUILTIN_any || bt == BUILTIN_object)
+                    {
+                        emitCoerceToNumeric(sp);
+                        already_coerced = true;
+                        retType = OBJECT_TYPE;
+                    }
+                    else if (bt == BUILTIN_float || bt == BUILTIN_float4) 
+                        retType = v.traits;
+                    else
+                        retType = NUMBER_TYPE;
+                }
+#endif
+                if(!already_coerced)
+                    emitCoerce(retType, sp);
+                coder->write(state, pc, opcode, retType);
                 break;
+                }
 
             case OP_increment_i:
             case OP_decrement_i:
@@ -2394,6 +2585,15 @@ namespace avmplus
                 state->pop_push(1, result);
                 break;
             }
+#ifdef VMCFG_FLOAT
+            case OP_lf32x4: {
+                checkStack(1,1);
+                emitCoerce(INT_TYPE, sp);
+                coder->write(state, pc, opcode);
+                state->pop_push(1, FLOAT4_TYPE);
+                break;
+            }
+#endif
 
             // stores
             case OP_si8:
@@ -2407,7 +2607,17 @@ namespace avmplus
                 coder->write(state, pc, opcode);
                 state->pop(2);
                 break;
-
+#ifdef VMCFG_FLOAT
+            case OP_sf32x4: {
+                checkStack(2,0);
+                emitCoerce(FLOAT4_TYPE, sp-1);
+                emitCoerce(INT_TYPE, sp);
+                coder->write(state, pc, opcode);
+                state->pop(2);
+                break;
+            }
+#endif
+                    
             default:
                 // size was nonzero, but no case handled the opcode.  someone asleep at the wheel!
                 AvmAssertMsg(false, "Unhandled opcode");
@@ -2522,13 +2732,18 @@ namespace avmplus
 
     bool Verifier::emitCallpropertySlot(AbcOpcode opcode, int& sp, Traits* t, Binding b, uint32_t argc, const uint8_t *pc)
     {
-        if (!AvmCore::isSlotBinding(b) || argc != 1)
+        if (!AvmCore::isSlotBinding(b))
+            return false;
+        if ((argc != 1) && (argc != 4))
             return false;
 
         const TraitsBindingsp tb = t->getTraitsBindings();
 
         int slot_id = AvmCore::bindingToSlotId(b);
         Traits* slotType = tb->getSlotTraits(slot_id);
+
+        if ((argc == 4) FLOAT_ONLY(&& (slotType != core->traits.float4_ctraits)))
+            return false;
 
         if (slotType == core->traits.int_ctraits)
         {
@@ -2548,6 +2763,27 @@ namespace avmplus
             state->setType(sp, NUMBER_TYPE, true);
         }
         else
+#ifdef VMCFG_FLOAT
+        if (slotType == core->traits.float_ctraits)
+        {
+            coder->write(state, pc, OP_convert_f, FLOAT_TYPE);
+            state->setType(sp, FLOAT_TYPE, true);
+        }
+        else
+        if (slotType == core->traits.float4_ctraits)
+        {
+            if(argc == 1) {
+                coder->write(state, pc, OP_convert_f4, FLOAT4_TYPE);
+                state->setType(sp, FLOAT4_TYPE, true);
+            } else {
+                AvmAssert(argc == 4);
+                AvmAssert(opcode != OP_callpropvoid);
+                coder->writeCoerceToFloat4(state, sp);
+                state->setType(sp, FLOAT4_TYPE, true);
+            }
+        }
+        else
+#endif
         if (slotType == core->traits.boolean_ctraits)
         {
             coder->write(state, pc, OP_convert_b, BOOLEAN_TYPE);
@@ -2577,6 +2813,7 @@ namespace avmplus
 
         if (opcode == OP_callpropvoid)
         {
+            AvmAssert(argc == 1);
             coder->write(state, pc, OP_pop);  // result
             coder->write(state, pc, OP_pop);  // function
             state->pop(2);
@@ -2586,8 +2823,8 @@ namespace avmplus
             FrameValue v = state->stackTop();
             // NOTE writeNip is necessary until lir optimizes the "nip"
             // case to avoid the extra copies that result from swap+pop
-            coder->writeNip(state, pc);
-            state->pop(2);
+            coder->writeNip(state, pc, (uint8_t) argc);
+            state->pop(argc + 1);
             state->push(v);
         }
         return true;
@@ -2699,8 +2936,23 @@ namespace avmplus
         // early bind slot
         if (AvmCore::isSlotBinding(b))
         {
+            // Bugzilla 705756: If we can mark known-notnull definitions as 
+            // notnull then finddef calls will be removed by the optimizer.
+            //
+            // *** DO NOT MERGE TO TAMARIN-REDUX WITHOUT CONSULTING FELIX ***
+            bool notNull = false;
+            if (obj.traits->pool == core->builtinPool)
+            {
+                // Global object holding the built-in types
+                Stringp nm = multiname.getName();
+                if (FLOAT_ONLY(nm == core->kfloat4 || nm == core->kfloat ||) nm == core->kMath || nm == core->kNumber)
+                {
+                    // We know those bindings not to be null values
+                    notNull = true;
+                }
+            }
             coder->writeOp1(state, pc, OP_getslot, AvmCore::bindingToSlotId(b), propType);
-            state->pop_push(n, propType);
+            state->pop_push(n, propType, notNull);
             return;
         }
 
@@ -2720,14 +2972,26 @@ namespace avmplus
         }
         if( !propType )
         {
-            if( obj.traits == VECTORINT_TYPE  || obj.traits == VECTORUINT_TYPE ||
-                obj.traits == VECTORDOUBLE_TYPE )
+            if (obj.traits == VECTORINT_TYPE
+                || obj.traits == VECTORUINT_TYPE
+                || obj.traits == VECTORDOUBLE_TYPE
+#ifdef VMCFG_FLOAT
+                || obj.traits == VECTORFLOAT_TYPE
+                || obj.traits == VECTORFLOAT4_TYPE
+#endif
+                )
             {
                 bool attr = multiname.isAttr();
                 Traits* indexType = state->value(state->sp()).traits;
                 // NOTE a dynamic name should have the same version as the current pool
                 bool maybeIntegerIndex = !attr && multiname.isRtname() && multiname.containsAnyPublicNamespace();
-                if( maybeIntegerIndex && (indexType == UINT_TYPE || indexType == INT_TYPE || indexType == NUMBER_TYPE) )
+                if( maybeIntegerIndex && (indexType == UINT_TYPE
+                                          || indexType == INT_TYPE
+                                          || indexType == NUMBER_TYPE
+#ifdef VMCFG_FLOAT
+                                          || indexType == FLOAT_TYPE
+#endif
+                                          ) )
                 {
                     if(obj.traits == VECTORINT_TYPE)
                         propType = INT_TYPE;
@@ -2735,6 +2999,12 @@ namespace avmplus
                         propType = UINT_TYPE;
                     else if(obj.traits == VECTORDOUBLE_TYPE)
                         propType = NUMBER_TYPE;
+#ifdef VMCFG_FLOAT
+                    else if(obj.traits == VECTORFLOAT_TYPE)
+                        propType = FLOAT_TYPE;
+                    else if(obj.traits == VECTORFLOAT4_TYPE)
+                        propType = FLOAT4_TYPE;
+#endif // VMCFG_FLOAT
                 }
             }
             else if (obj.traits != NULL && obj.traits->subtypeof(VECTOROBJ_TYPE) && 
@@ -2752,7 +3022,13 @@ namespace avmplus
                 Traits* indexType = state->value(state->sp()).traits;
                 // NOTE a dynamic name should have the same version as the current pool
                 bool maybeIntegerIndex = !attr && multiname.isRtname() && multiname.containsAnyPublicNamespace();
-                if( maybeIntegerIndex && (indexType == UINT_TYPE || indexType == INT_TYPE || indexType == NUMBER_TYPE) )
+                if( maybeIntegerIndex && (indexType == UINT_TYPE
+                                          || indexType == INT_TYPE
+                                          || indexType == NUMBER_TYPE
+#ifdef VMCFG_FLOAT
+                                          || indexType == FLOAT_TYPE
+#endif
+                                          ) )
                 {
                     propType = obj.traits->m_paramTraits;
                 }
@@ -2848,6 +3124,12 @@ namespace avmplus
         FrameValue &v = state->value(index);
         coder->writeCoerce(state, index, target);
         state->setType(index, target, v.notNull);
+    }
+
+    void Verifier::emitCoerceToNumeric(int index)
+    {
+        coder->writeCoerceToNumeric(state, index);
+        state->setType(index, OBJECT_TYPE, true);
     }
 
     Traits* Verifier::peekType(Traits* requiredType, int n)
@@ -3076,7 +3358,7 @@ namespace avmplus
             }
             if (!blockStates)
                 blockStates = new (core->GetGC()) BlockStatesType(core->GetGC());
-            targetState = mmfx_new( FrameState(ms) );
+            targetState = mmfx_new(FrameState(ms, info));
             targetState->abc_pc = target;
             blockStates->map.put(target, targetState);
 
@@ -3354,7 +3636,7 @@ namespace avmplus
                 Traits* t = type_index ? checkTypeName(type_index) : NULL;
 
                 Multiname qn;
-                int name_index = (pool->version != (46<<16|15)) ? toplevel->readU30(pos) : 0;
+                int name_index = pool->hasExceptionSupport() ? toplevel->readU30(pos) : 0;
                 if (name_index != 0)
                 {
                     pool->parseMultiname(qn, name_index);
@@ -3516,6 +3798,10 @@ namespace avmplus
             if (v.sst_mask & (1 << SST_uint32))          out << 'U';
             if (v.sst_mask & (1 << SST_bool32))          out << 'B';
             if (v.sst_mask & (1 << SST_double))          out << 'D';
+#ifdef VMCFG_FLOAT
+            if (v.sst_mask & (1 << SST_float))           out << 'F';
+            if (v.sst_mask & (1 << SST_float4))          out << "F4";
+#endif 
             out << ']';
         }
 #endif

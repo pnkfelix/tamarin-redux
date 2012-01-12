@@ -95,6 +95,7 @@
                 'core/Exception.cpp',
                 'core/exec.cpp',
                 'core/exec-jit.cpp',
+                'core/exec-osr.cpp',
                 'core/exec-verifyall.cpp',
                 'core/Float4Class.cpp',
                 'core/FloatClass.cpp',
@@ -177,6 +178,7 @@
                 'pcre/pcre_version.cpp',
                 'pcre/pcre_xclass.cpp',
                 'AVMPI/AvmAssert.cpp',
+                'AVMPI/float4Support.cpp',
                 'core/AvmLog.cpp',
                 'core/Coder.cpp'
             ],

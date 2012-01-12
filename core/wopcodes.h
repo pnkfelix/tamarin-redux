@@ -72,6 +72,8 @@ namespace avmplus
         WOP_dxns = 0x06,
         WOP_dxnslate = 0x07,
         WOP_kill = 0x08,
+        WOP_lf32x4 = 0x0A,
+        WOP_sf32x4 = 0x0B,
         WOP_ifnlt = 0x0C,
         WOP_ifnle = 0x0D,
         WOP_ifngt = 0x0E,
@@ -94,6 +96,7 @@ namespace avmplus
         WOP_hasnext = 0x1F,
         WOP_pushnull = 0x20,
         WOP_pushundefined = 0x21,
+        WOP_pushfloat = 0x22,
         WOP_nextvalue = 0x23,
         WOP_pushtrue = 0x26,
         WOP_pushfalse = 0x27,
@@ -134,6 +137,7 @@ namespace avmplus
         WOP_sxi8 = 0x51,
         WOP_sxi16 = 0x52,
         WOP_applytype = 0x53,
+        WOP_pushfloat4 = 0x54,
         WOP_newobject = 0x55,
         WOP_newarray = 0x56,
         WOP_newactivation = 0x57,
@@ -170,6 +174,9 @@ namespace avmplus
         WOP_coerce_b = 0x76, // coerce_b -> convert_b, they are the same
         WOP_convert_o = 0x77,
         WOP_checkfilter = 0x78,
+        WOP_convert_f = 0x79,
+        WOP_unplus = 0x7A,
+        WOP_convert_f4 = 0x7B,
         WOP_coerce = 0x80,
         WOP_coerce_s = 0x85,
         WOP_astype = 0x86,
@@ -279,8 +286,9 @@ namespace avmplus
         WOP_debugexit = 0x134,
         WOP_lix8 = 0x135,
         WOP_lix16 = 0x136,
+        WOP_float4 = 0x137,     // Needs four arguments but does not pop any - an abomination brought on by LIR_ffff2f4 and writeNip()
 
-        WOP_LAST = 0x136
+        WOP_LAST = 0x137
     };
 
     struct WordOpcodeAttr
@@ -292,7 +300,7 @@ namespace avmplus
         unsigned calls:1;        // True if the last argument is arg_count
                                  // An 'arg_count' number of extra parameters are pop from the stack
         unsigned pushes:3;       // Number of items pushed on the stack
-        unsigned pops:2;         // Number of items popped from the stack
+        unsigned pops:3;         // Number of items popped from the stack
         unsigned pops_extra:1;   // True if the instruction has extra stack pops, determined by verifier
         unsigned uses_local:1;   // Use local slot
         unsigned defs_local:1;   // Defines local slot

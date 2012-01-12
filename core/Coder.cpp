@@ -41,95 +41,6 @@
 
 namespace avmplus
 {
-#if defined FEATURE_TEEWRITER
-    TeeWriter::TeeWriter(CodeWriter* coder1, CodeWriter* coder2)
-        : coder1(coder1)
-        , coder2(coder2)
-    {
-        AvmAssert(coder1 != NULL);
-        AvmAssert(coder2 != NULL);
-    }
-
-    TeeWriter::~TeeWriter()
-    {
-    }
-
-    void TeeWriter::write(const FrameState* state, const uint8_t* pc, AbcOpcode opcode, Traits *type) {
-        coder1->write(state, pc, opcode, type);
-        coder2->write(state, pc, opcode, type);
-    }
-
-    void TeeWriter::writeOp1(const FrameState* state, const uint8_t *pc, AbcOpcode opcode, uint32_t opd1, Traits* type)
-    {
-        coder1->writeOp1(state, pc, opcode, opd1, type);
-        coder2->writeOp1(state, pc, opcode, opd1, type);
-    }
-
-    void TeeWriter::writeOp2(const FrameState* state, const uint8_t *pc, AbcOpcode opcode, uint32_t opd1, uint32_t opd2, Traits* type)
-    {
-        coder1->writeOp2(state, pc, opcode, opd1, opd2, type);
-        coder2->writeOp2(state, pc, opcode, opd1, opd2, type);
-    }
-
-    void TeeWriter::writeMethodCall(const FrameState* state, const uint8_t *pc, AbcOpcode opcode, MethodInfo* m, uintptr_t disp_id, uint32_t argc, Traits* type)
-    {
-        coder1->writeMethodCall(state, pc, opcode, m, disp_id, argc, type);
-        coder2->writeMethodCall(state, pc, opcode, m, disp_id, argc, type);
-    }
-
-    void TeeWriter::writeNip(const FrameState* state, const uint8_t *pc)
-    {
-        coder1->writeNip(state, pc);
-        coder2->writeNip(state, pc);
-    }
-
-    void TeeWriter::writeCheckNull(const FrameState* state, uint32_t index)
-    {
-        coder1->writeCheckNull(state, index);
-        coder2->writeCheckNull(state, index);
-    }
-
-    void TeeWriter::writeCoerce(const FrameState* state, uint32_t index, Traits *type)
-    {
-        coder1->writeCoerce(state, index, type);
-        coder2->writeCoerce(state, index, type);
-    }
-
-    void TeeWriter::writePrologue(const FrameState* state, const uint8_t *pc, CodegenDriver *dr)
-    {
-        coder1->writePrologue(state, pc, dr);
-        coder2->writePrologue(state, pc, dr);
-    }
-
-    void TeeWriter::writeEpilogue(const FrameState* state)
-    {
-        coder1->writeEpilogue(state);
-        coder2->writeEpilogue(state);
-    }
-
-    void TeeWriter::writeBlockStart(const FrameState* state)
-    {
-        coder1->writeBlockStart(state);
-        coder2->writeBlockStart(state);
-    }
-
-    void TeeWriter::writeOpcodeVerified(const FrameState* state, const uint8_t* pc, AbcOpcode opcode) {
-        coder1->writeOpcodeVerified(state, pc, opcode);
-        coder2->writeOpcodeVerified(state, pc, opcode);
-    }
-
-    void TeeWriter::writeFixExceptionsAndLabels(const FrameState* state, const uint8_t* pc) {
-        coder1->writeFixExceptionsAndLabels(state, pc);
-        coder2->writeFixExceptionsAndLabels(state, pc);
-    }
-
-    void TeeWriter::cleanup() {
-        coder1->cleanup();
-        coder2->cleanup();
-    }
-
-#endif // FEATURE_TEEWRITER
-
     NullWriter::NullWriter(CodeWriter* coder)
         : coder(coder) {
     }
@@ -157,9 +68,9 @@ namespace avmplus
         coder->writeMethodCall(state, pc, opcode, m, disp_id, argc, type);
     }
 
-    void NullWriter::writeNip(const FrameState* state, const uint8_t *pc)
+    void NullWriter::writeNip(const FrameState* state, const uint8_t *pc, uint8_t offset)
     {
-        coder->writeNip(state, pc);
+        coder->writeNip(state, pc, offset);
     }
 
     void NullWriter::writeCheckNull(const FrameState* state, uint32_t index)
@@ -167,6 +78,16 @@ namespace avmplus
         coder->writeCheckNull(state, index);
     }
 
+    void NullWriter::writeCoerceToNumeric(const FrameState* state, uint32_t index)
+    {
+        coder->writeCoerceToNumeric(state, index);
+    }
+
+    void NullWriter::writeCoerceToFloat4(const FrameState* state, uint32_t index)
+    {
+        coder->writeCoerceToFloat4(state, index);
+    }
+    
     void NullWriter::writeCoerce(const FrameState* state, uint32_t index, Traits *type)
     {
         coder->writeCoerce(state, index, type);
@@ -254,10 +175,16 @@ namespace avmplus
     void CodeWriter::writeMethodCall(const FrameState*, const uint8_t *, AbcOpcode, MethodInfo*, uintptr_t, uint32_t, Traits*)
     { }
 
-    void CodeWriter::writeNip(const FrameState*, const uint8_t *)
+    void CodeWriter::writeNip(const FrameState*, const uint8_t *, uint8_t)
     { }
 
     void CodeWriter::writeCheckNull(const FrameState*, uint32_t)
+    { }
+
+    void CodeWriter::writeCoerceToNumeric(const FrameState*, uint32_t)
+    { }
+
+    void CodeWriter::writeCoerceToFloat4(const FrameState*, uint32_t)
     { }
 
     void CodeWriter::writeCoerce(const FrameState*, uint32_t, Traits*)

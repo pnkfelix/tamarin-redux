@@ -41,7 +41,6 @@
 
 namespace avmplus
 {
-#ifdef VMCFG_OSR
     /**
      * "On-Stack_Replacement" of interpreter methods with equivalent
      * JIT compiled versions.
@@ -114,19 +113,19 @@ namespace avmplus
         // Trampolines, referenced by setInterp():
         static uintptr_t osrInterpGPR(MethodEnv* method, int argc, uint32_t *ap);
         static double osrInterpFPR(MethodEnv* method, int argc, uint32_t *ap);
+#ifdef VMCFG_FLOAT
+        static float4_t osrInterpVECR(MethodEnv* method, int argc, uint32_t *ap);
+#endif
         static Atom osrInvokeInterp(MethodEnv* env, int32_t argc, Atom* argv);
 
         // Three more trampolines to handle the init variants:
         static uintptr_t osrInitInterpGPR(MethodEnv* method, int argc, uint32_t *ap);
         static double osrInitInterpFPR(MethodEnv* method, int argc, uint32_t *ap);
+#ifdef VMCFG_FLOAT
+        static float4_t osrInitInterpVECR(MethodEnv* method, int argc, uint32_t *ap);
+#endif
         static Atom osrInitInvokeInterp(MethodEnv* env, int32_t argc, Atom* argv);
     };
-
-#else
-
-    class OSR { };       // Dummy class definition for non-OSR builds
-
-#endif // VMCFG_OSR
 }
 
 #endif // __avmplus_OSR__

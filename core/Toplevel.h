@@ -82,6 +82,12 @@ namespace avmplus
         GCRef<DoubleVectorClass> doubleVectorClass() const;
         GCRef<ErrorClass> errorClass() const;
         GCRef<EvalErrorClass> evalErrorClass() const;
+#ifdef VMCFG_FLOAT
+        GCRef<FloatClass> floatClass() const;
+        GCRef<Float4Class> float4Class() const;
+        GCRef<FloatVectorClass> floatVectorClass() const;
+        GCRef<Float4VectorClass> float4VectorClass() const;
+#endif        
         GCRef<FunctionClass> functionClass() const;
         GCRef<IntClass> intClass() const;
         GCRef<IntVectorClass> intVectorClass() const;
@@ -279,11 +285,6 @@ namespace avmplus
 
 
         /**
-         * operator +
-         */
-        Atom add2(Atom lhs, Atom rhs);
-
-        /**
          * Implements the GetDefaultNamespace API as specified in E4X 12.1.1, pg 59
          *
          */
@@ -452,6 +453,9 @@ namespace avmplus
     private:
         Atom getClassClosureAtomFromAlias(Atom name, bool checkContextDomainOnly);
         void addAliasedClassClosure(Atom key1, Atom key2, ClassClosure* cc, bool isDomainEnv);
+        //Function to be overriden by the player
+        //This hack has been added to fix Bugzilla 715105
+        virtual DomainEnv* getDomainEnvOverridableHook();
 
     public:
         String* getAliasFromTraits(Traits* traits);
@@ -509,12 +513,20 @@ namespace avmplus
         friend class BooleanClass;
         friend class NamespaceClass;
         friend class NumberClass;
+#ifdef VMCFG_FLOAT
+        friend class FloatClass;
+        friend class Float4Class;
+#endif        
         friend class IntClass;
         friend class UIntClass;
         friend class StringClass;
         GCMember<BooleanClass>      GC_POINTER(_booleanClass);
         GCMember<NamespaceClass>    GC_POINTER(_namespaceClass);
         GCMember<NumberClass>       GC_POINTER(_numberClass);
+#ifdef VMCFG_FLOAT
+        GCMember<FloatClass>        GC_POINTER(_floatClass);
+        GCMember<Float4Class>       GC_POINTER(_float4Class);
+#endif        
         GCMember<IntClass>          GC_POINTER(_intClass);
         GCMember<UIntClass>         GC_POINTER(_uintClass);
         GCMember<StringClass>       GC_POINTER(_stringClass);

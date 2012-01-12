@@ -86,6 +86,8 @@
 #undef AVMPLUS_VERBOSE
 #undef VMCFG_NANOJIT
 #undef FEATURE_NANOJIT
+#undef VMCFG_FLOAT
+#undef VMCFG_GENERIC_FLOAT4
 #undef VMCFG_OSR
 #undef VMCFG_COMPILEPOLICY
 #undef VMCFG_AOT
@@ -112,8 +114,6 @@
 #undef MMGC_VALGRIND
 #undef VMCFG_SAFEPOINTS
 #undef VMCFG_SWF12
-#undef VMCFG_FLOAT
-#undef VMCFG_FLOAT4
 #undef VMCFG_SWF13
 #undef VMCFG_SWF14
 #undef VMCFG_SWF15
@@ -213,6 +213,14 @@
  *
  * Note that if AVMSYSTEM_UNALIGNED_FP_ACCESS is not set then it is assumed that 64-bit
  * floats require 8-byte alignment.
+ *
+ * Note that AVMSYSTEM_UNALIGNED_FP_ACCESS does not apply to float4 values.  Some SIMD
+ * units have different instructions for aligned and unaligned access; on some
+ * systems the alignment requirement is 16 bytes, on others it's 8 bytes.  But as of
+ * November 2011 all C++ compilers we use will assume such alignment when manipulating
+ * float4 values and will not use the instructions for unaligned access even if
+ * they are available.  C++ code must never assume that unaligned access is OK is
+ * appropriate for float4 data.
  */
 #if !defined AVMSYSTEM_UNALIGNED_FP_ACCESS || AVMSYSTEM_UNALIGNED_FP_ACCESS != 0 && AVMSYSTEM_UNALIGNED_FP_ACCESS != 1
 #  error "AVMSYSTEM_UNALIGNED_FP_ACCESS must be defined and 0 or 1 (only)."
@@ -419,12 +427,22 @@
 #endif
 
 
+/* AVMFEATURE_FLOAT
+ *
+ * Enables the types 'float' and 'float4' in the VM.
+ */
+#if !defined AVMFEATURE_FLOAT || AVMFEATURE_FLOAT != 0 && AVMFEATURE_FLOAT != 1
+#  error "AVMFEATURE_FLOAT must be defined and 0 or 1 (only)."
+#endif
+
+
 /* AVMFEATURE_OSR
  *
- * Enables delayed JIT-compilation with on-stack replacement.
- * The default OSR compilation strategy either compiles a method eagerly
- * or interprets it always, thus the OSR invocation threshold must be
- * separately configured at runtime to obtain meaningful results.
+ * Enables delayed JIT-compilation with on-stack replacement, by default,
+ * and supports runtime-disabling of OSR to get the legacy policy (OSR=0).
+ * Without this feature, legacy policy is the default: the VM
+ * compiles a method eagerly or interprets it always, and the OSR
+ * invocation threshold can be enabled at runtime (OSR=K, K>0).
  */
 #if !defined AVMFEATURE_OSR || AVMFEATURE_OSR != 0 && AVMFEATURE_OSR != 1
 #  error "AVMFEATURE_OSR must be defined and 0 or 1 (only)."
@@ -872,6 +890,17 @@
 #  error "Exactly one of AVMSYSTEM_IA32,AVMSYSTEM_AMD64,AVMSYSTEM_ARM,AVMSYSTEM_PPC,AVMSYSTEM_SPARC,AVMSYSTEM_MIPS,AVMSYSTEM_SH4 must be defined."
 #endif
 
+#  if !AVMFEATURE_ABC_INTERP
+#    error "AVMFEATURE_ABC_INTERP is required for AVMFEATURE_JIT"
+#  endif
+#endif
+#if AVMFEATURE_FLOAT
+#  if !AVMFEATURE_SWF16
+#    error "AVMFEATURE_SWF16 is required for AVMFEATURE_FLOAT"
+#  endif
+#  if AVMFEATURE_AOT
+#    error "AVMFEATURE_AOT is precluded for AVMFEATURE_FLOAT"
+#  endif
 #endif
 #if AVMFEATURE_OSR
 #  if !AVMFEATURE_JIT
@@ -907,7 +936,11 @@
 #  endif
 #endif
 
-
+#if AVMFEATURE_EVAL
+#  if AVMFEATURE_AOT
+#    error "AVMFEATURE_AOT is precluded for AVMFEATURE_EVAL"
+#  endif
+#endif
 
 
 
@@ -1126,6 +1159,12 @@
 #if AVMFEATURE_JIT
 #  define FEATURE_NANOJIT
 #endif
+#if AVMFEATURE_FLOAT
+#  define VMCFG_FLOAT
+#endif
+#if AVMFEATURE_FLOAT
+#  define VMCFG_GENERIC_FLOAT4
+#endif
 #if AVMFEATURE_OSR
 #  define VMCFG_OSR
 #endif
@@ -1203,12 +1242,6 @@
 #endif
 #if AVMFEATURE_SWF12
 #  define VMCFG_SWF12
-#endif
-#if AVMFEATURE_SWF12
-#  define VMCFG_FLOAT
-#endif
-#if AVMFEATURE_SWF12
-#  define VMCFG_FLOAT4
 #endif
 #if AVMFEATURE_SWF13
 #  define VMCFG_SWF13

@@ -133,7 +133,6 @@ if buildAot:
     config.subst("ENABLE_AOT", 1)
 
 the_os, cpu = config.getTarget()
-
 APP_CPPFLAGS = "-DAVMSHELL_BUILD "
 APP_CXXFLAGS = ""
 APP_CFLAGS = ""
@@ -211,6 +210,8 @@ if 'VALGRIND_HOME' in os.environ:
     valinc = os.environ['VALGRIND_HOME'] + '/include'
 APP_CPPFLAGS += '-I' + valinc + ' '
 
+# builtinBuildFlags() must be called first, featureSettings() will clear the features!
+config.subst("BUILTIN_BUILDFLAGS",build.avmfeatures.builtinBuildFlags(o));
 # See build/avmfeatures.py for the code that processes switches for
 # standard feature names.
 APP_CPPFLAGS += build.avmfeatures.featureSettings(o)
@@ -294,8 +295,8 @@ if config.getCompiler() == 'GCC':
         BASE_M_FLAGS = "-mlong-calls -mthumb-interwork "
 
         if arm_arch == "armv7-a" or arm_arch == None:
-            BASE_CXX_FLAGS = "%s -march=armv7-a -mtune=cortex-a8 -mfloat-abi=softfp -mno-thumb -fno-section-anchors -D__ARM_ARCH__=7 " \
-                        "-DARMV6_ASSEMBLY " % BASE_M_FLAGS
+            BASE_CXX_FLAGS = "%s -march=armv7-a -mtune=cortex-a8 -mfloat-abi=softfp -mfpu=neon -mno-thumb -fno-section-anchors -D__ARM_ARCH__=7 " \
+                        "-DARMV6_ASSEMBLY -DTARGET_NEON " % BASE_M_FLAGS
             APP_CXXFLAGS += BASE_CXX_FLAGS
 
         elif arm_arch == "armv6":
@@ -452,6 +453,9 @@ elif the_os == "linux":
     MMGC_DEFINES.update({'UNIX': None,
                          'AVMPLUS_UNIX': None})
     OS_LIBS.append('pthread')
+    if cpu == "i686":
+        APP_CPPFLAGS += "-m32 -march=i686 "
+        OS_LDFLAGS += "-m32 "
 #    if cpu == "x86_64":
 #        # workaround https://bugzilla.mozilla.org/show_bug.cgi?id=467776
 #        OPT_CXXFLAGS += '-fno-schedule-insns2 '
@@ -486,8 +490,8 @@ else:
     raise Exception("Unsupported OS")
 
 if cpu == "i686":
-    if config.getCompiler() == 'GCC' and the_os == 'darwin':
-        #only mactel always has sse2
+    if config.getCompiler() == 'GCC' :
+        # we require sse2
         APP_CPPFLAGS += "-msse2 "
 elif cpu == "powerpc":
     # we detect this in core/avmbuild.h and MMgc/*build.h

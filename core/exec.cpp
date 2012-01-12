@@ -49,6 +49,10 @@ int argSize(Traits* t)
 {
     return Traits::getBuiltinType(t) == BUILTIN_number
             ? (int)sizeof(double)
+#ifdef VMCFG_FLOAT
+            : Traits::getBuiltinType(t) == BUILTIN_float4
+            ? (int) sizeof(float4_t)
+#endif
             : (int)sizeof(Atom);
 }
 
@@ -72,7 +76,7 @@ BaseExecMgr::BaseExecMgr(AvmCore* core)
     , verifyFunctionQueue(core->gc, 0)
     , verifyTraitsQueue(core->gc, 0)
 #endif
-#ifdef FEATURE_NANOJIT
+#ifdef VMCFG_NANOJIT
     , current_osr(NULL)
 #endif
 {
@@ -82,7 +86,7 @@ BaseExecMgr::BaseExecMgr(AvmCore* core)
 #ifdef VMCFG_COMPILEPOLICY
     prepPolicyRules();
 #endif
-#if defined VMCFG_NANOJIT && defined VMCFG_OSR && defined VMCFG_OSR_ENV_VAR
+#if defined VMCFG_NANOJIT && defined VMCFG_OSR_ENV_VAR
     if (config.osr_threshold == AvmCore::osr_threshold_default) {
         // If osr_threshold hasn't been set, check for OSR environment var.
         const char* osr_config = VMPI_getenv("OSR");
@@ -151,15 +155,47 @@ void BaseExecMgr::init(MethodEnv* env)
     env->_implGPR = delegateInvoke;
 }
 
+#ifdef VMCFG_FLOAT
+typedef enum _eRetTypeKinds {
+     kIntegerRetType = 0,         // return type for ints & co; also used for pointers, typically
+     kFloatingPointRetType = 1,   // used by functions that return float or double
+     kSIMDRetType = 2,            // used by functions that return float4
+} eRetTypeKinds;
+
+static REALLY_INLINE eRetTypeKinds ReturnType(MethodSignaturep ms){
+    BuiltinType rt = ms->returnTraitsBT();
+    if(rt==BUILTIN_number || rt==BUILTIN_float)
+        return kFloatingPointRetType;
+    if(rt==BUILTIN_float4)
+        return kSIMDRetType;
+    return kIntegerRetType;
+}
+#endif
+
 // Called after MethodInfo is resolved.
 void BaseExecMgr::notifyMethodResolved(MethodInfo* m, MethodSignaturep ms)
 {
     if (!config.verifyall) {
         m->_invoker = verifyInvoke;
+#ifdef VMCFG_FLOAT
+        switch(ReturnType(ms)){
+        case kIntegerRetType:
+            m->_implGPR = verifyEnterGPR;
+            break;
+        case kFloatingPointRetType:
+            m->_implFPR = verifyEnterFPR;
+            break;
+        case kSIMDRetType:
+            m->_implVECR = verifyEnterVECR_adapter;
+            break;
+        }
+#else
         if (ms->returnTraitsBT() == BUILTIN_number)
             m->_implFPR = verifyEnterFPR;
         else
             m->_implGPR = verifyEnterGPR;
+
+#endif // VMCFG_FLOAT
     }
 }
 
@@ -211,10 +247,6 @@ Atom BaseExecMgr::initInvokeInterpNoCoerce(MethodEnv* env, int argc, Atom* args)
 
 void BaseExecMgr::setInterp(MethodInfo* m, MethodSignaturep ms, bool isOsr)
 {
-#ifndef VMCFG_OSR
-    AvmAssert(!isOsr);
-#endif
-
     // Choose an appropriate set of interpreter invocation stubs.
     // * if OSR is enabled, choose a stub that counts invocations to trigger JIT.
     // * if the method is a constructor, choose a stub that initializes
@@ -228,18 +260,12 @@ void BaseExecMgr::setInterp(MethodInfo* m, MethodSignaturep ms, bool isOsr)
         BaseExecMgr::initInvokeInterpNoCoerce,    // osr=0, ctor=1, typedargs=0
         BaseExecMgr::initInvokeInterp             // osr=0, ctor=1, typedargs=1
     }}, {{
-#if defined FEATURE_NANOJIT && defined VMCFG_OSR
+#ifdef VMCFG_NANOJIT
         OSR::osrInvokeInterp,                     // osr=1, ctor=0, typedargs=0
         OSR::osrInvokeInterp                      // osr=1, ctor=0, typedargs=1
     }, {
         OSR::osrInitInvokeInterp,                 // osr=1, ctor=1, typedargs=0
         OSR::osrInitInvokeInterp                  // osr=1, ctor=1, typedargs=1
-#else
-        NULL,
-        NULL
-    }, {
-        NULL,
-        NULL
 #endif
     }}};
     int osr = isOsr ? 1 : 0;
@@ -259,29 +285,37 @@ void BaseExecMgr::setInterp(MethodInfo* m, MethodSignaturep ms, bool isOsr)
         //   the object's fields before executing (init_).
         // * if the return type is double, the stub must have a signature that
         //   returns double. (FPR)
-        static const GprMethodProc impl_stubs[2][2][2] = {{{
-            BaseExecMgr::interpGPR,                    // osr=0, ctor=0, fpr=0
-            (GprMethodProc)BaseExecMgr::interpFPR      // osr=0, ctor=0, fpr=1
+        // * if the return type is float, the stub reuses the double (FPR) 
+        //   signature 
+
+        static const GprMethodProc impl_stubs[2][2][IFFLOAT(3,2)] = {{{
+            BaseExecMgr::interpGPR                       // osr=0, ctor=0, fpr=0
+            , (GprMethodProc)BaseExecMgr::interpFPR      // osr=0, ctor=0, fpr=1
+#ifdef VMCFG_FLOAT
+            , (GprMethodProc)BaseExecMgr::interpVECR     // osr=0, ctor=0, fpr=2
+#endif
         }, {
-            BaseExecMgr::initInterpGPR,                // osr=0, ctor=1, fpr=0
-            (GprMethodProc)BaseExecMgr::initInterpFPR  // osr=0, ctor=1, fpr=1
+            BaseExecMgr::initInterpGPR                   // osr=0, ctor=1, fpr=0
+            , (GprMethodProc)BaseExecMgr::initInterpFPR  // osr=0, ctor=1, fpr=1
+#ifdef VMCFG_FLOAT
+            , (GprMethodProc)BaseExecMgr::initInterpVECR // osr=0, ctor=1, fpr=2
+#endif
         }}, {{
-#ifdef VMCFG_OSR
-            OSR::osrInterpGPR,                         // osr=1, ctor=0, fpr=0
-            (GprMethodProc)OSR::osrInterpFPR           // osr=1, ctor=0, fpr=1
+            OSR::osrInterpGPR                            // osr=1, ctor=0, fpr=0
+            , (GprMethodProc)OSR::osrInterpFPR           // osr=1, ctor=0, fpr=1
+#ifdef VMCFG_FLOAT
+            , (GprMethodProc)OSR::osrInterpVECR          // osr=1, ctor=0, fpr=2
+#endif
         }, {
-            OSR::osrInitInterpGPR,                     // osr=1, ctor=1, fpr=0
-            (GprMethodProc)OSR::osrInitInterpFPR       // osr=1, ctor=1, fpr=1
-#else
-            NULL,
-            NULL
-        }, {
-            NULL,
-            NULL
+            OSR::osrInitInterpGPR                        // osr=1, ctor=1, fpr=0
+            , (GprMethodProc)OSR::osrInitInterpFPR       // osr=1, ctor=1, fpr=1
+#ifdef VMCFG_FLOAT
+            , (GprMethodProc)OSR::osrInitInterpVECR      // osr=1, ctor=1, fpr=2
 #endif
         }}};
-        int fpr = ms->returnTraitsBT() == BUILTIN_number ? 1 : 0;
-        m->_implGPR = impl_stubs[osr][ctor][fpr];
+        int rtype = IFFLOAT( ReturnType(ms),
+                             ms->returnTraitsBT() == BUILTIN_number ? 1 : 0);
+        m->_implGPR = impl_stubs[osr][ctor][rtype];
         if (isOsr)
             m->_abc.countdown = config.osr_threshold;
     }
@@ -305,6 +339,17 @@ double BaseExecMgr::verifyEnterFPR(MethodEnv* env, int32_t argc, uint32_t* ap)
     STACKRESTORE();
     return d;
 }
+
+#ifdef VMCFG_FLOAT
+float4_t BaseExecMgr::verifyEnterVECR(MethodEnv* env, int32_t argc, uint32_t* ap)
+{
+    verifyOnCall(env);
+    STACKADJUST(); // align stack for 32-bit Windows and MSVC compiler
+    float4_t f4 = thunkEnterVECR_adapter((void*)env->method->_implVECR, env, argc, ap);
+    STACKRESTORE();
+    return f4;
+}
+#endif // VMCFG_FLOAT
 
 // Entry point when the first call to the method is late bound.
 Atom BaseExecMgr::verifyInvoke(MethodEnv* env, int argc, Atom* args)
@@ -374,11 +419,7 @@ void BaseExecMgr::verifyInterp(MethodInfo* m, MethodSignaturep ms, Toplevel *top
     if (m->pool()->isVerbose(VB_execpolicy))
         core->console << "execpolicy interp (" << m->unique_method_id() << ") " << m << " jit-available\n";
 # endif
-# ifdef VMCFG_OSR
     setInterp(m, ms, OSR::isSupported(abc_env, m, ms));
-# else
-    setInterp(m, ms, false);
-# endif
 #else
 # ifdef AVMPLUS_VERBOSE
     if (m->pool()->isVerbose(VB_execpolicy))
@@ -417,26 +458,37 @@ void BaseExecMgr::verifyCommon(MethodInfo* m, MethodSignaturep ms,
 }
 
 #ifdef DEBUGGER
+
+template<typename T, typename CALLT> T debugEnterExitWrapper(MethodEnv* env, GprMethodProc thunker, int32_t argc, uint32_t* argv){
+    CallStackNode csn(CallStackNode::kEmpty);
+    env->debugEnter(/*frame_sst*/NULL, &csn, /*framep*/NULL, /*eip*/NULL);
+    CALLT thunk = (CALLT) thunker;
+    const T result = thunk(env, argc, argv);
+    env->debugExit(&csn);
+    return result;
+}
 /*static*/
 uintptr_t BaseExecMgr::debugEnterExitWrapper32(MethodEnv* env, int32_t argc, uint32_t* argv)
 {
-    CallStackNode csn(CallStackNode::kEmpty);
-    env->debugEnter(/*frame_sst*/NULL, &csn, /*framep*/NULL, /*eip*/NULL);
-    GprMethodProc thunk = (GprMethodProc) env->method->_native.thunker;
-    const uintptr_t result = thunk(env, argc, argv);
-    env->debugExit(&csn);
-    return result;
+    return debugEnterExitWrapper<uintptr_t,GprMethodProc>(env,env->method->_native.thunker,argc,argv);
 }
 
 /*static*/
 double BaseExecMgr::debugEnterExitWrapperN(MethodEnv* env, int32_t argc, uint32_t* argv)
 {
+    return debugEnterExitWrapper<double,FprMethodProc>(env,env->method->_native.thunker, argc,argv);
+}
+#ifdef VMCFG_FLOAT
+/*static*/
+float4_t BaseExecMgr::debugEnterExitWrapperV(MethodEnv* env, int32_t argc, uint32_t* argv)
+{
     CallStackNode csn(CallStackNode::kEmpty);
     env->debugEnter(/*frame_sst*/NULL, &csn, /*framep*/NULL, /*eip*/NULL);
-    const double result = (reinterpret_cast<FprMethodProc>(env->method->_native.thunker))(env, argc, argv);
+    const float4_t result = thunkEnterVECR_adapter((void*) env->method->_native.thunker, env, argc, argv);
     env->debugExit(&csn);
     return result;
 }
+#endif // VMCFG_FLOAT
 #endif
 
 void BaseExecMgr::verifyNative(MethodInfo* m, MethodSignaturep ms)
@@ -444,10 +496,24 @@ void BaseExecMgr::verifyNative(MethodInfo* m, MethodSignaturep ms)
 #ifdef DEBUGGER
     if (core->debugger())
     {
+#ifdef VMCFG_FLOAT
+       switch( ReturnType(ms) ){
+       case kIntegerRetType:
+            setNative(m, debugEnterExitWrapper32);
+            break;
+       case kFloatingPointRetType:
+            setNative(m, (GprMethodProc) debugEnterExitWrapperN);
+            break;
+       case kSIMDRetType:
+            setNative(m, (GprMethodProc) debugEnterVECR_adapter);
+            break;
+       }
+#else
         if (ms->returnTraitsBT() == BUILTIN_number)
             setNative(m, (GprMethodProc) debugEnterExitWrapperN);
         else
             setNative(m, debugEnterExitWrapper32);
+#endif // VMCFG_FLOAT
     }
     else
 #endif
@@ -529,7 +595,35 @@ Atom* FASTCALL BaseExecMgr::unbox1(Atom atom, Traits* t, Atom* arg0)
             #endif
             break;
         }
-
+#ifdef VMCFG_FLOAT
+        case BUILTIN_float:
+        {
+            union
+            {
+                float f;
+                Atom a;
+            };
+            f = AvmCore::atomToFloat(atom);
+            atom = a;
+            break;
+        }
+        case BUILTIN_float4:
+		{
+			union{
+				float4_t f4;
+				Atom a[4];
+			};
+			const int nAtoms = sizeof(float4_t)/sizeof(Atom);
+            AvmAssert(sizeof(float4_t)%sizeof(Atom)==0);
+            f4 = AvmCore::atomToFloat4(atom); 
+			int i;
+            for(i=0;i<nAtoms-1;i++)
+                *arg0++ = a[i];
+            atom = a[i]; // this will be handled below
+			break;
+		}
+#endif
+            
         default:
             atom = (Atom)atomPtr(atom);
             break;
@@ -575,6 +669,34 @@ Atom* FASTCALL BaseExecMgr::coerceUnbox1(MethodEnv* env, Atom atom, Traits* t, A
             atom = (Atom)atomPtr(atom);
             break;
 
+#ifdef VMCFG_FLOAT
+        case BUILTIN_float:
+        {
+            union
+            {
+                float f;
+                Atom a;
+            };
+            f = (float) AvmCore::number(atom); 
+            atom = a;
+            break;
+        }
+        case BUILTIN_float4:
+        {
+            const int nAtoms = sizeof(float4_t)/sizeof(Atom);
+            union{
+                float4_t f4;
+                Atom a[nAtoms];
+            };
+            AvmAssert(sizeof(float4_t)%sizeof(Atom)==0);
+            AvmCore::float4(&f4, atom);
+            int i;
+            for(i=0;i<nAtoms-1;i++)
+                *args++ = a[i];
+            atom = a[i]; // this will be handled below
+            break;
+        }
+#endif // VMCFG_FLOAT
         case BUILTIN_number:
         {
             #ifdef AVMPLUS_64BIT
@@ -622,6 +744,10 @@ Atom* FASTCALL BaseExecMgr::coerceUnbox1(MethodEnv* env, Atom atom, Traits* t, A
         case BUILTIN_vectordouble:
         case BUILTIN_vectorint:
         case BUILTIN_vectoruint:
+#ifdef VMCFG_FLOAT
+        case BUILTIN_vectorfloat:
+        case BUILTIN_vectorfloat4:
+#endif
         case BUILTIN_xml:
         case BUILTIN_xmlList:
             // A few intrinsic final classes can skip subtypeof calls.
@@ -696,6 +822,12 @@ inline Atom coerceAtom(AvmCore* core, Atom atom, Traits* t, Toplevel* toplevel)
         return (atom == undefinedAtom) ? nullObjectAtom : atom;
     case BUILTIN_any:
         return atom;
+#ifdef VMCFG_FLOAT
+    case BUILTIN_float:
+        return AvmCore::isFloat(atom) ? atom : core->floatAtom(atom);
+    case BUILTIN_float4:
+        return AvmCore::isFloat4(atom) ? atom : core->float4Atom(atom);
+#endif // VMCFG_FLOAT
     default:
         return toplevel->coerce(atom, t);
     }
@@ -706,36 +838,62 @@ Atom BaseExecMgr::endCoerce(MethodEnv* env, int32_t argc, uint32_t *ap, MethodSi
     // We know we have verified the method, so we can go right into it.
     AvmCore* core = env->core();
     const int32_t bt = ms->returnTraitsBT();
-    if (bt == BUILTIN_number)
+    
+    switch(bt){
+    case BUILTIN_number:
     {
         STACKADJUST(); // align stack for 32-bit Windows and MSVC compiler
         double d = (*env->method->_implFPR)(env, argc, ap);
         STACKRESTORE();
         return core->doubleToAtom(d);
     }
-
-    STACKADJUST(); // align stack for 32-bit Windows and MSVC compiler
-    const Atom i = (*env->method->_implGPR)(env, argc, ap);
-    STACKRESTORE();
-
-    switch (bt)
+#ifdef VMCFG_FLOAT
+    case BUILTIN_float:
     {
-    case BUILTIN_int:
-        return core->intToAtom((int32_t)i);
-    case BUILTIN_uint:
-        return core->uintToAtom((uint32_t)i);
-    case BUILTIN_boolean:
-        return i ? trueAtom : falseAtom;
-    case BUILTIN_any:
-    case BUILTIN_object:
-    case BUILTIN_void:
-        return (Atom)i;
-    case BUILTIN_string:
-        return ((Stringp)i)->atom();
-    case BUILTIN_namespace:
-        return ((Namespace*)i)->atom();
+        STACKADJUST(); // align stack for 32-bit Windows and MSVC compiler
+        // WARNING: This assumes that the calling conventions of SinglePrecisionFprMethodProc and FprMethodProc 
+        // are identical, or at least compatible. I.e. the register used to return the "double" value is identical with 
+        // (or a superset of) the register used to return a float value. This assumption is true for ARM (softfloat, hardfloat ABIs)
+        // x86 and x64 (Mac, Windows, Linux) at least. Must double-check for other platforms!! (most notably, TODO: MIPS)
+        typedef float (*SinglePrecisionFprMethodProc)(MethodEnv*, int32_t, uint32_t *);
+        float f = reinterpret_cast<SinglePrecisionFprMethodProc> (*env->method->_implFPR)(env, argc, ap);
+        STACKRESTORE();
+        return core->floatToAtom(f);
+    }
+    case BUILTIN_float4:
+        {
+            STACKADJUST(); // align stack for 32-bit Windows and MSVC compiler
+            float4_t f4 = thunkEnterVECR_adapter((void*)env->method->_implVECR, env, argc, ap);
+            STACKRESTORE();
+            return core->float4ToAtom(f4);
+        }
+#endif // VMCFG_FLOAT
     default:
-        return ((ScriptObject*)i)->atom();
+    {
+        STACKADJUST(); // align stack for 32-bit Windows and MSVC compiler
+        const Atom i = (*env->method->_implGPR)(env, argc, ap);
+        STACKRESTORE();
+
+        switch (bt)
+        {
+        case BUILTIN_int:
+            return core->intToAtom((int32_t)i);
+        case BUILTIN_uint:
+            return core->uintToAtom((uint32_t)i);
+        case BUILTIN_boolean:
+            return i ? trueAtom : falseAtom;
+        case BUILTIN_any:
+        case BUILTIN_object:
+        case BUILTIN_void:
+            return (Atom)i;
+        case BUILTIN_string:
+            return ((Stringp)i)->atom();
+        case BUILTIN_namespace:
+            return ((Namespace*)i)->atom();
+        default:
+            return ((ScriptObject*)i)->atom();
+        }
+    }
     }
 }
 

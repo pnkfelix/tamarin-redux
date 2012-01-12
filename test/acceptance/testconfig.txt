@@ -51,6 +51,7 @@
 #
 #   The following commands only operate at a testfile level and not individual tests:
 #
+#   exclude - Do not compile and do not execute
 #   ats_skip - don't generate an ATS swf as these files are not ATS compatible
 #   deep - test should only run in deep phase for specified configs
 #   skip - the test is not run, for example the configuration does not support
@@ -193,6 +194,35 @@ misc/testJitordieSwitch, .*, arm-(winmobile|lnx), deep, include slow tests in de
 misc/testJitordieSwitch, arm-(winmobile|lnx), , skip, include slow tests in deep phase
 
 # skip slow tests when running in -Dgreedy mode
+e4x/Global/e13_1_2_1, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Date/e15_9_5_10, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Date/e15_9_5_10_11, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Date/e15_9_5_12_1, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Date/e15_9_5_12_4, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Date/e15_9_5_14, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Date/e15_9_5_16, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Date/e15_9_5_18, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Date/e15_9_5_20, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Date/e15_9_5_22_1, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Date/e15_9_5_22_2, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Expressions/e11_10_2, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Expressions/e11_10_3, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Expressions/e11_7_1, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Expressions/e11_7_2, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Expressions/e11_7_3, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Function/apply_001, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/RegExp/multibyte_regress, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+ecma3/Unicode/uA000_YiSyllables, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+mmgc/memlimit, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+mmgc/outofmemory, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+mmgc/pauseForGCIfCollectionImminent, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+spidermonkey/js1_5/Regress/regress-155081-2, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+spidermonkey/js1_5/Regress/regress-155081, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+spidermonkey/js1_5/Regress/regress-244470, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+spidermonkey/js1_5/Regress/regress-256501, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+spidermonkey/js1_5/Regress/regress-280769-2, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+spidermonkey/js1_5/Regress/regress-280769-3, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
+spidermonkey/js1_5/Regress/regress-366122, Dgreedy,, skip, skip slow test in -Dgreedy mode (bugzilla 707907)
 ecma3/Unicode/u3400_CJKUnifiedIdeographsExtensionA, Dgreedy,, skip, skip slow test in -Dgreedy mode
 ecma3/Unicode/u5000_CJKUnifiedIdeographs, Dgreedy,, skip, skip slow test in -Dgreedy mode
 ecma3/Unicode/u6000_CJKUnifiedIdeographs, Dgreedy,, skip, skip slow test in -Dgreedy mode
@@ -295,4 +325,21 @@ as3/ByteArray/ByteArray_bug662851 , x86-mac-tvm-releasedebugger-air,, skip , sys
 # Running -ES compiled tests
 ###########
 e4x/XML/setNotification , .*-ES , , skip, Testcase does not work with -ES
+
+####################
+# Float/Float4
+####################
+as3/Types/Float/.* , .* ,  .*float.* , exclude , Only valid when float is enabled.
+as3/Types/Float4/.* , .* , .*float.* , exclude , Only valid when float is enabled.
+abcasm/coverage/float/.* , .* , .*float.* , exclude , Only valid when float is enabled.
+abcasm/float/.* , .* , .*float.* , exclude , Only valid when float is enabled.
+as3/asc/.* , .* , .*float.* , exclude , Only valid when float is enabled.
+as3/AMF/AMFSerializer_float , .* , .*float.* , exclude , Only valid when float is enabled.
+
+###########
+# Helper files
+###########
+as3/asc/import-with-float4-helper , .* , , skip , Not a test on its own
+
+
 

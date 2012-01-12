@@ -122,7 +122,7 @@ class RuntestBase(object):
     custom_directives = ['deep', 'performance']
     # note that include is only valid for performance runtests config
     config_directives = ['expectedfail', 'skip', 'ats_skip', 'verify_skip',
-                         'include'] + custom_directives
+                         'include', 'exclude'] + custom_directives
     
     
     escbin = ''
@@ -326,7 +326,11 @@ class RuntestBase(object):
             elif o in ('--timeout',):
                 try:
                     self.timeout = int(v)
-                    self.testTimeOut=int(v)
+                    # Bugzilla 707907: timeout should not mean failure
+                    # unless --testtimeout passed.  But, we also do
+                    # not want long-running / infinitely-looping tests
+                    # to hijack --timeout. Below is a hack workaround.
+                    self.testTimeOut=int(v*20)
                 except ValueError:
                     print('Incorrect timeout value: %s\n' % v)
                     self.usage(2)
@@ -517,7 +521,7 @@ class RuntestBase(object):
             wordcode = ''
             
         self.config = cputype+'-'+self.osName+'-'+vm_str+'-'+self.vmtype+ \
-                      wordcode+self.addtoconfig+self.vmargs.replace(" ", "")
+                      wordcode+self.vmargs.replace(" ", "")+self.addtoconfig
         
         
 
@@ -703,16 +707,18 @@ class RuntestBase(object):
                 tests += [(d+'/'+f) for f in files if self.istest(f, fileExtentions)]
                 # utilDirs contains all dirs that hold support files, and therefore
                 # are excluded from the tests list
-                # There are two kinds of util directories:
+                # There are three kinds of util directories:
                 # 1. directory with the same name as the test: all files in that dir
                 #    are included when compiling the test
                 # 2. directory with the same name as the test + _support (string is defined in self.supportFolderExt):
                 #    all files in that dir are compiled, but not run - these files are
                 #    normally passed in as args to the test itself
+                # 3. directory with the name "includes": all files in that dir
+                #    are manually included in test media and will not be compiled or run
                 utilDirs = [ud for ud in dirs if (ud+self.sourceExt in files) or
                          (ud.endswith(self.supportFolderExt) and
                           ud[:-len(self.supportFolderExt)]+self.sourceExt in files)
-                         ]
+                         or ud=="includes"]
                 for x in [x for x in self.exclude+utilDirs if x in dirs]:
                     dirs.remove(x)
                     if x.endswith(self.supportFolderExt):
@@ -1100,7 +1106,13 @@ class RuntestBase(object):
                 print('The pexpect module must be installed to generate ats swfs.')
                 exit(1)
             for test in tests:
+                self.js_print('compiling %s' % test)
+                (dir, file) = split(test)
                 (testdir, ext) = splitext(test)
+                settings = self.get_test_settings(testdir)
+                if self.excludeTest(file, settings):
+                    continue
+
                 self.js_print('compiling %s' % test)
                 if self.aotsdk:
                     # We use the test config file to mark abc files that fail to AOT compile,
@@ -1145,6 +1157,12 @@ class RuntestBase(object):
 
             for test in tests:
                 self.js_print('compiling %s' % test)
+                (dir, file) = split(test)
+                (testdir, ext) = splitext(test)
+                settings = self.get_test_settings(testdir)
+                if self.excludeTest(file, settings):
+                    continue
+
                 if test.endswith(self.abcasmExt):
                     self.compile_test(test)
                 elif test.endswith(self.executableExtensions):
@@ -1153,8 +1171,7 @@ class RuntestBase(object):
                 else:
                     arglist = parseArgStringToList(self.ascargs)
 
-                    (dir, file) = split(test)
-                    (testdir, ext) = splitext(test)
+                    
 
                     # Check for a local .java_args file (either dir or file specific)
                     # Not ideal - but we try to load a .java_args file, and if one is loaded, then we revert to compiling
@@ -1269,9 +1286,18 @@ class RuntestBase(object):
     def skipAtsTest(self, file, settings):
         '''Check testconfig if we should skip the given file.  Returns a boolean'''
         if '.*' in settings:
-            for key in ['ats_skip', 'skip', 'expectedfail']:
+            for key in ['ats_skip', 'skip', 'expectedfail', 'exclude']:
                 if key in settings['.*']:
                     self.js_print('ATS Skipping %s ... reason: %s' % (file,settings['.*'][key]))
+                    return True
+        return False
+
+    def excludeTest(self, file, settings):
+        '''Check testconfig if we should exclude the given file.  Returns a boolean'''
+        if '.*' in settings:
+            for key in ['exclude']:
+                if key in settings['.*']:
+                    self.js_print('Excluding %s ... reason: %s' % (file,settings['.*'][key]))
                     return True
         return False
 
@@ -1416,7 +1442,7 @@ class RuntestBase(object):
                 self.lock.release()
 
             starttime=time()
-            output=err=""
+            output=err=[]
             while True:
                 if p.poll() is None:
                     if self.testTimeOut>-1 and time()-starttime>self.testTimeOut:

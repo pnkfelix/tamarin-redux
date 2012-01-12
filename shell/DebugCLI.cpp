@@ -527,20 +527,6 @@ namespace avmshell
          }
     }
 
-    avmplus::Atom DebugCLI::ease2Atom(const char* to, avmplus::Atom baseline)
-    {
-        // first make a string out of the value
-        avmplus::Atom a = core->newStringLatin1(to)->atom();
-
-        // using the type of baseline try to convert to into an appropriate Atom
-        if (core->isNumber(baseline))
-            return core->numberAtom(a);
-        else if (core->isBoolean(baseline))
-            return avmplus::AvmCore::booleanAtom(a);
-
-        return nullStringAtom;
-    }
-
     /**
      * Given a pointer, trims leading and trailing whitespace.  Note, this will
      * modify the buffer -- it trims trailing whitespace by writing a null
@@ -924,10 +910,10 @@ namespace avmshell
             currentToken = commandLine;
 
             char *command = nextToken();
-            int cmd = commandFor(command);
 
             TRY(core, avmplus::kCatchAction_Ignore)
             {
+            int cmd = commandFor(command);
             switch (cmd) {
             case -1:
                 // ambiguous, we already printed error message

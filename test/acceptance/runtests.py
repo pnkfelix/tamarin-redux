@@ -65,7 +65,8 @@ class AcceptanceRuntest(RuntestBase):
     androidthreads = False
     androiddevices = []
     verifyonly = False
-    swfversions = [9,10,11,12,13,14,15]
+    swfversions = [9,10,11,12,13,14,15,16]
+    apiversions = [12,13,14,15,16]
 
     def __init__(self):
         # Set threads to # of available cpus/cores
@@ -224,6 +225,15 @@ class AcceptanceRuntest(RuntestBase):
                                             settings['.*'][key],)))
         self.allskips += 1
         return output_calls
+
+    def exclude_test(self, ast, testnum, settings, key):
+        '''Exclude the given test, returns output_calls'''
+        output_calls = []
+        output_calls.append((self.js_print, ('%d running %s' % (testnum, ast),
+                                             '<b>', '</b><br/>')))
+        output_calls.append((self.js_print,('  excluding... reason: %s' %
+                                            settings['.*'][key],)))
+        return output_calls
      
     def runTestPrep(self, testAndNum):
         ast = testAndNum[0]
@@ -242,6 +252,10 @@ class AcceptanceRuntest(RuntestBase):
         includes = self.includes #list
 
         settings = self.get_test_settings(root)
+
+        # exclude entire test if specified
+        if '.*' in settings and 'exclude' in settings['.*']:
+            return self.exclude_test(ast, testnum, settings, 'exclude')
 
         # skip entire test if specified
         if '.*' in settings and 'skip' in settings['.*']:
@@ -303,6 +317,7 @@ class AcceptanceRuntest(RuntestBase):
             avm_args_file = open('%s.avm_args' % ast,'r')
             index = 0
             uses_swfversion = re.compile('uses_swfversion', re.IGNORECASE)
+            uses_apiversion = re.compile('uses_apiversion', re.IGNORECASE)
             for line in avm_args_file:
                 line = line.strip()
                 if line.startswith('#'):
@@ -315,6 +330,18 @@ class AcceptanceRuntest(RuntestBase):
                         line = uses_swfversion.sub('', line)
                         line, extraVmArgs, abcargs, multiabc = self.process_avm_args_line(line, dir)
                         extraVmArgs += ' -swfversion %s ' % swf_ver
+                        outputCalls.extend(self.runTest(
+                            ast, root, testName, '%s.%s' % (testnum, index),
+                            settings, extraVmArgs, abcargs))
+                        index += 1
+                    continue
+                # uses_apiversion
+                if uses_apiversion.search(line):
+                    # run avm with all api versions
+                    for api_ver in self.apiversions:
+                        line = uses_apiversion.sub('', line)
+                        line, extraVmArgs, abcargs, multiabc = self.process_avm_args_line(line, dir)
+                        extraVmArgs += ' -api SWF_%s ' % api_ver
                         outputCalls.extend(self.runTest(
                             ast, root, testName, '%s.%s' % (testnum, index),
                             settings, extraVmArgs, abcargs))

@@ -138,6 +138,14 @@ VTable* toVTable(E env, Atom atom)
         case kDoubleType:
             // ISSUE what about int?
             return toplevel->numberClass()->ivtable();
+#ifdef VMCFG_FLOAT
+        case kSpecialBibopType:
+            if( bibopKind(atom) == kBibopFloatType )
+                return toplevel->floatClass()->ivtable();
+            if( bibopKind(atom) == kBibopFloat4Type )
+                return toplevel->float4Class()->ivtable();
+            AvmAssertMsg(false,"Unhandled bibop kind");
+#endif // VMCFG_FLOAT
         }
     }
 
@@ -274,6 +282,18 @@ Atom constructprop(Toplevel* toplevel, const Multiname* multiname, int argc, Ato
         }
         else
         {
+#ifdef VMCFG_FLOAT
+            if (AvmCore::isFloat4(obj))
+            {
+                // See FIXME in Toplevel::getproperty for why this is "correct".
+                if (multiname->isValidDynamicName())
+                {
+                    uint32_t index;
+                    if (AvmCore::getIndexFromAtom(multiname->getName()->atom(), &index))
+                        toplevel->throwTypeError(kConstructOfNonFunctionError);
+                }
+            }
+#endif
             // primitive types are not dynamic, so we can go directly
             // to their __proto__ object
             o = toplevel->toPrototype(obj);
@@ -306,6 +326,12 @@ Atom coerceImpl(const Toplevel* toplevel, Atom atom, Traits* expected)
             return AvmCore::booleanAtom(atom);
         case BUILTIN_number:
             return core->numberAtom(atom);
+#ifdef VMCFG_FLOAT
+        case BUILTIN_float:
+            return AvmCore::isFloat(atom)?atom:core->floatAtom(atom);  
+        case BUILTIN_float4:
+            return AvmCore::isFloat4(atom)?atom:core->float4Atom(atom);  
+#endif
         case BUILTIN_string:
             return AvmCore::isNullOrUndefined(atom) ? nullStringAtom : core->string(atom)->atom();
         case BUILTIN_int:
@@ -346,6 +372,22 @@ Atom coerceImpl(const Toplevel* toplevel, Atom atom, Traits* expected)
         actual = AvmCore::atomToScriptObject(atom)->traits();
         break;
 
+#ifdef VMCFG_FLOAT
+    case kSpecialBibopType:
+        AvmAssert(atom != AtomConstants::undefinedAtom);
+
+        if(bibopKind(atom) == kBibopFloatType)
+        {
+            actual = core->traits.float_itraits;
+            break;
+        }
+        if(bibopKind(atom) == kBibopFloat4Type)
+        {
+            actual = core->traits.float4_itraits;
+            break;
+        }
+        // fall trhu to default
+#endif 
     default:
         // unexpected atom type
         AvmAssert(false);
@@ -392,7 +434,90 @@ void coerceobj_atom(MethodEnv *env, Atom atom, Traits* t)
         throwCheckTypeError(env, atom, t);
 }
     
+#ifdef VMCFG_FLOAT
+#define INTPTRASDOUBLE(v)  ( (double) atomGetIntptr(v) )
+template<typename T> T __multiply(T a, T b){ return a * b; }
+template<typename T> T __divide(T a, T b){ return a / b; }
+template<typename T> T __subtract(T a, T b){ return a - b; }
+static double __modulo(double a, double b){ return MathUtils::mod(a,b); }
+static float __modulo(float a, float b){ return (float) MathUtils::mod(a,b); }
+static float4_t __modulo(const float4_t& a, const float4_t& b){ 
+    float x= __modulo(f4_x(a), f4_x(b));
+    float y= __modulo(f4_y(a), f4_y(b));
+    float z= __modulo(f4_z(a), f4_z(b));
+    float w= __modulo(f4_w(a), f4_w(b));
+    float4_t res = {x, y, z, w};
+    return res;
+}
+template<> float4_t __multiply<float4_t>(float4_t a, float4_t b) { return f4_mul(a,b);}
+template<> float4_t __divide<float4_t>  (float4_t a, float4_t b) { return f4_div(a,b);}
+template<> float4_t __subtract<float4_t>(float4_t a, float4_t b) { return f4_sub(a,b);}
+
+#define op_generic(name) \
+    Atom op_##name(AvmCore* core, Atom lhs, Atom rhs)\
+    {\
+        tagprof("op_##name val1", lhs);\
+        tagprof("op_##name val2", rhs);\
+        \
+        if (atomIsBothIntptr(lhs,rhs))\
+        {\
+            double res = __##name( INTPTRASDOUBLE(lhs), INTPTRASDOUBLE(rhs));\
+            intptr_t res_int = intptr_t(res);\
+            if( atomIsValidIntptrValue(res_int) && res==(double)res_int)\
+                return (res_int << 3) | kIntptrType;\
+        }\
+        \
+        lhs = AvmCore::primitive(lhs); \
+        rhs = AvmCore::primitive(rhs); \
+        \
+       if(AvmCore::isFloat4(lhs) || AvmCore::isFloat4(rhs)){\
+           float4_decl_v(lhs);\
+           float4_decl_v(rhs);\
+           return core->float4ToAtom( __##name(lhsv, rhsv) );\
+        }\
+        if(AvmCore::isFloat(lhs) && AvmCore::isFloat(rhs))\
+            return core->floatToAtom( __##name(AvmCore::atomToFloat(lhs),AvmCore::atomToFloat(rhs)));\
+        else\
+            return core->doubleToAtom(__##name( AvmCore::number(lhs), AvmCore::number(rhs)) );\
+    }
+
+op_generic(divide);
+op_generic(subtract);
+op_generic(multiply);
+op_generic(modulo);
+
+Atom op_negate(AvmCore* core, Atom val) {
+    tagprof("op_negate val1", val);
+    val = AvmCore::primitive(val); // slow, but let's get over this...
+        
+    if(AvmCore::isFloat(val)){
+        return core->floatToAtom(-AvmCore::atomToFloat(val));
+    }
+
+    if(AvmCore::isFloat4(val)){
+        const static float4_t Zero = {-0.0, -0.0, -0.0, -0.0};
+        float4_decl_v(val);
+        return core->float4ToAtom( f4_sub(Zero, valv) );
+    
+    }
+    if(atomIsIntptr(val) && val != zeroIntAtom){
+        double res = - INTPTRASDOUBLE(val);
+        intptr_t res_int = intptr_t(res);
+        // note: we can't negate "0" as integer, but we should've guarded against that case with the zeroIntAtom test
+        AvmAssert(res_int != 0);
+        if( atomIsValidIntptrValue(res_int) && res == (double)res_int)
+            return (res_int << 3) | kIntptrType;
+    }
+
+    return core->doubleToAtom( - AvmCore::number(val) );
+}
+#endif
+
+#ifdef VMCFG_FLOAT
+template<bool float_enabled> Atom op_add_impl(AvmCore* core, Atom lhs, Atom rhs)
+#else
 Atom op_add(AvmCore* core, Atom lhs, Atom rhs)
+#endif // VMCFG_FLOAT
 {
     tagprof("op_add val1", lhs);
     tagprof("op_add val2", rhs);
@@ -425,7 +550,7 @@ Atom op_add(AvmCore* core, Atom lhs, Atom rhs)
         return core->allocDouble(double(atomGetIntptr(lhs) + atomGetIntptr(rhs)));
     }
 
-    if (AvmCore::isNumber(lhs) && AvmCore::isNumber(rhs))
+    if (AvmCore::isNumeric(lhs) && AvmCore::isNumeric(rhs))
     {
         // C++ porting note. if either side is undefined NaN then result must be NaN,
         // which is assumed to be taken care of by IEEE 748 double add.
@@ -480,8 +605,36 @@ concat_strings:
     return core->concatStrings(core->string(lhs), core->string(rhs))->atom();
 
 add_numbers:
+
+#ifdef VMCFG_FLOAT
+    // if both are floats, the addition is done on float; if any is float4, addition is done on float4
+    if(float_enabled)
+    {
+        if(AvmCore::isFloat4(lhs) || AvmCore::isFloat4(rhs))
+        {
+            float4_decl_v(lhs);
+            float4_decl_v(rhs);
+            return core->float4ToAtom( f4_add(lhsv , rhsv));
+        }
+        if(AvmCore::isFloat(lhs) && AvmCore::isFloat(rhs))
+            return core->floatToAtom(AvmCore::singlePrecisionFloat(lhs) + AvmCore::singlePrecisionFloat(rhs));
+    }
+#endif 
     return core->doubleToAtom(AvmCore::number(lhs) + AvmCore::number(rhs));
 }
+
+#ifdef VMCFG_FLOAT
+Atom op_add(AvmCore* core, Atom lhs, Atom rhs)
+{
+   return op_add_impl<true>(core, lhs, rhs);
+}
+
+Atom op_add_nofloat(AvmCore* core, Atom lhs, Atom rhs)
+{
+   return op_add_impl<false>( core, lhs, rhs);
+}
+#endif // VMCFG_FLOAT
+
 
 #ifdef VMCFG_FASTPATH_ADD
 
@@ -507,7 +660,11 @@ static bool addIntptrOverflow(intptr_t lhs, intptr_t rhs)
 // established by inline code.
 
 // atom + atom => atom
+#ifdef VMCFG_FLOAT
+template<bool float_support> Atom op_add_a_aa_impl(AvmCore* core, Atom lhs, Atom rhs)
+#else
 Atom op_add_a_aa(AvmCore* core, Atom lhs, Atom rhs)
+#endif // VMCFG_FLOAT
 {
 #ifndef VMCFG_FASTPATH_ADD_INLINE
     // Fastpath for intptr+intptr
@@ -582,6 +739,18 @@ Atom op_add_a_aa(AvmCore* core, Atom lhs, Atom rhs)
 
     if (!(AvmCore::isString(lhs) || AvmCore::isString(rhs)))
     {
+#ifdef VMCFG_FLOAT
+        if(float_support){
+            if(AvmCore::isFloat4(lhs) || AvmCore::isFloat4(rhs))
+            {
+                float4_decl_v(lhs);
+                float4_decl_v(rhs);
+                return core->float4ToAtom( f4_add(lhsv, rhsv) );
+            }
+            if(AvmCore::isFloat(lhs) && AvmCore::isFloat(rhs))
+                return core->floatToAtom(AvmCore::atomToFloat(lhs) + AvmCore::atomToFloat(rhs));
+        }
+#endif
         return core->doubleToAtom(AvmCore::number(lhs) + AvmCore::number(rhs));
     }
 
@@ -590,7 +759,11 @@ concat_strings:
 }
 
 // atom + int => atom
+#ifdef VMCFG_FLOAT
+template<bool float_support> Atom op_add_a_ai_impl(AvmCore* core, Atom lhs, int32_t rhs)
+#else
 Atom op_add_a_ai(AvmCore* core, Atom lhs, int32_t rhs)
+#endif // VMCFG_FLOAT
 {
     if (atomIsIntptr(lhs))
     {
@@ -627,7 +800,7 @@ Atom op_add_a_ai(AvmCore* core, Atom lhs, int32_t rhs)
     else if (AvmCore::isDouble(lhs))
     {
         return core->doubleToAtom(AvmCore::atomToDouble(lhs) + double(rhs));
-    }
+    } 
 
     if (AvmCore::isString(lhs) || AvmCore::isDate(lhs)) goto concat_strings;
 
@@ -635,6 +808,12 @@ Atom op_add_a_ai(AvmCore* core, Atom lhs, int32_t rhs)
 
     if (!AvmCore::isString(lhs))
     {
+#ifdef VMCFG_FLOAT
+        if(float_support && AvmCore::isFloat4(lhs)) {
+            float4_t op2 = {(float)rhs, (float)rhs, (float)rhs, (float)rhs};
+            return core->float4ToAtom( f4_add( AvmCore::atomToFloat4(lhs), op2) );
+        }
+#endif // VMCFG_FLOAT
         return core->doubleToAtom(AvmCore::number(lhs) + double(rhs));
     }
 
@@ -645,7 +824,11 @@ Atom op_add_a_ai(AvmCore* core, Atom lhs, int32_t rhs)
 }
 
 // int + atom => atom
+#ifdef VMCFG_FLOAT
+template<bool float_support> Atom op_add_a_ia_impl(AvmCore* core, int32_t lhs, Atom rhs)
+#else
 Atom op_add_a_ia(AvmCore* core, int32_t lhs, Atom rhs)
+#endif // VMCFG_FLOAT
 {
     if (atomIsIntptr(rhs))
     {
@@ -690,6 +873,12 @@ Atom op_add_a_ia(AvmCore* core, int32_t lhs, Atom rhs)
 
     if (!AvmCore::isString(rhs))
     {
+#ifdef VMCFG_FLOAT
+        if( float_support && AvmCore::isFloat4(rhs)) {
+            float4_t op1 = {(float)lhs, (float)lhs, (float)lhs, (float)lhs};
+            return core->float4ToAtom( f4_add( op1, AvmCore::atomToFloat4(rhs)) );
+        }
+#endif
         return core->doubleToAtom(double(lhs) + AvmCore::number(rhs));
     }
 
@@ -700,7 +889,11 @@ concat_strings:
 }
 
 // atom + double => atom
+#ifdef VMCFG_FLOAT
+template<bool float_support> Atom op_add_a_ad_impl(AvmCore* core, Atom lhs, double rhs)
+#else
 Atom op_add_a_ad(AvmCore* core, Atom lhs, double rhs)
+#endif // VMCFG_FLOAT
 {
     if (AvmCore::isDouble(lhs))
     {
@@ -717,6 +910,12 @@ Atom op_add_a_ad(AvmCore* core, Atom lhs, double rhs)
 
     if (!AvmCore::isString(lhs))
     {
+#ifdef VMCFG_FLOAT
+        if(float_support && AvmCore::isFloat4(lhs)) {
+            float4_t op2 = {(float)rhs, (float)rhs, (float)rhs, (float)rhs};
+            return core->float4ToAtom( f4_add( AvmCore::atomToFloat4(lhs), op2) );
+        }
+#endif // VMCFG_FLOAT
         return core->doubleToAtom(AvmCore::number(lhs) + rhs);
     }
 
@@ -727,7 +926,11 @@ concat_strings:
 }
 
 // double + atom => atom
+#ifdef VMCFG_FLOAT
+template<bool float_support> Atom op_add_a_da_impl(AvmCore* core, double lhs, Atom rhs)
+#else
 Atom op_add_a_da(AvmCore* core, double lhs, Atom rhs)
+#endif
 {
     if (AvmCore::isDouble(rhs))
     {
@@ -744,6 +947,12 @@ Atom op_add_a_da(AvmCore* core, double lhs, Atom rhs)
 
     if (!AvmCore::isString(rhs))
     {
+#ifdef VMCFG_FLOAT
+        if(float_support && AvmCore::isFloat4(rhs)) {
+            float4_t op1 = {(float)lhs, (float)lhs, (float)lhs, (float)lhs};
+            return core->float4ToAtom( f4_add( op1, AvmCore::atomToFloat4(rhs)) );
+        }
+#endif // VMCFG_FLOAT
         return core->doubleToAtom(lhs + AvmCore::number(rhs));
     }
 
@@ -752,6 +961,40 @@ concat_strings:
     Stringp s = core->doubleToString(lhs);
     return core->concatStrings(s, core->string(rhs))->atom();
 }
+
+
+#ifdef VMCFG_FLOAT
+Atom op_add_a_aa(AvmCore* core, Atom lhs, Atom rhs){
+    return op_add_a_aa_impl<true>(core, lhs, rhs);
+}
+Atom op_add_a_aa_nofloat(AvmCore* core, Atom lhs, Atom rhs){
+    return op_add_a_aa_impl<false>(core, lhs, rhs);                     
+}
+Atom op_add_a_ai(AvmCore* core, Atom lhs, int32_t rhs){
+    return op_add_a_ai_impl<true>(core, lhs, rhs);
+}
+Atom op_add_a_ai_nofloat(AvmCore* core, Atom lhs, int32_t rhs){
+    return op_add_a_ai_impl<false>(core, lhs, rhs);                     
+}
+Atom op_add_a_ia(AvmCore* core, int32_t lhs, Atom rhs){
+    return op_add_a_ia_impl<true>(core, lhs, rhs);
+}
+Atom op_add_a_ia_nofloat(AvmCore* core, int32_t lhs, Atom rhs){
+    return op_add_a_ia_impl<false>(core, lhs, rhs);                     
+}
+Atom op_add_a_ad(AvmCore* core, Atom lhs, double rhs){
+    return op_add_a_ad_impl<true>(core, lhs, rhs);
+}
+Atom op_add_a_ad_nofloat(AvmCore* core, Atom lhs, double rhs){
+    return op_add_a_ad_impl<false>(core, lhs, rhs);                     
+}
+Atom op_add_a_da(AvmCore* core, double lhs, Atom rhs){
+    return op_add_a_da_impl<true>(core, lhs, rhs);
+}
+Atom op_add_a_da_nofloat(AvmCore* core, double lhs, Atom rhs){
+    return op_add_a_da_impl<false>(core, lhs, rhs);                     
+}
+#endif /* VMCFG_FLOAT */
 
 #endif /* VMCFG_FASTPATH_ADD */
 
@@ -860,6 +1103,34 @@ double FASTCALL mop_lf64(const void* addr)
     return d.value;
 #endif
 }
+    
+#ifdef VMCFG_FLOAT
+void FASTCALL mop_lf32x4(float4_t* result, const void* addr)
+{
+#if defined(VMCFG_LITTLE_ENDIAN)
+    // Note, this depends on one of three conditions being true:
+    //  - float4_t is a generic structure type that is not mapped directly
+    //    to the SIMD type, and ByteArray storage is 4-byte aligned
+    //  - SIMD loads from unaligned addresses is OK
+    //  - ByteArray storage is 16-byte aligned
+    *result = *(const float4_t*)addr;
+#else
+    // 2011-12-16: This has probably never been tested: there have been no
+    // big-endian systems where VMCFG_FLOAT has been enabled.
+    const uint8_t* u = (const uint8_t*)addr;
+    float4_t result;
+    float_overlay f;
+    f.word = ((uint32_t(u[3]) << 24) | (uint32_t(u[2]) << 16) | (uint32_t([1]) << 8) | uint32_t(u[0]));
+    result->x = f.value;
+    f.word = ((uint32_t(u[7]) << 24) | (uint32_t(u[6]) << 16) | (uint32_t([5]) << 8) | uint32_t(u[4]));
+    result->y = f.value;
+    f.word = ((uint32_t(u[11]) << 24) | (uint32_t(u[10]) << 16) | (uint32_t([9]) << 8) | uint32_t(u[8]));
+    result->z = f.value;
+    f.word = ((uint32_t(u[15]) << 24) | (uint32_t(u[14]) << 16) | (uint32_t([13]) << 8) | uint32_t(u[12]));
+    result->w = f.value;
+#endif
+}
+#endif
 
 void FASTCALL mop_si8(void* addr, int32_t value)
 {
@@ -935,5 +1206,44 @@ void mop_sf64(void* addr, double value)
     u[7] = uint8_t(d.words.msw >> 24);
 #endif
 }
+
+#ifdef VMCFG_FLOAT
+void mop_sf32x4(void* addr, const float4_t& value)
+{
+#if defined(VMCFG_LITTLE_ENDIAN)
+    // Note, this depends on one of three conditions being true:
+    //  - float4_t is a generic structure type that is not mapped directly
+    //    to the SIMD type, and ByteArray storage is 4-byte aligned
+    //  - SIMD stores to unaligned addresses is OK
+    //  - ByteArray storage is 16-byte aligned
+    *(float4_t*)addr = value;
+#else
+    // 2011-12-16: This has probably never been tested: there have been no
+    // big-endian systems where VMCFG_FLOAT has been enabled.
+    uint8_t* u = (uint8_t*)addr;
+    float_overlay f;
+    f.value = value.x;
+    u[0] = uint8_t(f.word);
+    u[1] = uint8_t(f.word >> 8);
+    u[2] = uint8_t(f.word >> 16);
+    u[3] = uint8_t(f.word >> 24);
+    f.value = value.y;
+    u[4] = uint8_t(f.word);
+    u[5] = uint8_t(f.word >> 8);
+    u[6] = uint8_t(f.word >> 16);
+    u[7] = uint8_t(f.word >> 24);
+    f.value = value.z;
+    u[8] = uint8_t(f.word);
+    u[9] = uint8_t(f.word >> 8);
+    u[10] = uint8_t(f.word >> 16);
+    u[11] = uint8_t(f.word >> 24);
+    f.value = value.w;
+    u[12] = uint8_t(f.word);
+    u[13] = uint8_t(f.word >> 8);
+    u[14] = uint8_t(f.word >> 16);
+    u[15] = uint8_t(f.word >> 24);
+#endif
+}
+#endif
 
 } // namespace avmplus

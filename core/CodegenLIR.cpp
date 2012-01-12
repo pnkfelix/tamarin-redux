@@ -108,33 +108,6 @@ return foo;
 return *((intptr_t*)&_method);
 #endif
 
-#ifdef AVMPLUS_ARM
-#ifdef _MSC_VER
-#define RETURN_METHOD_PTR_D(_class, _method) \
-return *((int*)&_method);
-#else
-#define RETURN_METHOD_PTR_D(_class, _method) \
-union { \
-    double (_class::*bar)(); \
-    int foo[2]; \
-}; \
-bar = _method; \
-return foo[0];
-#endif
-
-#elif defined __GNUC__
-#define RETURN_METHOD_PTR_D(_class, _method) \
-union { \
-    double (_class::*bar)(); \
-    intptr_t foo; \
-}; \
-bar = _method; \
-return foo;
-#else
-#define RETURN_METHOD_PTR_D(_class, _method) \
-return *((intptr_t*)&_method);
-#endif
-
 #ifdef PERFM
 #define DOPROF
 #endif /* PERFM */
@@ -188,7 +161,8 @@ namespace avmplus
         #define VECTORINTADDR(f) vectorIntAddr((int (IntVectorObject::*)())(&f))
         #define VECTORUINTADDR(f) vectorUIntAddr((int (UIntVectorObject::*)())(&f))
         #define VECTORDOUBLEADDR(f) vectorDoubleAddr((int (DoubleVectorObject::*)())(&f))
-        #define VECTORDOUBLEADDRD(f) vectorDoubleAddrD((double (DoubleVectorObject::*)())(&f))
+        #define VECTORFLOATADDR(f) vectorFloatAddr((int (FloatVectorObject::*)())(&f))
+        #define VECTORFLOAT4ADDR(f) vectorFloat4Addr((int (Float4VectorObject::*)())(&f))
         #define VECTOROBJADDR(f) vectorObjAddr((int (ObjectVectorObject::*)())(&f))
         #define EFADDR(f)   efAddr((int (ExceptionFrame::*)())(&f))
         #define DEBUGGERADDR(f)   debuggerAddr((int (Debugger::*)())(&f))
@@ -241,11 +215,17 @@ namespace avmplus
             RETURN_METHOD_PTR(DoubleVectorObject, f);
         }
 
-        intptr_t vectorDoubleAddrD(double (DoubleVectorObject::*f)())
+#ifdef VMCFG_FLOAT
+        intptr_t vectorFloatAddr(int (FloatVectorObject::*f)())
         {
-            RETURN_METHOD_PTR_D(DoubleVectorObject, f);
+            RETURN_METHOD_PTR(FloatVectorObject, f);
         }
 
+        intptr_t vectorFloat4Addr(int (Float4VectorObject::*f)())
+        {
+            RETURN_METHOD_PTR(Float4VectorObject, f);
+        }
+    #endif // VMCFG_FLOAT
         intptr_t vectorObjAddr(int (ObjectVectorObject::*f)())
         {
             RETURN_METHOD_PTR(ObjectVectorObject, f);
@@ -587,14 +567,16 @@ namespace avmplus
      * ---------------------------------
      */
 
-    // address calc instruction
-    LIns* CodegenLIR::leaIns(int32_t disp, LIns* base) {
-        return lirout->ins2(LIR_addp, base, InsConstPtr((void*)disp));
-    }
 
     LIns* CodegenLIR::localCopy(int i)
     {
         switch (bt(state->value(i).traits)) {
+#ifdef VMCFG_FLOAT
+        case BUILTIN_float: 
+            return localGetf(i);
+        case BUILTIN_float4: 
+            return localGetf4(i);
+#endif
         case BUILTIN_number:
             return localGetd(i);
         case BUILTIN_boolean:
@@ -611,9 +593,9 @@ namespace avmplus
         BuiltinType tag = bt(type);
         SlotStorageType sst = valueStorageType(tag);
 #ifdef DEBUG
-        jit_sst[i] = uint8_t(1 << sst);
+        jit_sst[i] = uint16_t(1 << sst); 
 #endif
-        lirout->insStore(o, vars, i * VARSIZE, ACCSET_VARS);
+        lirout->insStore(o, vars, i << VARSHIFT(info) , ACCSET_VARS);
         lirout->insStore(LIR_sti2c, InsConst(sst), tags, i, ACCSET_TAGS);
     }
 
@@ -757,7 +739,9 @@ namespace avmplus
 
     bool isNullable(Traits* t) {
         BuiltinType bt = Traits::getBuiltinType(t);
-        return bt != BUILTIN_int && bt != BUILTIN_uint && bt != BUILTIN_boolean && bt != BUILTIN_number;
+
+        return bt != BUILTIN_int && bt != BUILTIN_uint && bt != BUILTIN_boolean && bt != BUILTIN_number
+                      FLOAT_ONLY(&& bt != BUILTIN_float && bt != BUILTIN_float4); 
     }
 
     /**
@@ -782,6 +766,7 @@ namespace avmplus
         LIns* vars;                     // LIns that defines the vars[] array
         LIns* tags;                     // LIns that defines the tags[] array
         const int nvar;                 // this method's frame size.
+        const int varShift;              // the size of a frame variable in bytes (8 or 16)
         const int scopeBase;            // index of first local scope
         const int stackBase;            // index of first stack slot
         int restLocal;                  // -1 or, if it's lazily allocated, the local holding the rest array
@@ -809,10 +794,10 @@ namespace avmplus
                 int nvar, int scopeBase, int stackBase, int restLocal,
                 uint32_t code_len)
             : LirWriter(out), alloc(alloc),
-              vars(NULL), tags(NULL),
-              nvar(nvar), scopeBase(scopeBase), stackBase(stackBase),
-              restLocal(restLocal), reachable(true),
-              has_backedges(false)
+              vars(NULL), tags(NULL), nvar(nvar), 
+              varShift(VARSHIFT(info)), scopeBase(scopeBase), 
+              stackBase(stackBase), restLocal(restLocal),
+              reachable(true), has_backedges(false)
 #ifdef DEBUGGER
             , haveDebugger(info->pool()->core->debugger() != NULL)
 #endif
@@ -1040,8 +1025,8 @@ namespace avmplus
         }
 
         REALLY_INLINE int varOffsetToIndex(int offset) {
-            AvmAssert(IS_ALIGNED(offset, VARSIZE));
-            return offset / VARSIZE;
+            AvmAssert(IS_ALIGNED(offset, 1 << varShift));
+            return offset >> varShift;
         }
 
         // keep track of the value stored in var d and update notnull
@@ -1078,6 +1063,7 @@ namespace avmplus
                 LIns *val = varTracker[i];
                 if (!val) {
                     val = out->insLoad(op, base, d, accSet, loadQual);
+                    FLOAT_ONLY(AvmAssert(!val->isF4() || varShift == 4));
                     trackVarLoad(val, i);
                 }
                 return val;
@@ -1098,7 +1084,10 @@ namespace avmplus
         // when we see stores to vars or tags.
         LIns *insStore(LOpcode op, LIns *value, LIns *base, int32_t d, AccSet accSet) {
             if (base == vars)
+            {
+                FLOAT_ONLY(AvmAssert(!value->isF4() || varShift == 4));
                 trackVarStore(value, varOffsetToIndex(d));
+            }
             else if (base == tags)
                 trackTagStore(value, d);
             return out->insStore(op, value, base, d, accSet);
@@ -1161,16 +1150,49 @@ namespace avmplus
                   (v.sst_mask == (1 << SST_uint32) && v.traits == UINT_TYPE) ||
                   (v.sst_mask == (1 << SST_bool32) && v.traits == BOOLEAN_TYPE));
 #endif
-        return lirout->insLoad(LIR_ldi, vars, i * VARSIZE, ACCSET_VARS);
+        return lirout->insLoad(LIR_ldi, vars, i << VARSHIFT(info) , ACCSET_VARS);
+    }
+
+    LIns* CodegenLIR::localGetf(int i) {
+#ifdef VMCFG_FLOAT
+#ifdef DEBUG
+        const FrameValue& v = state->value(i);
+        AvmAssert(v.sst_mask == (1<<SST_float) && v.traits == FLOAT_TYPE);
+#endif
+        return lirout->insLoad(LIR_ldf, vars, i << VARSHIFT(info), ACCSET_VARS);
+#else
+        toplevel->throwError(kNotImplementedError); (void)i;
+        return NULL;
+#endif
     }
 
     LIns* CodegenLIR::localGetd(int i) {
 #ifdef DEBUG
         const FrameValue& v = state->value(i);
-        AvmAssert(v.sst_mask == (1<<SST_double) && v.traits == NUMBER_TYPE);
+        AvmAssert((v.sst_mask == (1<<SST_double) && v.traits == NUMBER_TYPE));
 #endif
-        return lirout->insLoad(LIR_ldd, vars, i * VARSIZE, ACCSET_VARS);
+        return lirout->insLoad(LIR_ldd, vars, i << VARSHIFT(info) , ACCSET_VARS);
     }
+
+#ifdef VMCFG_FLOAT
+    LIns* CodegenLIR::localGetf4(int i) {
+#ifdef DEBUG
+        const FrameValue& v = state->value(i);
+        AvmAssert(v.sst_mask == (1<<SST_float4) && v.traits == FLOAT4_TYPE);
+        AvmAssert(VARSHIFT(info) == 4);
+#endif
+        return lirout->insLoad(LIR_ldf4, vars, i << 4, ACCSET_VARS);
+    }
+
+    LIns* CodegenLIR::localGetf4Addr(int i) {
+#ifdef DEBUG
+        const FrameValue& v = state->value(i);
+        AvmAssert(v.sst_mask == (1<<SST_float4) && v.traits == FLOAT4_TYPE);
+        AvmAssert(VARSHIFT(info) == 4);
+#endif
+        return lea(i << 4, vars);
+    }
+#endif
 
     // Load a pointer-sized var, and update null tracking state if the driver
     // informs us that it is not null via FrameState.value.
@@ -1183,13 +1205,15 @@ namespace avmplus
             AvmAssert(!(v.sst_mask == (1 << SST_int32) && v.traits == INT_TYPE) &&
                       !(v.sst_mask == (1 << SST_uint32) && v.traits == UINT_TYPE) &&
                       !(v.sst_mask == (1 << SST_bool32) && v.traits == BOOLEAN_TYPE) &&
+FLOAT_ONLY(           !(v.sst_mask == (1 << SST_float)  && v.traits == FLOAT_TYPE)   &&
+                      !(v.sst_mask == (1 << SST_float4) && v.traits == FLOAT4_TYPE)  && )
                       !(v.sst_mask == (1 << SST_double) && v.traits == NUMBER_TYPE));
-            ins = lirout->insLoad(LIR_ldp, vars, i * VARSIZE, ACCSET_VARS);
+            ins = lirout->insLoad(LIR_ldp, vars, i << VARSHIFT(info) , ACCSET_VARS);
         } else {
             // more than one representation is possible: convert to atom using tag found at runtime.
             AvmAssert(bt(v.traits) == BUILTIN_any || bt(v.traits) == BUILTIN_object);
             LIns* tag = lirout->insLoad(LIR_lduc2ui, tags, i, ACCSET_TAGS);
-            LIns* varAddr = leaIns(i * VARSIZE, vars);
+            LIns* varAddr = lea( i << VARSHIFT(info) , vars);
             ins = callIns(FUNCTIONID(makeatom), 3, coreAddr, varAddr, tag);
         }
         if (v.notNull)
@@ -1246,9 +1270,10 @@ namespace avmplus
         LIns *vars;
         LIns *tags;
         int nvar;
+        int varShift;
     public:
-        DebuggerCheck(AvmCore* core, Allocator& alloc, LirWriter *out, int nvar)
-            : LirWriter(out), core(core), vars(NULL), tags(NULL), nvar(nvar)
+        DebuggerCheck(AvmCore* core, Allocator& alloc, LirWriter *out, int nvar, int varShift)
+            : LirWriter(out), core(core), vars(NULL), tags(NULL), nvar(nvar), varShift(varShift)
         {
             varTracker = new (alloc) LIns*[nvar];
             tagTracker = new (alloc) LIns*[nvar];
@@ -1261,8 +1286,9 @@ namespace avmplus
         }
 
         void trackVarStore(LIns *value, int d) {
-            AvmAssert(IS_ALIGNED(d, VARSIZE));
-            int i = d / VARSIZE;
+            AvmAssert(IS_ALIGNED(d, 1 << varShift));
+            FLOAT_ONLY(AvmAssert(varShift == 4 || !value->isF4());)
+            int i = d >> varShift;
             if (i >= nvar)
                 return;
             varTracker[i] = value;
@@ -1292,6 +1318,15 @@ namespace avmplus
             case SST_double:
                 AvmAssert(val->isQorD());
                 break;
+#ifdef VMCFG_FLOAT
+            case SST_float:
+                AvmAssert(val->isF()); 
+                break;
+            case SST_float4:
+                AvmAssert(val->isF4()); 
+                break;
+#endif
+
             case SST_int32:
             case SST_uint32:
             case SST_bool32:
@@ -1365,6 +1400,9 @@ namespace avmplus
         virtual LIns* ins3(LOpcode v, LIns* a, LIns* b, LIns* c) {
             return lastIns = out->ins3(v, a, b, c);
         }
+        virtual LIns* ins4(LOpcode v, LIns* a, LIns* b, LIns* c, LIns* d) {
+            return lastIns = out->ins4(v, a, b, c, d);
+        }
         virtual LIns* insGuard(LOpcode v, LIns *c, GuardRecord *gr) {
             return lastIns = out->insGuard(v, c, gr);
         }
@@ -1387,6 +1425,12 @@ namespace avmplus
         virtual LIns* insImmD(double d) {
             return lastIns = out->insImmD(d);
         }
+        virtual LIns* insImmF(float f) {
+            return lastIns = out->insImmF(f);
+        }
+        virtual LIns* insImmF4(const float4_t& f) {
+            return lastIns = out->insImmF4(f);
+        }
         virtual LIns* insLoad(LOpcode op, LIns* base, int32_t d, AccSet accSet, LoadQual loadQual) {
             return lastIns = out->insLoad(op, base, d, accSet, loadQual);
         }
@@ -1404,10 +1448,12 @@ namespace avmplus
         virtual LIns* insJtbl(LIns* index, uint32_t size) {
             return lastIns = out->insJtbl(index, size);
         }
-
+        virtual LIns* insSwz(LIns* a, uint8_t mask) {
+            return lastIns = out->insSwz(a, mask);
+        }
     };
 
-    #if defined(VMCFG_OSR) && defined(DEBUG)
+    #ifdef DEBUG
     FUNCTION(FUNCADDR(OSR::checkBugCompatibility), SIG1(V, P), osr_check_bugcompatibility)
     #endif
 
@@ -1537,6 +1583,14 @@ namespace avmplus
             }
         }
 
+#if defined(NANOJIT_ARM) && defined(VMCFG_FLOAT)
+        // The LIR instructions for float and float4 are not supported by nanojit
+        // for soft float, and we are planning to rip out soft float entirely.
+        // While this is really a nanojit issue, we've already removed VMCFG_FLOAT
+        // from nanojit, so we put the check here.
+        AvmAssert(!core->config.njconfig.soft_float);
+#endif
+
         if (info->needRestOrArguments() && info->lazyRest())
             restLocal = ms->param_count()+1;
 
@@ -1578,7 +1632,7 @@ namespace avmplus
         #ifdef DEBUG
         DebuggerCheck *checker = NULL;
         if (haveDebugger) {
-            checker = new (*alloc1) DebuggerCheck(core, *alloc1, lirout, dbg_framesize);
+            checker = new (*alloc1) DebuggerCheck(core, *alloc1, lirout, dbg_framesize, VARSHIFT(info));
             lirout = checker;
         }
         #endif // DEBUG
@@ -1626,7 +1680,7 @@ namespace avmplus
         stp(InsConstPtr((void*)(uintptr_t)0xdeadbeef), methodFrame, offsetof(MethodFrame,dxns), ACCSET_OTHER);
         #endif
 
-        #if defined(VMCFG_OSR) && defined(DEBUG)
+        #ifdef DEBUG
         // Check that the BugCompatibility that would be used to OSR this function,
         // whether or not we actually did so, agrees with the value returned from
         // currentBugCompatibility() every time the function is executed.  Note that
@@ -1636,7 +1690,7 @@ namespace avmplus
         #endif
 
         // allocate room for our local variables
-        vars = insAlloc(framesize * VARSIZE);   // room for double|Atom|int|pointer
+        vars = insAlloc(framesize << VARSHIFT(info));   // room for double|Atom|int|pointer, and float4 if used 
         tags = insAlloc(framesize);             // one tag byte per var
         prolog_buf->sp = vars;
         varTracker->init(vars, tags);
@@ -1701,8 +1755,8 @@ namespace avmplus
         #endif
 
 #ifdef DEBUG
-        jit_sst = new (*alloc1) uint8_t[framesize];
-        memset(jit_sst, 0, framesize);
+        jit_sst = new (*alloc1) uint16_t[framesize];
+        memset(jit_sst, 0, framesize * sizeof(uint16_t));
 #endif
 
         //
@@ -1894,7 +1948,7 @@ namespace avmplus
 
             // Exception* setjmpResult = setjmp(_ef.jmpBuf);
             // ISSUE this needs to be a cdecl call
-            LIns* jmpbuf = leaIns(offsetof(ExceptionFrame, jmpbuf), _ef);
+            LIns* jmpbuf = lea(offsetof(ExceptionFrame, jmpbuf), _ef);
             setjmpResult = callIns(FUNCTIONID(fsetjmp), 2, jmpbuf, InsConst(0));
 
             // If (setjmp() != 0) goto catch dispatcher, which we generate in the epilog.
@@ -1904,7 +1958,6 @@ namespace avmplus
         verbose_only( if (vbWriter) { vbWriter->flush();} )
     }
 
-#ifdef VMCFG_OSR
     FUNCTION(FUNCADDR(OSR::adjustFrame), SIG4(B, P, P, P, P), osr_adjust_frame)
 
     // Emit code to call OSR::adjust_frame and conditionally enter loop.
@@ -1914,7 +1967,7 @@ namespace avmplus
     {
         // Compiling an OSR entry point; save FrameState at the OSR loop header,
         // for later use by adjust_frame().
-        FrameState* osr_state = mmfx_new(FrameState(ms));
+        FrameState* osr_state = mmfx_new(FrameState(ms, info));
         const FrameState* loop_state = driver->getFrameState(osr->osrPc());
         AvmAssert(loop_state->targetOfBackwardsBranch);
         osr_state->init(loop_state);
@@ -1925,9 +1978,6 @@ namespace avmplus
                 vars, tags);
         branchToAbcPos(LIR_jt, isOSR, osr->osrPc());
     }
-#else
-    void CodegenLIR::emitOsrBranch() { }
-#endif
 
     void CodegenLIR::emitInitializers()
     {
@@ -1973,6 +2023,17 @@ namespace avmplus
         Traits* type = ms->paramTraits(i);
         LIns *arg;
         switch (bt(type)) {
+#ifdef VMCFG_FLOAT
+        case BUILTIN_float: 
+            arg = loadIns(LIR_ldf, offset, apArg, ACCSET_OTHER, LOAD_CONST);
+            offset += sizeof(Atom); // float is 4 bytes; but on x64, it takes up 8 bytes too, just like any int.
+            break;
+        case BUILTIN_float4: 
+            // float4 is passed inline [i.e. not as a pointer to the value !! ]
+            arg = loadIns(LIR_ldf4, offset, apArg, ACCSET_OTHER, LOAD_CONST);
+            offset += sizeof(float4_t);
+            break;
+#endif // VMCFG_FLOAT
         case BUILTIN_number:
             arg = loadIns(LIR_ldd, offset, apArg, ACCSET_OTHER, LOAD_CONST);
             offset += sizeof(double);
@@ -2014,6 +2075,131 @@ namespace avmplus
     {
         localSet(i, undefConst, NULL);
     }
+
+#ifdef VMCFG_FLOAT
+    void CodegenLIR::emitNumericOp2(int32_t op1, int32_t op2, const LIREmitter& emitIns)
+    {
+        static_assert(kIntptrType == 6, "You can't change kIntptrType just like that");
+        static_assert(kDoubleType == 7, "You can't change kDoubleType just like that");
+        
+        const FrameValue& v1 = state->value(op1); (void) v1;
+        const FrameValue& v2 = state->value(op2); (void) v2;
+        AvmAssert (v1.traits == OBJECT_TYPE && v2.traits == OBJECT_TYPE && v1.notNull && v2.notNull);
+
+        CodegenLabel slow_path("_numeric2_slow_path_");
+        CodegenLabel both_double("_numeric2_both_double_");
+        CodegenLabel done("_numeric2_done_");
+        CodegenLabel int_op_number("_numeric2_int_op_number_");
+        CodegenLabel v1_is_int("_numeric2_v1_is_int_");
+        
+        LIns* val1 = loadAtomRep(op1);
+        LIns* val2 = loadAtomRep(op2);
+        LIns* result = insAlloc(sizeof(intptr_t));
+        LIns* tag = andp(  binaryIns(LIR_andp, val1, val2), AtomConstants::kAtomTypeMask);
+        // kIntptrType
+        suspendCSE();
+        /* NOTE: to make the fast path faster, we're playing with the bits to quickly determine if 
+           "both are double", "at least one is not Number" and "both are int"
+           We rely on the Atom TAG scheme, i.e. "kIntPtrType is 6" and "kDoubleType is 7",
+           see static asserts above.
+        */
+        branchToLabel(LIR_jt, eqp(tag, AtomConstants::kDoubleType), both_double);
+        branchToLabel(LIR_jf, eqp(tag, AtomConstants::kIntptrType), slow_path);
+        LIns* xormask = andp( binaryIns(LIR_xorp,val1,val2), AtomConstants::kAtomTypeMask );
+
+        branchToLabel(LIR_jf, eqp0(xormask), int_op_number);
+    // both_integers:
+        stp( nativeToAtom(
+                    emitIns(BUILTIN_number, p2dIns(rshp(val1, AtomConstants::kAtomTypeSize)) 
+                                          , p2dIns(rshp(val2, AtomConstants::kAtomTypeSize)) ),
+                    NUMBER_TYPE ),
+             result, 0, ACCSET_OTHER);
+        JIT_EVENT(jit_numeric2_fast_int);
+        branchToLabel(LIR_j, NULL, done);
+
+    // int_op_number:
+        emitLabel(int_op_number);
+        tag = andp (val1, AtomConstants::kAtomTypeMask); 
+        branchToLabel(LIR_jt, eqp(tag, AtomConstants::kIntptrType),v1_is_int );
+    // v2_is_int: (v1 is number!)
+        stp( nativeToAtom(
+                emitIns(BUILTIN_number, ldd(subp(val1, AtomConstants::kDoubleType), 0, ACCSET_OTHER)
+                                      , p2dIns(rshp(val2, AtomConstants::kAtomTypeSize)) ),
+                NUMBER_TYPE ),
+            result, 0, ACCSET_OTHER);
+        JIT_EVENT(jit_numeric2_dbl_int);
+        branchToLabel(LIR_j, NULL, done);
+    // v1_is_int: (v2 is number!)
+        emitLabel(v1_is_int);
+        stp( nativeToAtom(
+                    emitIns(BUILTIN_number, p2dIns(rshp(val1, AtomConstants::kAtomTypeSize))
+                                          , ldd(subp(val2, AtomConstants::kDoubleType), 0, ACCSET_OTHER) ),
+                NUMBER_TYPE ),
+            result, 0, ACCSET_OTHER);
+        JIT_EVENT(jit_numeric2_dbl_int);
+        branchToLabel(LIR_j, NULL, done);
+        
+    // slow_path:        
+        emitLabel(slow_path);
+        stp( emitIns(BUILTIN_any,  val1, val2) , result, 0, ACCSET_OTHER);
+        JIT_EVENT(jit_numeric2_slow);
+        branchToLabel(LIR_j, NULL, done);
+
+    // both_double:
+        emitLabel(both_double);
+        stp( nativeToAtom( 
+                        emitIns(BUILTIN_number,  ldd(subp(val1, AtomConstants::kDoubleType), 0, ACCSET_OTHER)
+                                              ,  ldd(subp(val2, AtomConstants::kDoubleType), 0, ACCSET_OTHER))
+                        , NUMBER_TYPE),
+             result, 0, ACCSET_OTHER);
+        JIT_EVENT(jit_numeric2_fast_double);
+
+   // done:
+        emitLabel(done);
+        resumeCSE();
+        localSet( op1, ldp(result, 0, ACCSET_OTHER), OBJECT_TYPE);
+    }
+
+    void CodegenLIR::emitNumericOp1(int32_t op1, const LIREmitter &emitIns)
+    {
+        const FrameValue& v = state->value(op1); (void)v;
+        AvmAssert(v.traits == OBJECT_TYPE && v.notNull);
+
+        CodegenLabel not_intptr("_not_intptr_");
+        CodegenLabel not_double("_not_double_");
+        CodegenLabel done("_done_");
+        LIns* val = loadAtomRep(op1); // load Atom.
+        LIns* result = insAlloc(sizeof(intptr_t));
+        LIns* tag = andp(val, AtomConstants::kAtomTypeMask);
+        // kIntptrType
+        suspendCSE();
+        branchToLabel(LIR_jf, eqp(tag, AtomConstants::kIntptrType), not_intptr);
+        stp( nativeToAtom(
+            emitIns(BUILTIN_number, p2dIns(rshp(val, AtomConstants::kAtomTypeSize)) )
+            , NUMBER_TYPE
+            ) , result, 0, ACCSET_OTHER);
+
+        JIT_EVENT(jit_numeric1_fast_int);
+        branchToLabel(LIR_j, NULL, done);
+        emitLabel(not_intptr);
+        // kDoubleType
+        branchToLabel(LIR_jf, eqp(tag, AtomConstants::kDoubleType), not_double);
+        stp( nativeToAtom( 
+            emitIns(BUILTIN_number,  ldd(val, -AtomConstants::kDoubleType, ACCSET_OTHER) )
+            , NUMBER_TYPE
+            ) , result, 0, ACCSET_OTHER);
+        JIT_EVENT(jit_numeric1_fast_number);
+
+        branchToLabel(LIR_j, NULL, done);
+        emitLabel(not_double);
+
+        stp( emitIns(BUILTIN_any,  val) , result, 0, ACCSET_OTHER);
+        JIT_EVENT(jit_numeric1_slow);
+        emitLabel(done);
+        resumeCSE();
+        localSet( op1, ldp(result, 0, ACCSET_OTHER), OBJECT_TYPE);
+    }
+#endif // VMCFG_FLOAT
 
 #ifdef VMCFG_FASTPATH_ADD
 
@@ -2087,6 +2273,8 @@ namespace avmplus
     {
         LIns* rhs = loadAtomRep(j);
         LIns* lhs = localGet(i);
+        FLOAT_ONLY(const bool floatSupport = pool->hasFloatSupport();)
+        const CallInfo* addFunction = IFFLOAT(floatSupport ? FUNCTIONID(op_add_a_ia) : FUNCTIONID(op_add_a_ia_nofloat), FUNCTIONID(op_add_a_ia));
 
         #ifdef VMCFG_FASTPATH_ADD_INLINE
         if (inlineFastpath) {
@@ -2097,7 +2285,7 @@ namespace avmplus
             JIT_EVENT(jit_add_a_ia_fast_intptr);
             branchToLabel(LIR_j, NULL, done);
             emitLabel(fallback);
-            LIns* out = callIns(FUNCTIONID(op_add_a_ia), 3, coreAddr, lhs, rhs);
+            LIns* out = callIns(addFunction, 3, coreAddr, lhs, rhs);
             localSet(i, out, type);
             JIT_EVENT(jit_add_a_ia_slow);
             emitLabel(done);
@@ -2106,7 +2294,7 @@ namespace avmplus
         }
         #endif
 
-        LIns* out = callIns(FUNCTIONID(op_add_a_ia), 3, coreAddr, lhs, rhs);
+        LIns* out = callIns(addFunction, 3, coreAddr, lhs, rhs);
         localSet(i, out, type);
         JIT_EVENT(jit_add_a_ia);
     }
@@ -2117,7 +2305,13 @@ namespace avmplus
     {
         LIns* rhs = loadAtomRep(j);
         LIns* lhs = localGetd(i);
-        LIns* out = callIns(FUNCTIONID(op_add_a_da), 3, coreAddr, lhs, rhs);
+#ifdef VMCFG_FLOAT
+        const bool floatSupport = pool->hasFloatSupport();
+        const CallInfo* addFunction = floatSupport ? FUNCTIONID(op_add_a_da) : FUNCTIONID(op_add_a_da_nofloat);
+#else 
+        const CallInfo* addFunction = FUNCTIONID(op_add_a_da);
+#endif // VMCFG_FLOAT
+        LIns* out = callIns(addFunction, 3, coreAddr, lhs, rhs);
         localSet(i, out, type);
         JIT_EVENT(jit_add_a_da);
     }
@@ -2136,6 +2330,12 @@ namespace avmplus
     {
         LIns* lhs = loadAtomRep(i);
         LIns* rhs = localGet(j);
+#ifdef VMCFG_FLOAT
+        const bool floatSupport = pool->hasFloatSupport();
+        const CallInfo* addFunction = floatSupport ? FUNCTIONID(op_add_a_ai) : FUNCTIONID(op_add_a_ai_nofloat);
+#else
+        const CallInfo* addFunction = FUNCTIONID(op_add_a_ai);
+#endif // VMCFG_FLOAT
 
         #ifdef VMCFG_FASTPATH_ADD_INLINE
         if (inlineFastpath) {
@@ -2146,7 +2346,7 @@ namespace avmplus
             JIT_EVENT(jit_add_a_ai_fast_intptr);
             branchToLabel(LIR_j, NULL, done);
             emitLabel(fallback);
-            LIns* out = callIns(FUNCTIONID(op_add_a_ai), 3, coreAddr, lhs, rhs);
+            LIns* out = callIns(addFunction, 3, coreAddr, lhs, rhs);
             localSet(i, out, type);
             JIT_EVENT(jit_add_a_ai_slow);
             emitLabel(done);
@@ -2155,7 +2355,7 @@ namespace avmplus
         }
         #endif
 
-        LIns* out = callIns(FUNCTIONID(op_add_a_ai), 3, coreAddr, lhs, rhs);
+        LIns* out = callIns(addFunction, 3, coreAddr, lhs, rhs);
         localSet(i, out, type);
         JIT_EVENT(jit_add_a_ai);
     }
@@ -2166,7 +2366,14 @@ namespace avmplus
     {
         LIns* lhs = loadAtomRep(i);
         LIns* rhs = localGetd(j);
-        LIns* out = callIns(FUNCTIONID(op_add_a_ad), 3, coreAddr, lhs, rhs);
+#ifdef VMCFG_FLOAT
+        const bool floatSupport = pool->hasFloatSupport();
+        const CallInfo* addFunction = floatSupport ? FUNCTIONID(op_add_a_ad) : FUNCTIONID(op_add_a_ad_nofloat);
+#else
+        const CallInfo* addFunction = FUNCTIONID(op_add_a_ad);
+#endif // VMCFG_FLOAT
+
+        LIns* out = callIns(addFunction, 3, coreAddr, lhs, rhs);
         localSet(i, out, type);
         JIT_EVENT(jit_add_a_ad);
     }
@@ -2211,6 +2418,12 @@ namespace avmplus
     {
         LIns* lhs = loadAtomRep(i);
         LIns* rhs = loadAtomRep(j);
+#ifdef VMCFG_FLOAT
+        const bool floatSupport = pool->hasFloatSupport();
+        const CallInfo* addFunction = floatSupport ? FUNCTIONID(op_add_a_aa) : FUNCTIONID(op_add_a_aa_nofloat);
+#else
+        const CallInfo* addFunction = FUNCTIONID(op_add_a_aa);
+#endif // VMCFG_FLOAT
 
         #ifdef VMCFG_FASTPATH_ADD_INLINE
         if (inlineFastpath) {
@@ -2238,7 +2451,7 @@ namespace avmplus
             JIT_EVENT(jit_add_a_aa_fast_intptr);
             branchToLabel(LIR_j, NULL, done);
             emitLabel(fallback);
-            LIns* out = callIns(FUNCTIONID(op_add_a_aa), 3, coreAddr, lhs, rhs);
+            LIns* out = callIns(addFunction, 3, coreAddr, lhs, rhs);
             localSet(i, out, type);
             JIT_EVENT(jit_add_a_aa_slow);
             emitLabel(done);
@@ -2247,7 +2460,7 @@ namespace avmplus
         }
         #endif
 
-        LIns* out = callIns(FUNCTIONID(op_add_a_aa), 3, coreAddr, lhs, rhs);
+        LIns* out = callIns(addFunction, 3, coreAddr, lhs, rhs);
         localSet(i, atomToNativeRep(type, out), type);
         JIT_EVENT(jit_add_a_aa);
     }
@@ -2258,7 +2471,14 @@ namespace avmplus
     {
         LIns* lhs = loadAtomRep(i);
         LIns* rhs = loadAtomRep(j);
-        LIns* out = callIns(FUNCTIONID(op_add), 3, coreAddr, lhs, rhs);
+        
+#ifdef VMCFG_FLOAT
+        const bool floatSupport = pool->hasFloatSupport();
+        const CallInfo* addFunction = floatSupport ? FUNCTIONID(op_add) : FUNCTIONID(op_add_nofloat);
+#else
+        const CallInfo* addFunction = FUNCTIONID(op_add);
+#endif // VMCFG_FLOAT
+        LIns* out = callIns(addFunction, 3, coreAddr, lhs, rhs);
         localSet(i, atomToNativeRep(type, out), type);
         JIT_EVENT(jit_add);
     }
@@ -2282,11 +2502,32 @@ namespace avmplus
             // TODO: The tests for isNumeric() above could be isNumericOrBool(),
             // but a corresponding change would be needed in the verifier, resulting
             // in a slight change to the verifier's type inference algorithm.
-            AvmAssert(type == NUMBER_TYPE);
-            LIns* lhs = coerceToNumber(i);
-            LIns* rhs = coerceToNumber(j);
-            localSet(i, binaryIns(LIR_addd, lhs, rhs), type);
-            JIT_EVENT(jit_add_a_nn);
+            AvmAssert(type == NUMBER_TYPE FLOAT_ONLY(|| type==FLOAT_TYPE || type== FLOAT4_TYPE) );
+#ifdef VMCFG_FLOAT
+            if(!pool->hasFloatSupport()) 
+                type = NUMBER_TYPE; 
+            else if(val1.traits== FLOAT4_TYPE || val2.traits == FLOAT4_TYPE) 
+                type = FLOAT4_TYPE;
+
+            if (type == FLOAT4_TYPE) {
+                LIns* lhs = coerceToFloat4(i);
+                LIns* rhs = coerceToFloat4(j);
+                localSet(i, binaryIns(LIR_addf4, lhs, rhs), type);
+                JIT_EVENT(jit_add_a_f4f4);
+            } else if(type==FLOAT_TYPE){
+                AvmAssert(val1.traits == FLOAT_TYPE && val2.traits == FLOAT_TYPE);
+                LIns* lhs = coerceToFloat(i);
+                LIns* rhs = coerceToFloat(j);
+                localSet(i, binaryIns(LIR_addf, lhs, rhs), type);
+                JIT_EVENT(jit_add_a_ff);
+            } else 
+#endif // VMCFG_FLOAT
+            {
+                LIns* lhs = coerceToNumber(i);
+                LIns* rhs = coerceToNumber(j);
+                localSet(i, binaryIns(LIR_addd, lhs, rhs), type);
+                JIT_EVENT(jit_add_a_nn);
+            }
 #ifdef VMCFG_FASTPATH_ADD
         // If we arrive here, at least one argument is not known to be of a numeric type.
         // Thus, having determined one argument to be of a known numeric type, we will coerce
@@ -2325,7 +2566,7 @@ namespace avmplus
         emitSetPc(state->abc_pc);
 
 #ifdef DEBUG
-        memset(jit_sst, 0, framesize);
+        memset(jit_sst, 0, framesize * sizeof(uint16_t));
 #endif
 
         // If this is a backwards branch, generate an interrupt check.
@@ -2437,6 +2678,16 @@ namespace avmplus
             AvmAssert(type == NUMBER_TYPE);
             emitDoubleConst(sp+1, &pool->cpool_double[imm30]->value);
             break;
+#ifdef VMCFG_FLOAT
+        case OP_pushfloat:
+            AvmAssert(type == FLOAT_TYPE);
+            emitFloatConst(sp+1, pool->cpool_float[imm30]->value);
+            break;
+        case OP_pushfloat4:
+            AvmAssert(type == FLOAT4_TYPE);
+            emitFloat4Const(sp+1, (const float4_t*) pool->cpool_float4[imm30] );
+            break;
+#endif
         case OP_pushnan:
             AvmAssert(type == NUMBER_TYPE);
             emitDoubleConst(sp+1, (double*)atomPtr(core->kNaN));
@@ -2474,7 +2725,8 @@ namespace avmplus
             break;
         case OP_inclocal:
         case OP_declocal:
-            emit(opcode, imm30, opcode==OP_inclocal ? 1 : -1, NUMBER_TYPE);
+            AvmAssert(type==NUMBER_TYPE FLOAT_ONLY(|| type == FLOAT_TYPE|| type == FLOAT4_TYPE|| type == OBJECT_TYPE) );
+            emit(opcode, imm30, opcode==OP_inclocal ? 1 : -1, type);
             break;
         case OP_inclocal_i:
         case OP_declocal_i:
@@ -2516,6 +2768,12 @@ namespace avmplus
             break;
         }
 
+#ifdef VMCFG_FLOAT
+        case OP_unplus:
+            AvmAssert(type && (type == OBJECT_TYPE || type->isNumeric()));
+            /* Don't do anything; the coercion already happened */
+            break;
+#endif
         case OP_coerce:
         case OP_coerce_b:
         case OP_convert_b:
@@ -2528,19 +2786,26 @@ namespace avmplus
         case OP_convert_d:
         case OP_coerce_d:
         case OP_coerce_s:
-            AvmAssert(
-                    (opcode == OP_coerce    && type != NULL) ||
+#ifdef VMCFG_FLOAT
+        case OP_convert_f:
+        case OP_convert_f4:
+#endif
+
+            AvmAssert( FLOAT_ONLY(
+                    (opcode == OP_convert_f && type == FLOAT_TYPE)   ||  
+                    (opcode == OP_convert_f4 && type == FLOAT4_TYPE) ||)
+                    (opcode == OP_coerce    && type != NULL)         ||
                     (opcode == OP_coerce_b  && type == BOOLEAN_TYPE) ||
                     (opcode == OP_convert_b && type == BOOLEAN_TYPE) ||
-                    (opcode == OP_coerce_o  && type == OBJECT_TYPE) ||
-                    (opcode == OP_coerce_a  && type == NULL) ||
-                    (opcode == OP_convert_i && type == INT_TYPE) ||
-                    (opcode == OP_coerce_i  && type == INT_TYPE) ||
-                    (opcode == OP_convert_u && type == UINT_TYPE) ||
-                    (opcode == OP_coerce_u  && type == UINT_TYPE) ||
-                    (opcode == OP_convert_d && type == NUMBER_TYPE) ||
-                    (opcode == OP_coerce_d  && type == NUMBER_TYPE) ||
-                    (opcode == OP_coerce_s  && type == STRING_TYPE));
+                    (opcode == OP_coerce_o  && type == OBJECT_TYPE)  ||
+                    (opcode == OP_coerce_a  && type == NULL)         ||
+                    (opcode == OP_convert_i && type == INT_TYPE)     ||
+                    (opcode == OP_coerce_i  && type == INT_TYPE)     ||
+                    (opcode == OP_convert_u && type == UINT_TYPE)    ||
+                    (opcode == OP_coerce_u  && type == UINT_TYPE)    ||
+                    (opcode == OP_convert_d && type == NUMBER_TYPE)  ||
+                    (opcode == OP_coerce_d  && type == NUMBER_TYPE)  ||
+                    (opcode == OP_coerce_s  && type == STRING_TYPE)  );
             emitCoerce(sp, type);
             break;
 
@@ -2648,12 +2913,14 @@ namespace avmplus
         case OP_subtract:
         case OP_divide:
         case OP_multiply:
-            emit(opcode, 0, 0, NUMBER_TYPE);
+            AvmAssert(type==NUMBER_TYPE FLOAT_ONLY(|| type == OBJECT_TYPE || type == FLOAT_TYPE || type == FLOAT4_TYPE));
+            emit(opcode, 0, 0, type);
             break;
 
         case OP_increment:
         case OP_decrement:
-            emit(opcode, sp, opcode == OP_increment ? 1 : -1, NUMBER_TYPE);
+            AvmAssert(type==NUMBER_TYPE FLOAT_ONLY(|| type == OBJECT_TYPE || type == FLOAT_TYPE || type == FLOAT4_TYPE));
+            emit(opcode, sp, opcode == OP_increment ? 1 : -1, type);
             break;
 
         case OP_increment_i:
@@ -2668,7 +2935,8 @@ namespace avmplus
             break;
 
         case OP_negate:
-            emit(opcode, sp, 0, NUMBER_TYPE);
+            AvmAssert(type==NUMBER_TYPE FLOAT_ONLY(|| type == OBJECT_TYPE || type == FLOAT_TYPE || type == FLOAT4_TYPE));
+            emit(opcode, sp, 0, type);
             break;
 
         case OP_negate_i:
@@ -2743,7 +3011,14 @@ namespace avmplus
             emit(opcode, sp, 0, result);
             break;
         }
-
+#ifdef VMCFG_FLOAT
+        case OP_lf32x4:
+        {
+            emit(opcode, sp, 0, FLOAT4_TYPE);
+            break;
+        }
+#endif
+                
         // stores
         case OP_si8:
         case OP_si16:
@@ -2754,7 +3029,14 @@ namespace avmplus
             emit(opcode, 0, 0, VOID_TYPE);
             break;
         }
-
+#ifdef VMCFG_FLOAT
+        case OP_sf32x4:
+        {
+            emit(opcode, 0, 0, FLOAT4_TYPE);
+            break;
+        }
+#endif
+                
         case OP_getglobalscope:
             emitGetGlobalScope(sp+1);
             break;
@@ -2982,7 +3264,7 @@ namespace avmplus
                                 loadEnvToplevel(),
                                 InsConstPtr(multiname),
                                 loadAtomRep(state->sp()),
-                                leaIns(restLocal * VARSIZE, vars),
+                                lea(restLocal << VARSHIFT(info) , vars),
                                 restArgc,
                                 (info->needRest() ?
                                     binaryIns(LIR_addp, ap_param, InsConstPtr((void*)(ms->rest_offset()))) :
@@ -3012,6 +3294,12 @@ namespace avmplus
             return callIns(FUNCTIONID(intToString), 2, coreAddr, localGet(index));
         case BUILTIN_uint:
             return callIns(FUNCTIONID(uintToString), 2, coreAddr, localGet(index));
+#ifdef VMCFG_FLOAT
+        case BUILTIN_float: 
+                return callIns(FUNCTIONID(floatToString),2,coreAddr,localGetf(index));
+        case BUILTIN_float4: 
+                return callIns(FUNCTIONID(float4ToString), 2, coreAddr, localGetf4Addr(index)); 
+#endif
         case BUILTIN_number:
             return callIns(FUNCTIONID(doubleToString), 2, coreAddr, localGetd(index));
         case BUILTIN_boolean: {
@@ -3035,6 +3323,7 @@ namespace avmplus
         const FrameValue& value = state->value(index);
         Traits* in = value.traits;
 
+        /* can't promote "Numeric" to "Number", we don't know the exact type at compile time */
         if (in && (in->isNumeric() || in == BOOLEAN_TYPE)) {
             return promoteNumberIns(in, index);
         } else {
@@ -3043,54 +3332,128 @@ namespace avmplus
             // changes here they might need to be propagated there too.
             #ifdef VMCFG_FASTPATH_FROMATOM
             if (inlineFastpath) {
-                //     double rslt;
+                //     double result;
                 //     intptr_t val = CONVERT_TO_ATOM(arg);
                 //     if ((val & kAtomTypeMask) != kIntptrType) goto not_intptr;   # test for kIntptrType tag
                 //     # kIntptrType
-                //     rslt = double(val >> kAtomTypeSize);                         # extract integer value and convert to double
+                //     result = double(val >> kAtomTypeSize);                         # extract integer value and convert to double
                 //     goto done;
                 // not_intptr:
                 //     if ((val & kAtomTypeMask) != kDoubleType) goto not_double;   # test for kDoubleType tag
                 //     # kDoubleType
-                //     rslt = *(val - kDoubleType);                                 # remove tag and dereference
+                //     result = *(val - kDoubleType);                                 # remove tag and dereference
                 //     goto done;
                 // not_double:
-                //     rslt = number(val);                                          # slow path -- call helper
+                //     result = number(val);                                          # slow path -- call helper
                 // done:
-                //     result = rslt;
+                //     return result;
                 CodegenLabel not_intptr;
                 CodegenLabel not_double;
                 CodegenLabel done;
                 suspendCSE();
                 LIns* val = loadAtomRep(index);
-                LIns* rslt = insAlloc(sizeof(double));
+                LIns* result = insAlloc(sizeof(double));
                 LIns* tag = andp(val, AtomConstants::kAtomTypeMask);
                 // kIntptrType
                 branchToLabel(LIR_jf, eqp(tag, AtomConstants::kIntptrType), not_intptr);
                 // Note that this works on 64bit platforms only if we are careful
                 // to restrict the range of intptr values to those that fit within
                 // the integer range of the double type.
-                std(p2dIns(rshp(val, AtomConstants::kAtomTypeSize)), rslt, 0, ACCSET_OTHER);
+                std(p2dIns(rshp(val, AtomConstants::kAtomTypeSize)), result, 0, ACCSET_OTHER);
                 JIT_EVENT(jit_atom2double_fast_intptr);
                 branchToLabel(LIR_j, NULL, done);
                 emitLabel(not_intptr);
                 // kDoubleType
                 branchToLabel(LIR_jf, eqp(tag, AtomConstants::kDoubleType), not_double);
-                std(ldd(subp(val, AtomConstants::kDoubleType), 0, ACCSET_OTHER), rslt, 0, ACCSET_OTHER);
+                std(ldd(subp(val, AtomConstants::kDoubleType), 0, ACCSET_OTHER), result, 0, ACCSET_OTHER);
                 JIT_EVENT(jit_atom2double_fast_double);
                 branchToLabel(LIR_j, NULL, done);
                 emitLabel(not_double);
-                std(callIns(FUNCTIONID(number), 1, val), rslt, 0, ACCSET_OTHER);
+                std(callIns(FUNCTIONID(number), 1, val), result, 0, ACCSET_OTHER);
                 JIT_EVENT(jit_atom2double_slow);
                 emitLabel(done);
                 resumeCSE();
-                return ldd(rslt, 0, ACCSET_OTHER);
+                return ldd(result, 0, ACCSET_OTHER);
             }
             #endif
 
             return callIns(FUNCTIONID(number), 1, loadAtomRep(index));
         }
     }
+
+#ifdef VMCFG_FLOAT
+    /** emit code for * -> Float conversion */
+    LIns* CodegenLIR::coerceToFloat(int index)
+    {
+        const FrameValue& value = state->value(index);
+        Traits* in = value.traits;
+        
+        if (in && (in->isNumeric() || in == BOOLEAN_TYPE)) {
+            return promoteFloatIns(in, index);
+        } else {
+            // * -> Float
+            return callIns(FUNCTIONID(singlePrecisionFloat), 1, loadAtomRep(index));
+        }
+    }
+
+    /** emit code for * -> Float4 conversion */
+    LIns* CodegenLIR::coerceToFloat4(int index)
+    {
+        const FrameValue& value = state->value(index);
+        Traits* in = value.traits;
+        return promoteFloat4Ins(in, index);
+    }
+
+    /** emit code for * -> Float|Float4|Number conversion */
+    LIns* CodegenLIR::coerceToNumeric(int index)
+    {
+        const FrameValue& value = state->value(index);
+        Traits* in = value.traits;
+
+        if( in && (in->isNumeric() || in == BOOLEAN_TYPE))  
+            return loadAtomRep(index); // already numeric, just load the atom.
+        else{
+            CodegenLabel already_numeric("_coercenum_already_numeric_");
+            CodegenLabel done("_coercenum_done_");
+            CodegenLabel non_numeric("_coercenum_non_numeric_");
+            LIns* val = loadAtomRep(index);
+            LIns* tag = andp(val, AtomConstants::kAtomTypeMask);
+            LIns* result = insAlloc(sizeof(intptr_t));
+            suspendCSE();
+
+            LIns* tagmask = binaryIns(LIR_lshi, InsConst(1),p2i(tag));
+            const int32_t numericMask = ( (1<<AtomConstants::kIntptrType) | (1<< AtomConstants::kDoubleType) | (1 << AtomConstants::kSpecialBibopType) );
+            branchToLabel(LIR_jt, binaryIns(LIR_eqi, binaryIns(LIR_andi, tagmask, InsConst(numericMask)) , InsConst(0)  ), non_numeric);
+            branchToLabel(LIR_jf, eqp(val, AtomConstants::undefinedAtom), already_numeric); // we still need to test for "undefined" before we conclude it's already a numeric type
+            /* If we got here, the input was "undefined" - just return NaN */
+            stp(InsConstAtom(core->kNaN),result,0,ACCSET_OTHER ); 
+            branchToLabel(LIR_j, NULL, done);
+
+            emitLabel(non_numeric);
+            stp(callIns(FUNCTIONID(numericAtom), 2, coreAddr, val) , result,0,ACCSET_OTHER);
+            JIT_EVENT(jit_atom2numeric_dbl);
+            branchToLabel(LIR_j, NULL, done);
+
+            emitLabel(already_numeric);
+#ifdef DEBUG
+            // Above we assume that every bibop type is numeric.
+            // Add a DEBUG guard in case we introduce future non-numeric bibop types.
+            CodegenLabel really_numeric("_really_numeric_");
+            branchToLabel(LIR_jf, eqp(tag, AtomConstants::kSpecialBibopType), really_numeric);
+            LIns* bibopTag = lirout->insLoad(LIR_lduc2ui, andp(val, (Atom)MMgc::GCHeap::kBlockMask), 0, ACCSET_OTHER);
+            branchToLabel(LIR_jt, binaryIns(LIR_eqi, bibopTag, InsConst(AtomConstants::kBibopFloatType)), really_numeric);
+            branchToLabel(LIR_jt, binaryIns(LIR_eqi, bibopTag, InsConst(AtomConstants::kBibopFloat4Type)), really_numeric);
+            callIns(FUNCTIONID(upe), 1, env_param);
+            emitLabel(really_numeric);
+#endif
+            stp(val,result,0, ACCSET_OTHER); 
+            JIT_EVENT(jit_atom2numeric_flt);
+            emitLabel(done);
+            resumeCSE();
+            return ldp(result,0,ACCSET_OTHER);
+        }
+    }
+#endif // VMCFG_FLOAT
 
     LIns *CodegenLIR::emitStringCall(int index, const CallInfo *stringCall, bool preserveNull)
     {
@@ -3159,11 +3522,11 @@ namespace avmplus
         return localGetp(index);
      }
 
-    void CodegenLIR::writeNip(const FrameState* state, const uint8_t *pc)
+    void CodegenLIR::writeNip(const FrameState* state, const uint8_t *pc, uint8_t offset)
     {
         this->state = state;
         emitSetPc(pc);
-        emitCopy(state->sp(), state->sp()-1);
+        emitCopy(state->sp(), state->sp() - offset);
     }
 
     void CodegenLIR::writeMethodCall(const FrameState* state, const uint8_t *pc, AbcOpcode opcode, MethodInfo* m, uintptr_t disp_id, uint32_t argc, Traits *type)
@@ -3342,9 +3705,29 @@ namespace avmplus
                     //
                     //    The verifier has computed that the return type of the "length" 
                     //    getter is uint, so we can just load "len" here: it is a uint32_t.
+                    //
+                    // -  Optimize access to float4's x, y, z, and w elements.
+                    //
+                    //    These are statically known to produce float, so a simple load
+                    //    will suffice.
+                    //
+                    // -  Optimize access to float4 swizzlers.
+                    //
+                    //    These are statically known to produce float4, the swizzling compiles
+                    //    down to a single LIR instruction.
 
                     int32_t arrayDataOffset = -1;
                     int32_t lenOffset = -1;
+
+#ifdef VMCFG_FLOAT
+                    uint8_t shuffle_mask = 0;
+                    if (matchShuffler(getter_info, &shuffle_mask)) {
+                        NanoAssert(bt(type) == BUILTIN_float4);
+                        localSet(sp, lirout->insSwz(localGetf4(sp), shuffle_mask), type);
+                        break;
+                    }
+                    LOpcode f4_getter = LIR_skip;
+#endif
 
                     switch (getter_info->method_id())
                     {
@@ -3364,13 +3747,32 @@ namespace avmplus
                             arrayDataOffset = int32_t(offsetof(UIntVectorObject, m_list.m_data));
                             lenOffset = int32_t(offsetof(DataListHelper<uint32_t>::LISTDATA, len));
                             goto vector_length;
-
-                        // Add more specializations here
-
+#ifdef VMCFG_FLOAT
+                        case avmplus::NativeID::float4_x_get:
+                            f4_getter = LIR_f4x;
+                            goto float4_element;
+                        case avmplus::NativeID::float4_y_get:
+                            f4_getter = LIR_f4y;
+                            goto float4_element;
+                        case avmplus::NativeID::float4_z_get:
+                            f4_getter = LIR_f4z;
+                            goto float4_element;
+                        case avmplus::NativeID::float4_w_get:
+                            f4_getter = LIR_f4w;
+                            goto float4_element;
+#endif
                         default:
                             goto invoke_getter;
                     }
                     
+#ifdef VMCFG_FLOAT
+                float4_element: {
+                    NanoAssert(bt(type) == BUILTIN_float);
+                    localSet(sp, lirout->ins1(f4_getter, localGetf4(sp)), type);
+                    break;
+                }
+#endif
+
                 vector_length: {
                     LIns *arrayData = loadIns(LIR_ldp, arrayDataOffset, localGetp(sp), ACCSET_OTHER, LOAD_NORMAL);
                     LIns *arrayLen  = loadIns(LIR_ldi, lenOffset, arrayData, ACCSET_OTHER, LOAD_NORMAL);
@@ -3471,6 +3873,69 @@ namespace avmplus
         localSet(index, lirout->insImmD(*pd), NUMBER_TYPE);
     }
 
+#ifdef VMCFG_FLOAT
+    void CodegenLIR::emitFloatConst(int index, const float f)
+    {
+        localSet(index, lirout->insImmF(f), FLOAT_TYPE);
+    }
+
+    void CodegenLIR::emitFloat4Const(int index, const float4_t* f4)
+    {
+        localSet(index, lirout->insImmF4(*(const float4_t*)f4), FLOAT4_TYPE);
+    }
+
+    /**
+     * If m is a float4 shuffle getter, e.g. xyxy(), then return true and
+     * the shuffle mask to use with the LIR_swzf4 instruction.
+     */
+    bool CodegenLIR::matchShuffler(MethodInfo* m, uint8_t* mask)
+    {
+        using namespace avmplus::NativeID;
+        AvmAssert(m->pool() == core->builtinPool);
+
+        uint32_t id = m->method_id();
+        if (id < float4_xxxx_get || id > float4_wwww_get)
+            return false;
+        id -= float4_xxxx_get;
+        int x = (id >> 6) & 3;
+        int y = (id >> 4) & 3;
+        int z = (id >> 2) & 3;
+        int w = (id >> 0) & 3;
+        *mask = uint8_t(w << 6 | z << 4 | y << 2 | x << 0);
+        return true;
+
+        // We are counting on xxxx, xxxy, ... wwww being in order.
+        NanoStaticAssert(float4_xxxy_get - float4_xxxx_get == 1);
+        // todo: put the rest of them here.
+        NanoStaticAssert(float4_wwww_get - float4_xxxx_get == 255);
+    }
+#endif // VMCFG_FLOAT
+    
+    void CodegenLIR::writeCoerceToNumeric(const FrameState* state, uint32_t loc)
+    {
+        this->state = state;
+        emitSetPc(state->abc_pc);
+        localSet(loc, IFFLOAT(coerceToNumeric(loc), coerceToNumber(loc)), OBJECT_TYPE);
+    }
+
+    void CodegenLIR::writeCoerceToFloat4(const FrameState* state, uint32_t index)
+    {
+#ifdef VMCFG_FLOAT
+        AvmAssert(index >= 3);
+        this->state = state;
+        emitSetPc(state->abc_pc);
+        LIns* x = coerceToFloat(index-3);
+        LIns* y = coerceToFloat(index-2);
+        LIns* z = coerceToFloat(index-1);
+        LIns* w = coerceToFloat(index);
+        LIns* val = lirout->ins4(LIR_ffff2f4, x, y, z, w);
+        localSet(index, val, FLOAT4_TYPE);
+#else
+        (void) index; (void) state;
+        AvmAssert(!"coerceToFloat4 encountered in CodegenLIR, with VMCFG_FLOAT turned off!!!");
+#endif
+    }
+
     void CodegenLIR::writeCoerce(const FrameState* state, uint32_t loc, Traits* result)
     {
         this->state = state;
@@ -3515,7 +3980,7 @@ namespace avmplus
     // return NULL.  It is assumed that the replacement function will return
     // an int32 value.
 
-    LIns* CodegenLIR::specializeIntCall(LIns* call, Specialization* specs)
+    LIns* CodegenLIR::specializeIntCall(LIns* call, const Specialization* specs)
     {
         LIns *priorCall = getSpecializedCall(call);
         if (priorCall)
@@ -3560,7 +4025,7 @@ namespace avmplus
         return imm;
     }
 
-    static Specialization coerceDoubleToInt[] = {
+    static const Specialization coerceDoubleToInt[] = {
         { FUNCTIONID(String_charCodeAtDI),    FUNCTIONID(String_charCodeAtIU) },
         { FUNCTIONID(String_charCodeAtDU),    FUNCTIONID(String_charCodeAtIU) },
         { FUNCTIONID(String_charCodeAtDD),    FUNCTIONID(String_charCodeAtID) },
@@ -3642,17 +4107,13 @@ namespace avmplus
         // using the CVTTSD2SI instruction.  If we get a 0x80000000 return
         // value, our double is outside the valid integer range we fallback
         // to calling doubleToInt32.
-#if defined AVMPLUS_IA32 || defined AVMPLUS_AMD64
-#ifndef AVMPLUS_AMD64
-        SSE2_ONLY(if(core->config.njconfig.i386_sse2))
-#endif // AVMPLUS_AMD64
-        {
+        if (haveSSE2()) {
             suspendCSE();
             CodegenLabel skip_label("goodint");
             LIns* intResult = insAlloc(sizeof(int32_t));
             LIns* fastd2i = lirout->ins1(LIR_d2i, arg);
             sti(fastd2i, intResult, 0, ACCSET_STORE_ANY);      // int32_t index
-            LIns *c = binaryIns(LIR_eqi, fastd2i, InsConst(1L << 31));
+            LIns *c = binaryIns(LIR_eqi, fastd2i, InsConst(0x80000000));
             branchToLabel(LIR_jf, c, skip_label);
             LIns *funcCall = callIns(FUNCTIONID(doubleToInt32), 1, arg);
             sti(funcCall, intResult, 0, ACCSET_STORE_ANY);      // int32_t index
@@ -3661,13 +4122,42 @@ namespace avmplus
             resumeCSE();
             return result;
         }
-#endif // AVMPLUS_IA32 || AVMPLUS_AMD64
-
-#ifndef AVMPLUS_AMD64
-         return callIns(FUNCTIONID(integer_d), 1, arg);
-#endif // AVMPLUS_AMD64
+        return callIns(FUNCTIONID(integer_d), 1, arg);
     }
 
+#ifdef VMCFG_FLOAT
+    LIns* CodegenLIR::coerceFloatToInt(int loc)
+    {
+        LIns *arg = localGetf(loc);
+        if (arg->isop(LIR_immf))
+            return InsConst(AvmCore::integer_d((double)arg->immF()));
+
+        // fixme: Bug 707644; emperically, calling the helper is fastest.
+        const bool use_cvttss2si = false;
+
+        // For SSE capable machines, inline our float to integer conversion
+        // using the CVTTSS2SI instruction.  If we get a 0x80000000 return
+        // value, our float is outside the valid integer range we fallback
+        // to calling doubleToInt32.
+        if (use_cvttss2si && haveSSE2()) {
+            suspendCSE();
+            CodegenLabel skip_label("goodint");
+            LIns* intResult = insAlloc(sizeof(int32_t));
+            LIns* fastf2i = lirout->ins1(LIR_f2i, arg);
+            sti(fastf2i, intResult, 0, ACCSET_STORE_ANY);      // int32_t index
+            LIns *c = binaryIns(LIR_eqi, fastf2i, InsConst(0x80000000));
+            branchToLabel(LIR_jf, c, skip_label);
+            LIns *funcCall = callIns(FUNCTIONID(doubleToInt32), 1, f2dIns(arg));
+            sti(funcCall, intResult, 0, ACCSET_STORE_ANY);      // int32_t index
+            emitLabel(skip_label);
+            LIns *result = loadIns(LIR_ldi, 0, intResult, ACCSET_LOAD_ANY);
+            resumeCSE();
+            return result;
+        }
+        // fallback: promote float->double, then convert double->int
+        return callIns(FUNCTIONID(integer_d), 1, f2dIns(arg));
+    }
+#endif
 
     LIns* CodegenLIR::coerceToType(int loc, Traits* result)
     {
@@ -3708,6 +4198,16 @@ namespace avmplus
         {
             expr = coerceToNumber(loc);
         }
+#ifdef VMCFG_FLOAT
+        else if (result == FLOAT_TYPE)
+        {
+            expr = coerceToFloat(loc);
+        }
+        else if (result == FLOAT4_TYPE)
+        {
+            expr = coerceToFloat4(loc);
+        }
+#endif // VMCFG_FLOAT
         else if (result == INT_TYPE)
         {
             if (in == UINT_TYPE || in == BOOLEAN_TYPE || in == INT_TYPE)
@@ -3720,6 +4220,12 @@ namespace avmplus
                 // narrowing conversion number->int
                 expr = coerceNumberToInt(loc);
             }
+#ifdef VMCFG_FLOAT
+            else if (in == FLOAT_TYPE)
+            {
+                expr = coerceFloatToInt(loc);
+            }
+#endif
             else
             {
                 // * -> int
@@ -3737,6 +4243,12 @@ namespace avmplus
             {
                 expr = coerceNumberToInt(loc);
             }
+#ifdef VMCFG_FLOAT
+            else if (in == FLOAT_TYPE)
+            {
+                expr = coerceFloatToInt(loc);
+            }
+#endif
             else
             {
                 // * -> uint
@@ -3749,9 +4261,11 @@ namespace avmplus
             {
                 expr = localGet(loc);
             }
-            else if (in == NUMBER_TYPE)
+            else if (in == NUMBER_TYPE FLOAT_ONLY(|| in ==FLOAT_TYPE) )
             {
-                expr = callIns(FUNCTIONID(doubleToBool), 1, localGetd(loc));
+                LIns* ins = FLOAT_ONLY( in == FLOAT_TYPE ? f2dIns(localGetf(loc)):)
+                                                                  localGetd(loc);
+                expr = callIns(FUNCTIONID(doubleToBool), 1, ins);
             }
             else if (in == INT_TYPE || in == UINT_TYPE)
             {
@@ -3852,14 +4366,28 @@ namespace avmplus
     void CodegenLIR::emitIsNaN(Traits* result)
     {
         int op1 = state->sp();
-        LIns *f = localGetd(op1);
+        /* In practice, floats will be coerced to double before calling isNaN - so "singlePrecision" should be always false for now.
+        But this is implemented as if isNaN was polymorphic - there's no reason why it won't eventually be polymorphic */
+        bool singlePrecision = IFFLOAT(state->value(op1).traits == FLOAT_TYPE, false);
+        LIns *f = singlePrecision? localGetf(op1):localGetd(op1);
         if (isPromote(f->opcode())) {
             // Promoting an integer to a double cannot result in a NaN.
             localSet(op1-1, InsConst(0), result);
         }
         else {
+#ifdef VMCFG_FLOAT
+            if (f->opcode()==LIR_f2d) {
+                /* handle the case when isNan() was called on a float */
+                f = f->oprnd1();
+                singlePrecision = true;
+            }
+            LOpcode eqop = singlePrecision ? LIR_eqf : LIR_eqd;
+#else
+            LOpcode eqop = LIR_eqd;
+#endif // VMCFG_FLOAT
+
             // LIR is required to follow IEEE floating point semantics, thus x is a NaN iff x != x.
-            localSet(op1-1, binaryIns(LIR_eqi, binaryIns(LIR_eqd, f, f), InsConst(0)), result);
+            localSet(op1-1, binaryIns(LIR_eqi, binaryIns(eqop, f, f), InsConst(0)), result);
         }
     }
 
@@ -3902,6 +4430,125 @@ namespace avmplus
         localSet(op1, ptr, result);
     }
 
+#ifdef VMCFG_FLOAT
+    void CodegenLIR::emitFloatUnary(Traits* result, LOpcode op) {
+        int sp = state->sp();
+        localSet(sp - 1, lirout->ins1(op, localGetf(sp)), result);
+    }
+
+    void CodegenLIR::emitFloatAbs(Traits* result)        { emitFloatUnary(result, LIR_absf);   }
+    void CodegenLIR::emitFloatReciprocal(Traits* result) { emitFloatUnary(result, LIR_recipf); }
+    void CodegenLIR::emitFloatRsqrt(Traits* result)      { emitFloatUnary(result, LIR_rsqrtf); }
+    void CodegenLIR::emitFloatSqrt(Traits* result)       { emitFloatUnary(result, LIR_sqrtf);  }
+
+    void CodegenLIR::emitFloat4unary(Traits* result, LOpcode op) {
+        int sp = state->sp();
+        localSet(sp - 1, lirout->ins1(op, localGetf4(sp)), result);
+    }
+
+    void CodegenLIR::emitFloat4abs(Traits* result)        { emitFloat4unary(result, LIR_absf4); }
+    void CodegenLIR::emitFloat4reciprocal(Traits* result) { emitFloat4unary(result, LIR_recipf4); }
+    void CodegenLIR::emitFloat4rsqrt(Traits* result)      { emitFloat4unary(result, LIR_rsqrtf4); }
+    void CodegenLIR::emitFloat4sqrt(Traits* result)       { emitFloat4unary(result, LIR_sqrtf4); }
+
+    // Helper to expand dotf4, dotf3, dotf2
+    LIns* CodegenLIR::emitDot(LOpcode dot_op, LIns* a, LIns* b) {
+        if (core->config.njconfig.i386_sse41)
+            return lirout->ins2(dot_op, a, b);
+        LIns* c = lirout->ins2(LIR_mulf4, a, b);
+        LIns* sum = lirout->ins2(LIR_addf, lirout->ins1(LIR_f4x, c), lirout->ins1(LIR_f4y, c));
+        if (dot_op == LIR_dotf3 || dot_op == LIR_dotf4)
+            sum = lirout->ins2(LIR_addf, sum, lirout->ins1(LIR_f4z, c));
+        if (dot_op == LIR_dotf4)
+            sum = lirout->ins2(LIR_addf, sum, lirout->ins1(LIR_f4w, c));
+        return sum;
+    }
+
+    // magnitudeK(x) = sqrt(dotK(x, x))
+    LIns* CodegenLIR::magnitude(LOpcode dot_op, LIns* x) {
+        return lirout->ins1(LIR_sqrtf, emitDot(dot_op, x, x));
+    }
+
+    /** normalize(x:float4) = x / magnitude(x) = x / sqrt(dot(x,x)) */
+    void CodegenLIR::emitFloat4normalize(Traits* result) {
+        int sp = state->sp();
+        LIns* x = localGetf4(sp);
+        LIns* mag4 = lirout->ins1(LIR_f2f4, magnitude(LIR_dotf4, x));
+        LIns* normalize = lirout->ins2(LIR_divf4, x, mag4);
+        localSet(sp - 1, normalize, result);
+    }
+
+    /** cross(a:float4, b:float4) = a.yzx0 * b.zxy0 - a.zxy0 * b.yzx0
+        We implement the equivalent:a.yzxw * b.zxyw - a.zxyw * b.yzxw
+    */
+    void CodegenLIR::emitFloat4cross(Traits* result) {
+        int sp = state->sp();
+        LIns* x = localGetf4(sp - 1);
+        LIns* y = localGetf4(sp);
+
+        LIns* xs1 = lirout->insSwz(x,0xD8);
+        LIns* ys1 = lirout->insSwz(y,0xE1);
+        LIns* m1  = lirout->ins2(LIR_mulf4,xs1,ys1);
+
+        LIns* xs2 = lirout->insSwz(x,0xE1);
+        LIns* ys2 = lirout->insSwz(y,0xD8);
+        LIns* m2  = lirout->ins2(LIR_mulf4,xs2,ys2);
+
+        LIns* cross = lirout->ins2(LIR_subf4, m1,m2);
+        localSet(sp - 2, cross , result);
+    }
+
+    void CodegenLIR::emitFloat4binary(Traits* result, LOpcode op) {
+        int sp = state->sp();
+        LIns* x = localGetf4(sp - 1);
+        LIns* y = localGetf4(sp);
+        localSet(sp - 2, lirout->ins2(op, x, y), result);
+    }
+
+    void CodegenLIR::emitFloat4max(Traits* result)            { emitFloat4binary(result, LIR_maxf4);   }
+    void CodegenLIR::emitFloat4min(Traits* result)            { emitFloat4binary(result, LIR_minf4);   }
+    void CodegenLIR::emitFloat4Greater(Traits* result)        { emitFloat4binary(result, LIR_cmpgtf4); }
+    void CodegenLIR::emitFloat4GreaterOrEqual(Traits* result) { emitFloat4binary(result, LIR_cmpgef4); }
+    void CodegenLIR::emitFloat4Less(Traits* result)           { emitFloat4binary(result, LIR_cmpltf4); }
+    void CodegenLIR::emitFloat4LessOrEqual(Traits* result)    { emitFloat4binary(result, LIR_cmplef4); }
+    void CodegenLIR::emitFloat4Equal(Traits* result)          { emitFloat4binary(result, LIR_cmpeqf4); }
+    void CodegenLIR::emitFloat4NotEqual(Traits* result)       { emitFloat4binary(result, LIR_cmpnef4); }
+
+    void CodegenLIR::emitFloat4dot(Traits* result, LOpcode op) {
+        int sp = state->sp();
+        LIns* x = localGetf4(sp - 1);
+        LIns* y = localGetf4(sp);
+        localSet(sp - 2, emitDot(op, x, y), result);
+    }
+
+    void CodegenLIR::emitFloat4dot(Traits* result)        { emitFloat4dot(result, LIR_dotf4); }
+    void CodegenLIR::emitFloat4dot2(Traits* result)       { emitFloat4dot(result, LIR_dotf2); }
+    void CodegenLIR::emitFloat4dot3(Traits* result)       { emitFloat4dot(result, LIR_dotf3); }
+
+    void CodegenLIR::emitMagnitude(Traits* result, LOpcode dot_op) {
+        int sp = state->sp();
+        LIns* x = localGetf4(sp);
+        localSet(sp - 1, magnitude(dot_op, x), result);
+    }
+
+    void CodegenLIR::emitFloat4magnitude(Traits* result)  { emitMagnitude(result, LIR_dotf4); }
+    void CodegenLIR::emitFloat4magnitude2(Traits* result) { emitMagnitude(result, LIR_dotf2); }
+    void CodegenLIR::emitFloat4magnitude3(Traits* result) { emitMagnitude(result, LIR_dotf3); }
+
+    // distanceK(x,y) = magnitudeK(x - y)
+    void CodegenLIR::emitDistance(Traits* result, LOpcode dot_op) {
+        int sp = state->sp();
+        LIns* x = localGetf4(sp - 1);
+        LIns* y = localGetf4(sp);
+        LIns* diff = lirout->ins2(LIR_subf4, x, y);
+        localSet(sp - 2, magnitude(dot_op, diff), result);
+    }
+
+    void CodegenLIR::emitFloat4distance(Traits* result)  { emitDistance(result, LIR_dotf4); }
+    void CodegenLIR::emitFloat4distance2(Traits* result) { emitDistance(result, LIR_dotf2); }
+    void CodegenLIR::emitFloat4distance3(Traits* result) { emitDistance(result, LIR_dotf3); }
+#endif
+
     // Determine a mask for our argument that indicates to which types it may be trivially converted
     // without insertion of additional instructions and without loss.  This information may allow us
     // to substitute a numeric operation on a more specific type than that inferred by the verifier.
@@ -3921,11 +4568,36 @@ namespace avmplus
                         btMask |= 1 << BUILTIN_uint;
                     btMask |= 1 << BUILTIN_int;
                 }
+#ifdef VMCFG_FLOAT
+                float fVal = (float) arg->immD();
+                if((double)fVal == arg->immD() || MathUtils::isNaN(arg->immD()))
+                    btMask |= 1 << BUILTIN_float;
+#endif // VMCFG_FLOAT
             }
             else if (arg->opcode() == LIR_i2d)
                 btMask |= 1 << BUILTIN_int;
             else if (arg->opcode() == LIR_ui2d)
                 btMask |= 1 << BUILTIN_uint;
+#ifdef VMCFG_FLOAT
+            else if (arg->opcode() == LIR_f2d)
+                btMask |= 1<< BUILTIN_float;
+        }
+        else if (bt == BUILTIN_float) {
+            LIns *arg = localGetf(argOffset);
+            btMask |= 1 << BUILTIN_number;
+            if (arg->isImmF()) {
+                int32_t intVal = (int32_t) arg->immF();
+                if ((float) intVal == arg->immF() && !MathUtils::isNegZero(arg->immF())) {
+                    if (intVal >= 0)
+                        btMask |= 1 << BUILTIN_uint;
+                    btMask |= 1 << BUILTIN_int;
+                }
+            }
+            else if (arg->opcode() == LIR_i2f)
+                btMask |= 1 << BUILTIN_int;
+            else if (arg->opcode() == LIR_ui2f)
+                btMask |= 1 << BUILTIN_uint;
+#endif // VMCFG_FLOAT
         }
         else if (bt == BUILTIN_int) {
             LIns *arg = localGet(argOffset);
@@ -3960,11 +4632,69 @@ namespace avmplus
                 else
                     AvmAssert(0);
             }
+#ifdef VMCFG_FLOAT
+            else if (newBt == BUILTIN_float) {  // not used right now, but maybe soon...
+                if (arg->isImmD())
+                    return InsConstFlt((float)arg->immD());
+                else if (arg->opcode() == LIR_f2d)
+                    return arg->oprnd1();
+                else
+                    AvmAssert(0);
+            }
+            AvmAssert(newBt==BUILTIN_number);
+            return arg;
+        }
+        else if (oldBt == BUILTIN_float) {
+            LIns *arg = localGetf(argOffset);
+            if (newBt == BUILTIN_int) {
+                if (arg->isImmF())
+                    return InsConst((int32_t)arg->immF());
+                else if (arg->opcode() == LIR_i2f)
+                    return arg->oprnd1();
+                else
+                    AvmAssert(0);
+            }
+            else if (newBt == BUILTIN_uint) {
+                if (arg->isImmD())
+                    return InsConst((int32_t)arg->immD());
+                else if (arg->opcode() == LIR_ui2d)
+                    return arg->oprnd1();
+                else
+                    AvmAssert(0);
+            }
+            else if (newBt == BUILTIN_number) {  // not used right now, but maybe soon...
+                if (arg->isImmF())
+                    return lirout->insImmD(arg->immF());
+                else 
+                    return f2dIns(arg);
+            }
+            AvmAssert(newBt==BUILTIN_float);
+            return arg;
+#endif // VMCFG_FLOAT
         }
 
+        /* See determineBuiltinMaskForArg - so far we can have:
+             - for Number/float - newBt may be any of float, int, uint, number
+             - for int  - newBt may also be uint 
+             - for others: newBt must be identical with oldBt
+             That's why the switch below works.
+        */
+
         switch (newBt) {
+#ifdef VMCFG_FLOAT
+        case BUILTIN_number:
+            AvmAssertMsg(false, "Case should be already handled; this means oldBt is not number, but newBt is Number!");
+            return localGetd(argOffset);
+        case BUILTIN_float:
+            AvmAssertMsg(false, "Case should be already handled; this means oldBt is not float, but newBt is float!");
+            return localGetf(argOffset);
+        case BUILTIN_float4:
+            AvmAssertMsg(false, "Case should be already handled; this means oldBt is not float4, but newBt is float4!");
+            return localGetf4(argOffset);
+#else
         case BUILTIN_number:
             return localGetd(argOffset);
+#endif // VMCFG_FLOAT
         case BUILTIN_boolean:
         case BUILTIN_int:
         case BUILTIN_uint:
@@ -3982,6 +4712,7 @@ namespace avmplus
     {
         { 0, /* dummy entry so 0 can be treated as HashMap miss*/ 1, {}, 0, 0},
         { avmplus::NativeID::native_script_function_isNaN, 1, {BUILTIN_number, BUILTIN_none},   0, &CodegenLIR::emitIsNaN },
+        /*could theoretically also add { avmplus::NativeID::native_script_function_isNaN, 1, {BUILTIN_float, BUILTIN_none},   0, &CodegenLIR::emitIsNaN }, */
 
         { avmplus::NativeID::String_AS3_charCodeAt,        1, {BUILTIN_uint,   BUILTIN_none},   FUNCTIONID(String_charCodeAtDU), 0},
         { avmplus::NativeID::String_AS3_charCodeAt,        1, {BUILTIN_int,    BUILTIN_none},   FUNCTIONID(String_charCodeAtDI), 0},
@@ -4011,6 +4742,33 @@ namespace avmplus
         // We would like to inline abs(), but the obvious implementation does not work, as both 0.0 and -0.0 compare as the same.
         { avmplus::NativeID::Math_abs,                     1, {BUILTIN_number, BUILTIN_none},   FUNCTIONID(Math_abs), 0},
 
+#if defined VMCFG_FLOAT && defined VMCFG_IA32
+        // float4
+        { avmplus::NativeID::float4_abs,                   1, {BUILTIN_float4, BUILTIN_none},   0, &CodegenLIR::emitFloat4abs},
+        { avmplus::NativeID::float4_max,                   2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4max},
+        { avmplus::NativeID::float4_min,                   2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4min},
+        { avmplus::NativeID::float4_reciprocal,            1, {BUILTIN_float4, BUILTIN_none},   0, &CodegenLIR::emitFloat4reciprocal},
+        { avmplus::NativeID::float4_rsqrt,                 1, {BUILTIN_float4, BUILTIN_none},   0, &CodegenLIR::emitFloat4rsqrt},
+        { avmplus::NativeID::float4_sqrt,                  1, {BUILTIN_float4, BUILTIN_none},   0, &CodegenLIR::emitFloat4sqrt},
+        { avmplus::NativeID::float4_cross,                 2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4cross},
+        { avmplus::NativeID::float4_normalize,             1, {BUILTIN_float4, BUILTIN_none},   0, &CodegenLIR::emitFloat4normalize},
+        { avmplus::NativeID::float4_dot,                   2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4dot},
+        { avmplus::NativeID::float4_dot2,                  2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4dot2},
+        { avmplus::NativeID::float4_dot3,                  2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4dot3},
+        { avmplus::NativeID::float4_magnitude,             1, {BUILTIN_float4, BUILTIN_none},   0, &CodegenLIR::emitFloat4magnitude},
+        { avmplus::NativeID::float4_magnitude3,            1, {BUILTIN_float4, BUILTIN_none},   0, &CodegenLIR::emitFloat4magnitude3},
+        { avmplus::NativeID::float4_magnitude2,            1, {BUILTIN_float4, BUILTIN_none},   0, &CodegenLIR::emitFloat4magnitude2},
+        { avmplus::NativeID::float4_distance,              2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4distance},
+        { avmplus::NativeID::float4_distance2,             2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4distance2},
+        { avmplus::NativeID::float4_distance3,             2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4distance3},
+        { avmplus::NativeID::float4_isGreater,             2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4Greater},
+        { avmplus::NativeID::float4_isLess,                2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4Less},
+        { avmplus::NativeID::float4_isGreaterOrEqual,      2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4GreaterOrEqual},
+        { avmplus::NativeID::float4_isLessOrEqual,         2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4LessOrEqual},
+        { avmplus::NativeID::float4_isEqual,               2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4Equal},
+        { avmplus::NativeID::float4_isNotEqual,            2, {BUILTIN_float4, BUILTIN_float4}, 0, &CodegenLIR::emitFloat4NotEqual},
+#endif
+
         { avmplus::NativeID::Math_min,                     2, {BUILTIN_int,    BUILTIN_int},    0, &CodegenLIR::emitIntMathMin},
         { avmplus::NativeID::Math_max,                     2, {BUILTIN_int,    BUILTIN_int},    0, &CodegenLIR::emitIntMathMax},
         { avmplus::NativeID::Math_private__min,            2, {BUILTIN_int,    BUILTIN_int},    0, &CodegenLIR::emitIntMathMin},
@@ -4021,6 +4779,44 @@ namespace avmplus
 
         // Unsupported because it uses MathClass::seed
         //{ avmplus::NativeID::Math_random,                  0, {BUILTIN_none,   BUILTIN_none},   FUNCTIONID(Math_random), 0},
+
+#ifdef VMCFG_FLOAT
+        // float
+        { avmplus::NativeID::float_acos,                    1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_acos), 0},
+        { avmplus::NativeID::float_asin,                    1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_asin), 0},
+        { avmplus::NativeID::float_atan,                    1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_atan), 0},
+        { avmplus::NativeID::float_ceil,                    1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_ceil), 0},
+        { avmplus::NativeID::float_cos,                     1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_cos), 0},
+        { avmplus::NativeID::float_exp,                     1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_exp), 0},
+        { avmplus::NativeID::float_floor,                   1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_floor), 0},
+        { avmplus::NativeID::float_log,                     1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_log), 0},
+        { avmplus::NativeID::float_sin,                     1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_sin), 0},
+        { avmplus::NativeID::float_tan,                     1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_tan), 0},
+        
+        { avmplus::NativeID::float_atan2,                   2, {BUILTIN_float, BUILTIN_float}, FUNCTIONID(float_atan2), 0},
+        { avmplus::NativeID::float_pow,                     2, {BUILTIN_float, BUILTIN_float}, FUNCTIONID(float_pow), 0},
+
+        // We would like to inline this on x86, but need SSE 4.1 to use ROUNDSS. A CVTSS2SI; CVTSI2SS sequence should work for SSE2,
+        // but only with the correct rounding mode, which we cannot guarantee.  It would be possible to inline the MathUtils::roundf
+        // function, which seems the best we can do.
+        { avmplus::NativeID::float_round,                   1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_round), 0},
+        // We would like to inline these on x86, but the MINSS and MAXSS instructions do not handle signed zero as required.
+        { avmplus::NativeID::float_max,                     2, {BUILTIN_float, BUILTIN_float}, FUNCTIONID(float_max2), 0},
+        { avmplus::NativeID::float_min,                     2, {BUILTIN_float, BUILTIN_float}, FUNCTIONID(float_min2), 0},
+
+    #ifdef VMCFG_IA32
+        { avmplus::NativeID::float_abs,                     1, {BUILTIN_float, BUILTIN_none},  0, &CodegenLIR::emitFloatAbs},
+        { avmplus::NativeID::float_reciprocal,              1, {BUILTIN_float, BUILTIN_none},  0, &CodegenLIR::emitFloatReciprocal},
+        { avmplus::NativeID::float_rsqrt,                   1, {BUILTIN_float, BUILTIN_none},  0, &CodegenLIR::emitFloatRsqrt},
+        { avmplus::NativeID::float_sqrt,                    1, {BUILTIN_float, BUILTIN_none},  0, &CodegenLIR::emitFloatSqrt},
+    #else
+        { avmplus::NativeID::float_abs,                     1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_abs), 0},
+        { avmplus::NativeID::float_reciprocal,              1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_reciprocal), 0},
+        { avmplus::NativeID::float_rsqrt,                   1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_rsqrt), 0},
+        { avmplus::NativeID::float_sqrt,                    1, {BUILTIN_float, BUILTIN_none},  FUNCTIONID(float_sqrt), 0},
+    #endif
+
+#endif
     };
 
     static uint32_t genFunctionKey (int32_t methodId, int32_t argCount)
@@ -4265,24 +5061,36 @@ namespace avmplus
             Traits* paramType = i <= param_count ? ms->paramTraits(i) : NULL;
             LIns* v;
             switch (bt(paramType)) {
+#ifdef VMCFG_FLOAT
+            case BUILTIN_float: 
+                v = (i == 0) ? obj : lirout->insLoad(LIR_ldf, vars, index << VARSHIFT(info), ACCSET_VARS);
+                stf(v, ap, disp, ACCSET_OTHER);
+                disp += sizeof(intptr_t); // only 4 bytes needed, but on X64 we use at least 8 bytes anyway - same as "int" and "uint"
+                break;
+            case BUILTIN_float4: 
+                v = (i == 0) ? obj : lirout->insLoad(LIR_ldf4, vars, index << VARSHIFT(info), ACCSET_VARS);
+                stf4(v, ap, disp, ACCSET_OTHER);
+                disp += sizeof(float4_t); 
+                break;
+#endif
             case BUILTIN_number:
-                v = (i == 0) ? obj : lirout->insLoad(LIR_ldd, vars, index * VARSIZE, ACCSET_VARS);
+                v = (i == 0) ? obj : lirout->insLoad(LIR_ldd, vars, index << VARSHIFT(info), ACCSET_VARS);
                 std(v, ap, disp, ACCSET_OTHER);
                 disp += sizeof(double);
                 break;
             case BUILTIN_int:
-                v = (i == 0) ? obj : lirout->insLoad(LIR_ldi, vars, index * VARSIZE, ACCSET_VARS);
+                v = (i == 0) ? obj : lirout->insLoad(LIR_ldi, vars, index << VARSHIFT(info), ACCSET_VARS);
                 stp(i2p(v), ap, disp, ACCSET_OTHER);
                 disp += sizeof(intptr_t);
                 break;
             case BUILTIN_uint:
             case BUILTIN_boolean:
-                v = (i == 0) ? obj : lirout->insLoad(LIR_ldi, vars, index * VARSIZE, ACCSET_VARS);
+                v = (i == 0) ? obj : lirout->insLoad(LIR_ldi, vars, index << VARSHIFT(info), ACCSET_VARS);
                 stp(ui2p(v), ap, disp, ACCSET_OTHER);
                 disp += sizeof(uintptr_t);
                 break;
             default:
-                v = (i == 0) ? obj : lirout->insLoad(LIR_ldp, vars, index * VARSIZE, ACCSET_VARS);
+                v = (i == 0) ? obj : lirout->insLoad(LIR_ldp, vars, index << VARSHIFT(info), ACCSET_VARS);
                 stp(v, ap, disp, ACCSET_OTHER);
                 disp += sizeof(void*);
                 break;
@@ -4293,13 +5101,21 @@ namespace avmplus
         ap->setSize(disp);
 
         LIns* target = loadIns(LIR_ldp, offsetof(MethodEnvProcHolder,_implGPR), method, ACCSET_OTHER);
-        LIns* apAddr = leaIns(pad, ap);
+        LIns* apAddr = lea(pad, ap);
 
         LIns *out;
         BuiltinType rbt = bt(result);
         if (!iid) {
             const CallInfo *fid;
             switch (rbt) {
+#ifdef VMCFG_FLOAT
+            case BUILTIN_float: 
+                fid = FUNCTIONID(fcalli);
+                break;
+            case BUILTIN_float4: 
+                fid = FUNCTIONID(vfcalli);
+                break;
+#endif
             case BUILTIN_number:
                 fid = FUNCTIONID(dcalli);
                 break;
@@ -4314,6 +5130,14 @@ namespace avmplus
         } else {
             const CallInfo *fid;
             switch (rbt) {
+#ifdef VMCFG_FLOAT
+            case BUILTIN_float: 
+                fid = FUNCTIONID(fcallimt);
+                break;
+            case BUILTIN_float4: 
+                fid = FUNCTIONID(vfcallimt);
+                break;
+#endif
             case BUILTIN_number:
                 fid = FUNCTIONID(dcallimt);
                 break;
@@ -4348,6 +5172,10 @@ namespace avmplus
         // get
         LOpcode op;
         switch (bt(slotType)) {
+#ifdef VMCFG_FLOAT
+        case BUILTIN_float4:    op = LIR_ldf4;   break;
+        case BUILTIN_float:     op = LIR_ldf;   break;
+#endif
         case BUILTIN_number:    op = LIR_ldd;   break;
         case BUILTIN_int:
         case BUILTIN_uint:
@@ -4410,21 +5238,30 @@ namespace avmplus
 
         // if storing to a pointer-typed slot, inline a WB
         Traits* slotType = tb->getSlotTraits(slot);
-
         if (!slotType || !slotType->isMachineType() || slotType == OBJECT_TYPE)
         {
             // slot type is Atom (for *, Object) or RCObject* (String, Namespace, or other user types)
             const CallInfo *wbAddr = FUNCTIONID(privateWriteBarrierRC);
-            if (slotType == NULL || slotType == OBJECT_TYPE) {
+            if (slotType == NULL ||  slotType == OBJECT_TYPE) {
                 // use fast atom wb
                 wbAddr = FUNCTIONID(atomWriteBarrier);
             }
             callIns(wbAddr, 4,
                     InsConstPtr(core->GetGC()),
                     unoffsetPtr,
-                    leaIns(offset, ptr),
+                    lea(offset, ptr),
                     value);
         }
+#ifdef VMCFG_FLOAT
+        else if (slotType == FLOAT_TYPE) {
+            // slot type is double or int
+            stf(value, ptr, offset, ACCSET_OTHER);
+        }
+        else if (slotType == FLOAT4_TYPE) {
+            // slot type is double or int
+            stf4(value, ptr, offset, ACCSET_OTHER);
+        }
+#endif
         else if (slotType == NUMBER_TYPE) {
             // slot type is double or int
             std(value, ptr, offset, ACCSET_OTHER);
@@ -4496,6 +5333,20 @@ namespace avmplus
     static const CallInfo* getDoubleVectorHelpers[VI_SIZE] =
         { FUNCTIONID(DoubleVectorObject_getUintProperty), FUNCTIONID(DoubleVectorObject_getIntProperty), FUNCTIONID(DoubleVectorObject_getDoubleProperty) };
 
+#ifdef VMCFG_FLOAT
+    static const CallInfo* getFloatVectorNativeHelpers[VI_SIZE] =
+        { FUNCTIONID(FloatVectorObject_getNativeUintProperty), FUNCTIONID(FloatVectorObject_getNativeIntProperty), FUNCTIONID(FloatVectorObject_getNativeDoubleProperty) };
+
+    static const CallInfo* getFloatVectorHelpers[VI_SIZE] =
+        { FUNCTIONID(FloatVectorObject_getUintProperty), FUNCTIONID(FloatVectorObject_getIntProperty), FUNCTIONID(FloatVectorObject_getDoubleProperty) };
+
+    static const CallInfo* getFloat4VectorNativeHelpers[VI_SIZE] =
+        { FUNCTIONID(Float4VectorObject_getNativeUintProperty), FUNCTIONID(Float4VectorObject_getNativeIntProperty), FUNCTIONID(Float4VectorObject_getNativeDoubleProperty) };
+    
+    static const CallInfo* getFloat4VectorHelpers[VI_SIZE] =
+        { FUNCTIONID(Float4VectorObject_getUintProperty), FUNCTIONID(Float4VectorObject_getIntProperty), FUNCTIONID(Float4VectorObject_getDoubleProperty) };
+#endif
+
     static const CallInfo* getGenericHelpers[VI_SIZE] =
         { FUNCTIONID(getpropertylate_u), FUNCTIONID(getpropertylate_i), FUNCTIONID(getpropertylate_d) };
 
@@ -4508,11 +5359,19 @@ namespace avmplus
 
         // index is "int" or "uint".
         //
+        // The basic code is this:
+        //
         // arrayData = *(array+arrayDataOffset)                  ; array->data
         // arrayLen  = *(arrayData + lenOffset)                  ; array->data->len
         // if ((unsigned)index >= (unsigned)arrayLen)
         //   call(helper, array, index)
         // value = *(arrayData + (index<<scale) + entriesOffset) ; value = array->data->entries[index]
+        //
+        // In the case of float4 the (arrayData + entriesOffset) has to be rounded up to a 16-byte
+        // boundary at run-time to conform to alignment restrictions.
+        // It would be better to have a different vector representation and a guarantee about
+        // alignment from the storage manager, so that we could avoid the adjustment, but that's
+        // a future improvement.
         //
         // The "(unsigned)index" compare trick works because vectors are shorter than 2^31 elements,
         // that fact is verified statically in the vector code, see eg checkReadIndex_i.
@@ -4525,13 +5384,36 @@ namespace avmplus
         LIns* cmp = binaryIns(LIR_geui, index, arrayLen);
         suspendCSE();
         branchToLabel(LIR_jf, cmp, begin_label);
-        callIns(helper, 2, localGetp(objIndexOnStack), index);
+        if(load_item == LIR_ldf4)
+            callIns(helper, 3, localGetp(objIndexOnStack), InsConstPtr(NULL), index);  // we don't really need the returned arg, hence we pass null.
+        else
+            callIns(helper, 2, localGetp(objIndexOnStack), index);
         emitLabel(begin_label);
         resumeCSE();
-        LIns* valOffset = binaryIns(LIR_addp, arrayData, ui2p(binaryIns(LIR_lshi, index, InsConst(scale))));
-        LIns* value = loadIns(load_item, int32_t(entriesOffset), valOffset, ACCSET_OTHER, LOAD_NORMAL);
-
-        return value;
+        switch (load_item)
+        {
+            case LIR_ldf4:
+            {
+                LIns* base = binaryIns(LIR_addp, arrayData, InsConstPtr((const void*)(uintptr_t(entriesOffset) + 15))); // arrayData + entries + 15
+                LIns* baseRounded = binaryIns(LIR_andp, base, InsConstPtr((const void*)~uintptr_t(15)));                // & ~15
+                LIns* element = ui2p(binaryIns(LIR_lshi, index, InsConst(scale)));
+                LIns* effectiveAddress = binaryIns(LIR_addp, baseRounded, element);
+                return loadIns(load_item, 0, effectiveAddress, ACCSET_OTHER, LOAD_NORMAL);
+            }
+#ifdef VMCFG_64BIT
+            case LIR_ldp:
+#endif
+            case LIR_ldd:
+            case LIR_ldi:
+            case LIR_ldf:
+            {
+                LIns* valOffset = binaryIns(LIR_addp, arrayData, ui2p(binaryIns(LIR_lshi, index, InsConst(scale))));
+                return loadIns(load_item, int32_t(entriesOffset), valOffset, ACCSET_OTHER, LOAD_NORMAL);
+            }
+            default:
+                AvmAssert(!"Bad inline vector access");
+                return NULL;
+        }
     }
 
     LIns* CodegenLIR::emitInlineSpeculativeArrayRead(int objIndexOnStack,
@@ -4549,7 +5431,8 @@ namespace avmplus
 
         size_t lenIfSimpleOffset = offsetof(ArrayObject, m_lengthIfSimple);
         size_t denseArrayOffset = offsetof(ArrayObject, m_denseArray);
-        size_t entriesOffset = offsetof(ListData<Atom>, entries);
+        typedef ListData<Atom, 0> LISTDATA;
+        size_t entriesOffset = offsetof(LISTDATA, entries);
         int scale = (sizeof(void*) == 8) ? 3 : 2;
 
         LIns* arrayPtr = localGetp(objIndexOnStack);
@@ -4599,11 +5482,12 @@ namespace avmplus
         }
         else if (objType != NULL && objType->subtypeof(VECTOROBJ_TYPE)) {
             if (idxKind == VI_INT || idxKind == VI_UINT) {
+                typedef ListData<Atom, 0> STORAGE;
                 return atomToNativeRep(result, emitInlineVectorRead(objIndexOnStack, 
                                                                     index,
                                                                     offsetof(ObjectVectorObject, m_list.m_data),
                                                                     offsetof(AtomListHelper::LISTDATA, len),
-                                                                    offsetof(ListData<Atom>, entries),
+                                                                    offsetof(STORAGE, entries),
                                                                     sizeof(void*) == 8 ? 3 : 2,
                                                                     LIR_ldp,
                                                                     getObjectVectorHelpers[idxKind]));
@@ -4613,11 +5497,12 @@ namespace avmplus
         else if (objType == VECTORINT_TYPE) {
             if (result == INT_TYPE) {
                 if (idxKind == VI_INT || idxKind == VI_UINT) {
+                    typedef ListData<int32_t, 0> STORAGE;
                     return emitInlineVectorRead(objIndexOnStack, 
                                                 index,
                                                 offsetof(IntVectorObject, m_list.m_data),
                                                 offsetof(DataListHelper<int32_t>::LISTDATA, len),
-                                                offsetof(ListData<int32_t>, entries),
+                                                offsetof(STORAGE, entries),
                                                 2,
                                                 LIR_ldi,
                                                 getIntVectorNativeHelpers[idxKind]);
@@ -4632,11 +5517,12 @@ namespace avmplus
         else if (objType == VECTORUINT_TYPE) {
             if (result == UINT_TYPE) {
                 if (idxKind == VI_INT || idxKind == VI_UINT) {
+                    typedef ListData<uint32_t, 0> STORAGE;
                     return emitInlineVectorRead(objIndexOnStack, 
                                                 index,
                                                 offsetof(UIntVectorObject, m_list.m_data),
                                                 offsetof(DataListHelper<uint32_t>::LISTDATA, len),
-                                                offsetof(ListData<uint32_t>, entries),
+                                                offsetof(STORAGE, entries),
                                                 2,
                                                 LIR_ldi,
                                                 getUIntVectorNativeHelpers[idxKind]);
@@ -4651,11 +5537,12 @@ namespace avmplus
         else if (objType == VECTORDOUBLE_TYPE) {
             if (result == NUMBER_TYPE) {
                 if (idxKind == VI_INT || idxKind == VI_UINT) {
+                    typedef ListData<double, 0> STORAGE;
                     return emitInlineVectorRead(objIndexOnStack, 
                                                 index,
                                                 offsetof(DoubleVectorObject, m_list.m_data),
                                                 offsetof(DataListHelper<double>::LISTDATA, len),
-                                                offsetof(ListData<double>, entries),
+                                                offsetof(STORAGE, entries),
                                                 3,
                                                 LIR_ldd,
                                                 getDoubleVectorNativeHelpers[idxKind]);
@@ -4667,6 +5554,52 @@ namespace avmplus
                 getter = getDoubleVectorHelpers[idxKind];
             }
         }
+#ifdef VMCFG_FLOAT
+        else if (objType == VECTORFLOAT_TYPE) {
+            if (result == FLOAT_TYPE) {
+                if (idxKind == VI_INT || idxKind == VI_UINT) {
+                    typedef ListData<float, 0> STORAGE;
+                    return emitInlineVectorRead(objIndexOnStack, 
+                                                index,
+                                                offsetof(FloatVectorObject, m_list.m_data),
+                                                offsetof(DataListHelper<float>::LISTDATA, len),
+                                                offsetof(STORAGE, entries),
+                                                2,
+                                                LIR_ldf,
+                                                getFloatVectorNativeHelpers[idxKind]);
+                }
+                getter = getFloatVectorNativeHelpers[idxKind];
+                valIsAtom = false;
+            }
+            else {
+                getter = getFloatVectorHelpers[idxKind];
+            }
+        }
+        else if (objType == VECTORFLOAT4_TYPE) {
+            if (result == FLOAT4_TYPE) {
+                if (idxKind == VI_INT || idxKind == VI_UINT) {
+                    typedef ListData<float4_t, 16> STORAGE;
+                    typedef DataListHelper<float4_t, 16>::LISTDATA LISTDATA;
+                    return emitInlineVectorRead(objIndexOnStack, 
+                                                index,
+                                                offsetof(Float4VectorObject, m_list.m_data),
+                                                offsetof(LISTDATA, len),
+                                                offsetof(STORAGE, entries),
+                                                4,
+                                                LIR_ldf4,
+                                                getFloat4VectorNativeHelpers[idxKind]);
+                }
+                /* handle here the case of native helpers, it is different than all the others */
+                LIns* retval = lirout->insAlloc(sizeof(float4_t));
+                callIns(getFloat4VectorNativeHelpers[idxKind], 3, localGetp(objIndexOnStack), lea(0, retval), index);
+                return ldf4(retval, 0, ACCSET_OTHER);
+            }
+            else {
+                getter = getFloat4VectorHelpers[idxKind];
+            }
+        }
+#endif
+
         if (getter) {
             LIns* value = callIns(getter, 2, localGetp(objIndexOnStack), index);
             return valIsAtom ? atomToNativeRep(result, value) : value;
@@ -4707,8 +5640,23 @@ namespace avmplus
     static const CallInfo* setDoubleVectorHelpers[VI_SIZE] =
         { FUNCTIONID(DoubleVectorObject_setUintProperty), FUNCTIONID(DoubleVectorObject_setIntProperty), FUNCTIONID(DoubleVectorObject_setDoubleProperty) };
 
+#ifdef VMCFG_FLOAT
+    static const CallInfo* setFloatVectorNativeHelpers[VI_SIZE] =
+        { FUNCTIONID(FloatVectorObject_setNativeUintProperty), FUNCTIONID(FloatVectorObject_setNativeIntProperty), FUNCTIONID(FloatVectorObject_setNativeDoubleProperty) };
+
+    static const CallInfo* setFloatVectorHelpers[VI_SIZE] =
+        { FUNCTIONID(FloatVectorObject_setUintProperty), FUNCTIONID(FloatVectorObject_setIntProperty), FUNCTIONID(FloatVectorObject_setDoubleProperty) };
+
+    static const CallInfo* setFloat4VectorNativeHelpers[VI_SIZE] =
+        { FUNCTIONID(Float4VectorObject_setNativeUintProperty), FUNCTIONID(Float4VectorObject_setNativeIntProperty), FUNCTIONID(Float4VectorObject_setNativeDoubleProperty) };
+    
+    static const CallInfo* setFloat4VectorHelpers[VI_SIZE] =
+        { FUNCTIONID(Float4VectorObject_setUintProperty), FUNCTIONID(Float4VectorObject_setIntProperty), FUNCTIONID(Float4VectorObject_setDoubleProperty) };
+#endif
+
     static const CallInfo* setGenericHelpers[VI_SIZE] =
         { FUNCTIONID(setpropertylate_u), FUNCTIONID(setpropertylate_i), FUNCTIONID(setpropertylate_d) };
+
 
     // Not for values that require a write barrier!
     void CodegenLIR::emitInlineVectorWrite(int objIndexOnStack,
@@ -4722,12 +5670,20 @@ namespace avmplus
         
         // index is "int" or "uint".
         //
+        // The basic  code is this:
+        //
         // arrayData = *(array+arrayDataOffset)                    ; array->data
         // arrayLen  = *(arrayData + lenOffset)                    ; array->data->len
         // if ((unsigned)index >= (unsigned)arrayLen)
         //   call(helper, array, index, value)
         // else
         //   *(arrayData + (index<<scale) + entriesOffset) = value ; array->data->entries[index] = value
+        //
+        // In the case of float4 the (arrayData + entriesOffset) has to be rounded up to a 16-byte
+        // boundary at run-time to conform to alignment restrictions.
+        // It would be better to have a different vector representation and a guarantee about
+        // alignment from the storage manager, so that we could avoid the adjustment, but that's
+        // a future improvement.
         //
         // The "(unsigned)index" compare trick works because vectors are shorter than 2^31 elements,
         // that fact is verified statically in the vector code, see eg checkReadIndex_i.
@@ -4743,8 +5699,42 @@ namespace avmplus
         callIns(helper, 3, localGetp(objIndexOnStack), index, value);
         branchToLabel(LIR_j, NULL, end_label);
         emitLabel(begin_label);
-        LIns *valOffset = binaryIns(LIR_addp, arrayData, ui2p(binaryIns(LIR_lshi, index, InsConst(scale))));
-        storeIns(store_item, value, int32_t(entriesOffset), valOffset, ACCSET_OTHER);
+        switch (store_item)
+        {
+#ifdef VMCFG_FLOAT
+            case LIR_stf4:
+            {
+                LIns* base = binaryIns(LIR_addp, arrayData, InsConstPtr((const void*)(uintptr_t(entriesOffset) + 15))); // arrayData + entries + 15
+                LIns* baseRounded = binaryIns(LIR_andp, base, InsConstPtr((const void*)~uintptr_t(15)));                // & ~15
+                LIns* element = ui2p(binaryIns(LIR_lshi, index, InsConst(scale)));
+                LIns* effectiveAddress = binaryIns(LIR_addp, baseRounded, element);
+                
+                if( (value->opcode() == LIR_addp) && (value->oprnd1() == vars) ){
+                    AvmAssert(value->oprnd2()->isImmP());
+                    int32_t v_offset = (int32_t) (intptr_t) value->oprnd2()->immP();
+                    value = ldf4(vars, v_offset, ACCSET_VARS);
+                } else {
+                    value = ldf4(value, 0 , ACCSET_OTHER);
+                }
+
+                storeIns(store_item, value, 0, effectiveAddress, ACCSET_OTHER);
+                break;
+            }
+#endif
+#ifdef VMCFG_64BIT
+            case LIR_stp:
+#endif
+            case LIR_std:
+            case LIR_sti:
+            case LIR_stf:
+            {
+                LIns *valOffset = binaryIns(LIR_addp, arrayData, ui2p(binaryIns(LIR_lshi, index, InsConst(scale))));
+                storeIns(store_item, value, int32_t(entriesOffset), valOffset, ACCSET_OTHER);
+                break;
+            }
+            default:
+                AvmAssert(!"Bad inline vector access");
+        }
         emitLabel(end_label);
         resumeCSE();
     }
@@ -4781,12 +5771,13 @@ namespace avmplus
         else if (objType == VECTORINT_TYPE) {
             if (valueType == INT_TYPE) {
                 if (idxKind == VI_INT || idxKind == VI_UINT) {
+                    typedef ListData<int32_t, 0> STORAGE;
                     emitInlineVectorWrite(objIndexOnStack, 
                                           index,
                                           localGet(valIndexOnStack),
                                           offsetof(IntVectorObject, m_list.m_data),
                                           offsetof(DataListHelper<int32_t>::LISTDATA, len),
-                                          offsetof(ListData<int32_t>, entries),
+                                          offsetof(STORAGE, entries),
                                           2,
                                           LIR_sti,
                                           setIntVectorNativeHelpers[idxKind]);
@@ -4803,12 +5794,13 @@ namespace avmplus
         else if (objType == VECTORUINT_TYPE) {
             if (valueType == UINT_TYPE) {
                 if (idxKind == VI_INT || idxKind == VI_UINT) {
+                    typedef ListData<uint32_t, 0> STORAGE;
                     emitInlineVectorWrite(objIndexOnStack, 
                                           index,
                                           localGet(valIndexOnStack),
                                           offsetof(UIntVectorObject, m_list.m_data),
                                           offsetof(DataListHelper<uint32_t>::LISTDATA, len),
-                                          offsetof(ListData<uint32_t>, entries),
+                                          offsetof(STORAGE, entries),
                                           2,
                                           LIR_sti,
                                           setUIntVectorNativeHelpers[idxKind]);
@@ -4825,12 +5817,13 @@ namespace avmplus
         else if (objType == VECTORDOUBLE_TYPE) {
             if (valueType == NUMBER_TYPE) {
                 if (idxKind == VI_INT || idxKind == VI_UINT) {
+                    typedef ListData<double, 0> STORAGE;
                     emitInlineVectorWrite(objIndexOnStack, 
                                           index,
                                           localGetd(valIndexOnStack),
                                           offsetof(DoubleVectorObject, m_list.m_data),
                                           offsetof(DataListHelper<double>::LISTDATA, len),
-                                          offsetof(ListData<double>, entries),
+                                          offsetof(STORAGE, entries),
                                           3,
                                           LIR_std,
                                           setDoubleVectorNativeHelpers[idxKind]);
@@ -4844,6 +5837,56 @@ namespace avmplus
                 setter = setDoubleVectorHelpers[idxKind];
             }
         }
+#ifdef VMCFG_FLOAT
+        else if (objType == VECTORFLOAT_TYPE) {
+            if (valueType == FLOAT_TYPE) {
+                if (idxKind == VI_INT || idxKind == VI_UINT) {
+                    typedef ListData<float, 0> STORAGE;
+                    emitInlineVectorWrite(objIndexOnStack, 
+                                          index,
+                                          localGetf(valIndexOnStack),
+                                          offsetof(FloatVectorObject, m_list.m_data),
+                                          offsetof(DataListHelper<float>::LISTDATA, len),
+                                          offsetof(STORAGE, entries),
+                                          2,
+                                          LIR_stf,
+                                          setFloatVectorNativeHelpers[idxKind]);
+                    return;
+                }
+                value = localGetf(valIndexOnStack);
+                setter = setFloatVectorNativeHelpers[idxKind];
+            }
+            else {
+                value = loadAtomRep(valIndexOnStack);
+                setter = setFloatVectorHelpers[idxKind];
+            }
+        }
+        else if (objType == VECTORFLOAT4_TYPE) { 
+                          
+            if (valueType == FLOAT4_TYPE) {
+                if (idxKind == VI_INT || idxKind == VI_UINT) {
+                    typedef ListData<float4_t, 16> STORAGE;
+                    typedef DataListHelper<float4_t, 16>::LISTDATA LISTDATA;
+                    emitInlineVectorWrite(objIndexOnStack, 
+                                          index,
+                                          localGetf4Addr(valIndexOnStack),
+                                          offsetof(Float4VectorObject, m_list.m_data),
+                                          offsetof(LISTDATA, len),
+                                          offsetof(STORAGE, entries),
+                                          4,
+                                          LIR_stf4,
+                                          setFloat4VectorNativeHelpers[idxKind]);
+                }
+                value = localGetf4Addr(valIndexOnStack);
+                setter = setFloat4VectorNativeHelpers[idxKind];
+            }
+            else {
+                value = loadAtomRep(valIndexOnStack);
+                setter = setFloat4VectorHelpers[idxKind];
+            }
+        }
+#endif // VMCFG_FLOAT
+
         if (setter) {
             callIns(setter, 3, localGetp(objIndexOnStack), index, value);
         } else {
@@ -4872,19 +5915,22 @@ namespace avmplus
         }
         // Convert Number expression to int or uint if it is a promotion
         // from int or uint, or if it is a constant in range for int or uint.
-        else if (*indexType == NUMBER_TYPE) {
-            index = localGetd(sp);
-            if (index->opcode() == LIR_i2d) {
+        else if (*indexType == NUMBER_TYPE FLOAT_ONLY(|| *indexType == FLOAT_TYPE)) {
+            bool singlePrecision = IFFLOAT(*indexType == FLOAT_TYPE,false);
+            index = singlePrecision ? localGetf(sp) : localGetd(sp);
+            if (index->opcode() == LIR_i2d FLOAT_ONLY(|| index->opcode()== LIR_i2f)) {
+                FLOAT_ONLY(AvmAssert(singlePrecision == (index->opcode()==LIR_i2f)) );
                 *indexType = INT_TYPE;
                 return index->oprnd1();
             }
-            else if (index->opcode() == LIR_ui2d) {
+            else if (index->opcode() == LIR_ui2d FLOAT_ONLY(|| index->opcode()== LIR_ui2f)) {
+                FLOAT_ONLY(AvmAssert(singlePrecision == (index->opcode()==LIR_ui2f)) );
                 *indexType = UINT_TYPE;
                 return index->oprnd1();
             }
-            else if (index->isImmD())
+            else if (index->isImmD() FLOAT_ONLY(|| index->isImmF()) )
             {
-                double d = index->immD();
+                double d = IFFLOAT( index->isImmD() ? index->immD(): (double)index->immF(), index->immD());
                 // Convert to uint if possible.
                 uint32_t u = uint32_t(d);
                 if (double(u) == d) {
@@ -4972,6 +6018,19 @@ namespace avmplus
                 localSet(index, i2, result);
                 break;
             }
+#ifdef VMCFG_FLOAT
+            case OP_lf32x4:
+            {
+                // TODO: inlining.  The appropriate condition is probably *not* VMCFG_MOPS_USE_EXPANDED_LOADSTORE_FP.
+                int32_t index = (int32_t) op1;
+                LIns* mopAddr = binaryIns(LIR_andi, localGet(index), InsConst(~15U));
+                LIns* realAddr = mopAddrToRangeCheckedRealAddrAndDisp(mopAddr, sizeof(float4_t), NULL);
+                LIns* retval = insAlloc(sizeof(float4_t));
+                callIns(FUNCTIONID(mop_lf32x4), 2, retval, realAddr);
+                localSet(index, ldf4(retval,0,ACCSET_OTHER), result);
+                break;
+            }
+#endif
 
             // stores
             case OP_si8:
@@ -4995,7 +6054,8 @@ namespace avmplus
             case OP_sf32:
             case OP_sf64:
             {
-                LIns* svalue = localGetd(sp-1);
+                bool singlePrecision = IFFLOAT(state->value(sp-1).traits == FLOAT_TYPE, false);
+                LIns* svalue = singlePrecision ? localGetf(sp-1) : localGetd(sp-1);
                 LIns* mopAddr = localGet(sp);
                 const MopsInfo& mi = kMopsStoreInfo[opcode-OP_si8];
             #ifdef VMCFG_MOPS_USE_EXPANDED_LOADSTORE_FP
@@ -5008,6 +6068,17 @@ namespace avmplus
             #endif
                 break;
             }
+#ifdef VMCFG_FLOAT
+            case OP_sf32x4:
+            {
+                // TODO: inlining.  The appropriate condition is probably *not* VMCFG_MOPS_USE_EXPANDED_LOADSTORE_FP.
+                LIns* svalue = localGetf4Addr(sp-1);
+                LIns* mopAddr = binaryIns(LIR_andi, localGet(sp), InsConst(~15U));
+                LIns* realAddr = mopAddrToRangeCheckedRealAddrAndDisp(mopAddr, sizeof(float4_t), NULL);
+                callIns(FUNCTIONID(mop_sf32x4), 2, realAddr, svalue);
+                break;
+            }
+#endif
 
             case OP_jump:
             {
@@ -5121,6 +6192,14 @@ namespace avmplus
                     }
                 }
                 switch (bt(t)) {
+#ifdef VMCFG_FLOAT
+                case BUILTIN_float: 
+                    Ins(LIR_retf, retvalue);
+                    break;
+                case BUILTIN_float4: 
+                    Ins(LIR_retf4, retvalue);
+                    break;
+#endif
                 case BUILTIN_number:
                     Ins(LIR_retd, retvalue);
                     break;
@@ -5162,7 +6241,22 @@ namespace avmplus
 
             case OP_negate: {
                 int32_t index = (int32_t) op1;
+#ifdef VMCFG_FLOAT
+                const Traits*  vt = state->value(index).traits;
+                AvmAssert ( vt == result );
+                if(vt == NUMBER_TYPE)
+                    localSet(index, Ins(LIR_negd, localGetd(index)), result);
+                else if(vt == FLOAT_TYPE)
+                    localSet(index, Ins(LIR_negf, localGetf(index)), result);
+                else if(vt == FLOAT4_TYPE)
+                    localSet(index, Ins(LIR_negf4, localGetf4(index)), result);
+                else {
+                    NanoAssert( vt == OBJECT_TYPE && state->value(index).notNull );
+                    emitNumericOp1( index, BasicLIREmitter(this, LIR_negd, FUNCTIONID(op_negate)) );
+                }
+#else
                 localSet(index, Ins(LIR_negd, localGetd(index)),result);
+#endif // VMCFG_FLOAT
                 break;
             }
 
@@ -5180,7 +6274,28 @@ namespace avmplus
             case OP_declocal: {
                 int32_t index = (int32_t) op1;
                 int32_t incr = (int32_t) op2; // 1 or -1
-                localSet(index, binaryIns(LIR_addd, localGetd(index), i2dIns(InsConst(incr))), result);
+                LIns* addIns = NULL;
+#ifdef VMCFG_FLOAT
+                const Traits*  vt = state->value(index).traits;
+                AvmAssert(result == vt);
+                if(vt == NUMBER_TYPE)
+                    addIns = binaryIns(LIR_addd, localGetd(index), i2dIns(InsConst(incr)));
+                else if(vt == FLOAT_TYPE)
+                    addIns = binaryIns(LIR_addf, localGetf(index), InsConstFlt((float)incr));
+                else if(vt == FLOAT4_TYPE)
+                    addIns = binaryIns(LIR_addf4, localGetf4(index), Ins(LIR_f2f4, InsConstFlt((float)incr)) );
+                else 
+                { /// NUMERIC - i.e., unknown
+                    AvmAssert(vt == OBJECT_TYPE && state->value(index).notNull);
+                    emitNumericOp1(index, IncrementLIREmitter(this, incr<0));
+                    JIT_EVENT(jit_add);
+                    break; // skip the localSet, emitNumericOp1 already does it
+                }
+                
+#else
+                addIns = binaryIns(LIR_addd, localGetd(index), i2dIns(InsConst(incr)));
+#endif // VMCFG_FLOAT
+                localSet(index, addIns,result);  
                 break;
             }
 
@@ -5204,15 +6319,71 @@ namespace avmplus
             }
 
             case OP_modulo: {
-                LIns* out = callIns(FUNCTIONID(mod), 2,
-                    localGetd(sp-1), localGetd(sp));
+#ifdef VMCFG_FLOAT
+                if(result ==FLOAT_TYPE){
+                    AvmAssert(state->value(sp-1).traits == FLOAT_TYPE);
+                    AvmAssert(state->value(sp).traits == FLOAT_TYPE);
+                    LIns* get1 = f2dIns(localGetf(sp-1));
+                    LIns* get2 = f2dIns(localGetf(sp));
+                    LIns* out = callIns(FUNCTIONID(mod), 2,get1,get2);
+                    localSet(sp-1,  d2fIns(out), result);
+                } else if(result == FLOAT4_TYPE){
+                    AvmAssert(state->value(sp-1).traits == FLOAT4_TYPE);
+                    AvmAssert(state->value(sp).traits == FLOAT4_TYPE);
+                    LIns* f4 = localGetf4(sp-1), *g4 = localGetf4(sp);
+                    LIns* f4x = f2dIns(lirout->ins1(LIR_f4x, f4)), *g4x = f2dIns(lirout->ins1(LIR_f4x, g4));
+                    LIns* ox = callIns(FUNCTIONID(mod), 2,f4x,g4x);
+                    LIns* f4y = f2dIns(lirout->ins1(LIR_f4y, f4)), *g4y = f2dIns(lirout->ins1(LIR_f4y, g4));
+                    LIns* oy = callIns(FUNCTIONID(mod), 2,f4y,g4y);
+                    LIns* f4z = f2dIns(lirout->ins1(LIR_f4z, f4)), *g4z = f2dIns(lirout->ins1(LIR_f4z, g4));
+                    LIns* oz = callIns(FUNCTIONID(mod), 2,f4z,g4z);
+                    LIns* f4w = f2dIns(lirout->ins1(LIR_f4w, f4)), *g4w = f2dIns(lirout->ins1(LIR_f4w, g4));
+                    LIns* ow = callIns(FUNCTIONID(mod), 2,f4w,g4w);
+                    localSet(sp - 1, lirout->ins4(LIR_ffff2f4,d2fIns(ox), d2fIns(oy), d2fIns(oz), d2fIns(ow)), result);
+                } else if(result == NUMBER_TYPE){
+                    AvmAssert(state->value(sp-1).traits == NUMBER_TYPE);
+                    AvmAssert(state->value(sp).traits == NUMBER_TYPE);
+                    LIns* get1= localGetd(sp-1);
+                    LIns* get2 = localGetd(sp);
+                    LIns* out = callIns(FUNCTIONID(mod), 2,get1,get2);
+                    localSet(sp-1,  out, result);
+                } else {
+                    AvmAssert(result == OBJECT_TYPE && state->value(sp).traits == OBJECT_TYPE && state->value(sp-1).traits == OBJECT_TYPE && state->value(sp).notNull && state->value(sp-1).notNull);
+                    emitNumericOp2( sp-1, sp,  ModuloLIREmitter(this) );
+                }
+#else
+                LIns* out = callIns(FUNCTIONID(mod), 2, localGetd(sp-1), localGetd(sp));
                 localSet(sp-1,  out, result);
+#endif // VMCFG_FLOAT
                 break;
             }
 
             case OP_divide:
             case OP_multiply:
             case OP_subtract: {
+#ifdef VMCFG_FLOAT
+                LOpcode opf,opf4,opd;
+                const CallInfo* interpCall = NULL;
+                AvmAssert(state->value(sp-1).traits==result && state->value(sp-1).traits ==result);
+
+                switch(opcode){
+                    default: AvmAssertMsg(false,"Can only handle OP_divide/OP_multiply/OP_subtract");
+                    case OP_divide:   opf= LIR_divf; opf4= LIR_divf4; opd = LIR_divd; interpCall= FUNCTIONID(op_divide); break;
+                    case OP_multiply: opf= LIR_mulf; opf4= LIR_mulf4; opd = LIR_muld; interpCall= FUNCTIONID(op_multiply); break;
+                    case OP_subtract: opf= LIR_subf; opf4= LIR_subf4; opd = LIR_subd; interpCall= FUNCTIONID(op_subtract); break;
+                }
+
+                if(result ==FLOAT_TYPE){
+                    localSet(sp-1, binaryIns(opf, localGetf(sp-1), localGetf(sp)), result);
+                } else if(result == NUMBER_TYPE){
+                    localSet(sp-1, binaryIns(opd, localGetd(sp-1), localGetd(sp)), result);
+                } else if(result == FLOAT4_TYPE){
+                    localSet(sp-1, binaryIns(opf4, localGetf4(sp-1), localGetf4(sp)), result);
+                } else {
+                    AvmAssert(result == OBJECT_TYPE && state->value(sp).traits == OBJECT_TYPE && state->value(sp-1).traits == OBJECT_TYPE && state->value(sp).notNull && state->value(sp-1).notNull);
+                    emitNumericOp2(sp-1, sp, BasicLIREmitter(this, opd, interpCall) );
+                }
+#else
                 LOpcode op;
                 switch (opcode) {
                     default:
@@ -5221,6 +6392,7 @@ namespace avmplus
                     case OP_subtract:   op = LIR_subd; break;
                 }
                 localSet(sp-1, binaryIns(op, localGetd(sp-1), localGetd(sp)), result);
+#endif // VMCFG_FLOAT
                 break;
             }
 
@@ -5521,7 +6693,7 @@ namespace avmplus
                 LIns* ap = storeAtomArgs(2*argc, arg0);
 
                 LIns* i3 = callIns(FUNCTIONID(op_newobject), 3,
-                    env_param, leaIns(sizeof(Atom)*(2*argc-1), ap), InsConst(argc));
+                    env_param, lea(sizeof(Atom)*(2*argc-1), ap), InsConst(argc));
                 liveAlloc(ap);
 
                 localSet(dest, ptrToNativeRep(result, i3), result);
@@ -5635,7 +6807,7 @@ namespace avmplus
                 }
                 else
                 {
-                    withBase = leaIns(state->withBase*sizeof(Atom), ap);
+                    withBase = lea(state->withBase*sizeof(Atom), ap);
                 }
 
                 //      return env->findproperty(outer, argv, extraScopes, name, strict);
@@ -6199,7 +7371,7 @@ namespace avmplus
     // type or value, if constant, of the other argument.  The function call is normally presumed
     // to be the left-hand argument.  The swap parameter, if true, reverses this convention.
 
-    static Specialization intCmpWithNumber[] = {
+    static const Specialization intCmpWithNumber[] = {
         { FUNCTIONID(String_charCodeAtDI),    FUNCTIONID(String_charCodeAtIU) },
         { FUNCTIONID(String_charCodeAtDU),    FUNCTIONID(String_charCodeAtIU) },
         { FUNCTIONID(String_charCodeAtDD),    FUNCTIONID(String_charCodeAtID) },
@@ -6248,7 +7420,7 @@ namespace avmplus
         return NULL;
     }
 
-    static Specialization stringCmpWithString[] = {
+    static const Specialization stringCmpWithString[] = {
         { FUNCTIONID(String_charAtI),    FUNCTIONID(String_charCodeAtII) },
         { FUNCTIONID(String_charAtU),    FUNCTIONID(String_charCodeAtIU) },
         { FUNCTIONID(String_charAtD),    FUNCTIONID(String_charCodeAtID) },
@@ -6284,7 +7456,7 @@ namespace avmplus
     }
 
     // Faster compares for int, uint, double, boolean
-    LIns* CodegenLIR::cmpOptimization(int lhsi, int rhsi, LOpcode icmp, LOpcode ucmp, LOpcode fcmp)
+    LIns* CodegenLIR::cmpOptimization( int lhsi, int rhsi, LOpcode icmp, LOpcode ucmp, LOpcode fcmp, bool strictOperation /*=false*/ )
     {
         Traits* lht = state->value(lhsi).traits;
         Traits* rht = state->value(rhsi).traits;
@@ -6301,6 +7473,45 @@ namespace avmplus
             LIns* rhs = localGet(rhsi);
             return binaryIns(ucmp, lhs, rhs);
         }
+#ifdef VMCFG_FLOAT
+        else if (lht == rht && lht == FLOAT_TYPE)
+        {
+            LIns* lhs = localGetf(lhsi);
+            LIns* rhs = localGetf(rhsi);
+            return binaryIns(getCmpFOpcode(fcmp), lhs, rhs);
+        }
+        else if (lht == FLOAT4_TYPE || rht == FLOAT4_TYPE)
+        {
+            if (fcmp == LIR_eqd) {
+                // TODO: This is not the best way to optimize the mixed-mode cases
+                // if SIMD instructions are not available on the target platform.
+                if (lht == rht) {
+                    // float4 ==/=== float4
+                    LIns* lhs = localGetf4(lhsi);
+                    LIns* rhs = localGetf4(rhsi);
+                    return binaryIns(LIR_eqf4, lhs, rhs);
+                } else if (lht == FLOAT_TYPE) {
+                    // float ==/=== float4
+                    if (strictOperation)
+                        return InsConst(0);
+                    LIns* lhs = Ins(LIR_f2f4, localGetf(lhsi));
+                    LIns* rhs = localGetf4(rhsi);
+                    return binaryIns(LIR_eqf4, lhs, rhs);
+                } else if (rht == FLOAT_TYPE) {
+                    // float4 ==/=== float
+                    if (strictOperation)
+                        return InsConst(0);
+                    LIns* lhs = localGetf4(lhsi);
+                    LIns* rhs = Ins(LIR_f2f4, localGetf(rhsi));
+                return binaryIns(LIR_eqf4, lhs, rhs);
+                } else
+                    // Punt to out-of-line handler.
+                    return NULL;
+            } else
+                // Comparison with NaN, always false.
+                return InsConst(0);
+        }
+#endif // VMCFG_FLOAT
         else if (lht && lht->isNumeric() && rht && rht->isNumeric())
         {
             // Comparing the result of a call returning a Number to another int value.
@@ -6314,6 +7525,8 @@ namespace avmplus
                 if (result)
                     return result;
             }
+            // Note: no optimizations needed above for "float" or "numeric".
+            // Those optimize String.charCodeAt(), which returns a Number by language definition.
 
             // If we're comparing a uint to an int and the int is a non-negative
             // integer constant, don't promote to doubles for the compare
@@ -6351,10 +7564,14 @@ namespace avmplus
                     return binaryIns(ucmp, lhs, rhs);
             #endif
             }
-
-            LIns* lhs = promoteNumberIns(lht, lhsi);
-            LIns* rhs = promoteNumberIns(rht, rhsi);
-            return binaryIns(fcmp, lhs, rhs);
+            if(!strictOperation && (lht->isNumberType() || rht->isNumberType()) ){
+                // NOTE: This assumes that comparisons between two floats works just as
+                // well performed on doubles.  For float vs. number, we can't do strict
+                // equality tests this way, since the types are assumed to be different.
+                LIns* lhs = promoteNumberIns(lht, lhsi);
+                LIns* rhs = promoteNumberIns(rht, rhsi);
+                return binaryIns(fcmp, lhs, rhs);
+            }
         }
 
         if (lht == STRING_TYPE && rht == STRING_TYPE) {
@@ -6369,7 +7586,6 @@ namespace avmplus
                     return result;
             }
         }
-
         return NULL;
     }
 
@@ -6379,6 +7595,8 @@ namespace avmplus
         LIns *result = cmpOptimization(lhsi, rhsi, LIR_lti, LIR_ltui, LIR_ltd);
         if (result)
             return result;
+        
+        // TODO numeric comparisons can be optimized by inlining the fastpath (int/int, number/number)
 
         AvmAssert(trueAtom == 13);
         AvmAssert(falseAtom == 5);
@@ -6403,6 +7621,7 @@ namespace avmplus
         if (result)
             return result;
 
+        // TODO numeric comparisons can be optimized by inlining the fastpath (int/int, number/number)
         LIns* lhs = loadAtomRep(lhsi);
         LIns* rhs = loadAtomRep(rhsi);
         LIns* atom = callIns(FUNCTIONID(compare), 2, rhs, lhs);
@@ -6420,10 +7639,12 @@ namespace avmplus
 
     LIns* CodegenLIR::cmpEq(const CallInfo *fid, int lhsi, int rhsi)
     {
-        LIns *result = cmpOptimization(lhsi, rhsi, LIR_eqi, LIR_eqi, LIR_eqd);
-        if (result) {
+        bool isStrict = fid == FUNCTIONID(stricteq);
+
+        LIns *result = cmpOptimization(lhsi, rhsi, LIR_eqi, LIR_eqi, LIR_eqd, isStrict);
+        
+        if (result )
             return result;
-        }
 
         Traits* lht = state->value(lhsi).traits;
         Traits* rht = state->value(rhsi).traits;
@@ -6445,6 +7666,8 @@ namespace avmplus
             LIns* rhs = localGetp(rhsi);
             return binaryIns(LIR_eqp, lhs, rhs);
         }
+        
+        // TODO numeric comparisons can be optimized by inlining the fastpath (int/int, number/number)
 
         if ((lht == rht) && (lht == STRING_TYPE)) {
             LIns* lhs = localGetp(lhsi);
@@ -6455,7 +7678,7 @@ namespace avmplus
         LIns* lhs = loadAtomRep(lhsi);
         LIns* rhs = loadAtomRep(rhsi);
         LIns* out;
-        if (fid == FUNCTIONID(stricteq))
+        if (isStrict)
             out = callIns(fid, 2, lhs, rhs);
         else
             out = callIns(fid, 3, coreAddr, lhs, rhs);
@@ -6503,8 +7726,8 @@ namespace avmplus
             // _ef.beginCatch()
             int stackBase = ms->stack_base();
             LIns* pc = loadIns(LIR_ldp, 0, _save_eip, ACCSET_OTHER);
-            LIns* slotAddr = leaIns(stackBase * VARSIZE, vars);
-            LIns* tagAddr = leaIns(stackBase, tags);
+            LIns* slotAddr = lea(stackBase << VARSHIFT(info) , vars);
+            LIns* tagAddr = lea(stackBase, tags);
             LIns* handler_ordinal = callIns(FUNCTIONID(beginCatch), 6, coreAddr, _ef, InsConstPtr(info), pc, slotAddr, tagAddr);
 
             int handler_count = info->abc_exceptions()->exception_count;
@@ -6764,12 +7987,15 @@ namespace avmplus
         }
 
         LIns* toplevel = loadEnvToplevel();
-
         int offset;
         if (t == NAMESPACE_TYPE)    offset = offsetof(Toplevel, _namespaceClass);
         else if (t == STRING_TYPE)  offset = offsetof(Toplevel, _stringClass);
         else if (t == BOOLEAN_TYPE) offset = offsetof(Toplevel, _booleanClass);
         else if (t == NUMBER_TYPE)  offset = offsetof(Toplevel, _numberClass);
+#ifdef VMCFG_FLOAT
+        else if (t == FLOAT_TYPE)   offset = offsetof(Toplevel, _floatClass);
+        else if (t == FLOAT4_TYPE)  offset = offsetof(Toplevel, _float4Class );
+#endif        
         else if (t == INT_TYPE)     offset = offsetof(Toplevel, _intClass);
         else if (t == UINT_TYPE)    offset = offsetof(Toplevel, _uintClass);
         else
@@ -6789,16 +8015,64 @@ namespace avmplus
     LIns* CodegenLIR::promoteNumberIns(Traits* t, int i)
     {
         if (t == NUMBER_TYPE)
-        {
             return localGetd(i);
+        if (t == INT_TYPE || t == BOOLEAN_TYPE)
+            return i2dIns(localGet(i));
+        if (t == UINT_TYPE)
+            return ui2dIns(localGet(i));
+#ifdef VMCFG_FLOAT
+        if(t == FLOAT_TYPE)
+            return f2dIns(localGetf(i));
+        AvmAssert(t == FLOAT4_TYPE);
+#else
+        AvmAssert(!"Unhandled type in promoteNumberIns");
+#endif
+        return InsConstDbl(MathUtils::kNaN);
+    }
+
+#ifdef VMCFG_FLOAT
+    LIns* CodegenLIR::promoteFloatIns(Traits* t, int i)
+    {
+        if (t == FLOAT_TYPE)
+        {
+            return localGetf(i);
         }
+        if (t == FLOAT4_TYPE)
+        {
+            return InsConstFlt(AvmCore::atomToFloat(core->kFltNaN));
+        }
+        if(t == NUMBER_TYPE)
+            return d2fIns(localGetd(i));
         if (t == INT_TYPE || t == BOOLEAN_TYPE)
         {
-            return i2dIns(localGet(i));
+            return i2fIns(localGet(i));
         }
         AvmAssert(t == UINT_TYPE);
-        return ui2dIns(localGet(i));
+        return ui2fIns(localGet(i));
     }
+
+    LIns* CodegenLIR::promoteFloat4Ins(Traits* t, int i)
+    {
+        // This function hadles * -> Float4, too.
+        // That is because if any operand is float4, the other needs to be coerced to float4
+        switch(bt(t)){
+            case BUILTIN_float:
+            case BUILTIN_number:
+            case BUILTIN_int:
+            case BUILTIN_uint:
+            case BUILTIN_boolean:
+                return Ins(LIR_f2f4, promoteFloatIns(t,i));
+            case BUILTIN_float4: 
+                return localGetf4(i);
+            default:
+            {
+                LIns* retval = lirout->insAlloc(sizeof(float4_t));
+                callIns(FUNCTIONID(float4), 2, lea(0, retval), loadAtomRep(i));
+                return ldf4(retval,0,ACCSET_OTHER);
+            }
+        }
+    }
+#endif // VMCFG_FLOAT
 
     /// set position of a label and patch all pending jumps to point here.
     void CodegenLIR::emitLabel(CodegenLabel& label) 
@@ -6975,6 +8249,12 @@ namespace avmplus
     LIns* CodegenLIR::insAllocForTraits(Traits *t)
     {
         switch (bt(t)) {
+#ifdef VMCFG_FLOAT
+            case BUILTIN_float: 
+                return insAlloc(sizeof(float));
+            case BUILTIN_float4: 
+                return insAlloc(sizeof(float4_t));
+#endif // VMCFG_FLOAT
             case BUILTIN_number:
                 return insAlloc(sizeof(double));
             case BUILTIN_int:
@@ -7013,45 +8293,90 @@ namespace avmplus
         }
     }
 
-    // Treat addp(vars, const) as a load from vars[const]
-    // for the sake of dead store analysis.
-    void analyze_addp(LIns* ins, LIns* vars, nanojit::BitSet& varlivein)
+    REALLY_INLINE void update_var_liveness(nanojit::BitSet* varlivein, nanojit::BitSet* taglivein, int varIdx, const bool isVarStore)
     {
-        AvmAssert(ins->isop(LIR_addp));
-        if (ins->oprnd1() == vars && ins->oprnd2()->isImmP()) {
-            AvmAssert(IS_ALIGNED(ins->oprnd2()->immP(), VARSIZE));
-            int d = int(uintptr_t(ins->oprnd2()->immP()) / VARSIZE);
-            varlivein.set(d);
+        if(isVarStore) {
+            varlivein->clear(varIdx);
+            if(taglivein) taglivein->clear(varIdx);
+        } else {
+            varlivein->set(varIdx);
+            if(taglivein) taglivein->set(varIdx);
         }
+        
     }
-
+    
     // Treat the calculated address of addp(vars, const) as the target
-    // of a store to the variable pointed to, as well as its associated tag.
-    void analyze_addp_store(LIns* ins, LIns* vars, nanojit::BitSet& varlivein, nanojit::BitSet& taglivein)
+    // of a load(or store) from/to the variable pointed to, as well as its associated tag (if a tag bitset is passed).
+    bool analyze_addp(LIns* ins, LIns* vars, nanojit::BitSet* varlivein, nanojit::BitSet* taglivein, const size_t varShift, const bool isStore)
     {
         AvmAssert(ins->isop(LIR_addp));
         if (ins->oprnd1() == vars && ins->oprnd2()->isImmP()) {
-            AvmAssert(IS_ALIGNED(ins->oprnd2()->immP(), VARSIZE));
-            int d = int(uintptr_t(ins->oprnd2()->immP()) / VARSIZE);
-            varlivein.clear(d);
-            taglivein.clear(d);
+            AvmAssert(IS_ALIGNED(ins->oprnd2()->immP(), 1 << varShift));
+            int d = int(uintptr_t(ins->oprnd2()->immP()) >> varShift);
+            update_var_liveness(varlivein, taglivein, d, isStore);
+            return true;
         }
+        return false;
     }
 
     void analyze_call(LIns* ins, LIns* catcher, LIns* vars, DEBUGGER_ONLY(bool haveDebugger, int dbg_framesize,)
+            const size_t varShift,
             nanojit::BitSet& varlivein, LabelBitSet& varlabels,
             nanojit::BitSet& taglivein, LabelBitSet& taglabels)
     {
-        if (ins->callInfo() == FUNCTIONID(beginCatch)) {
+        typedef struct FuncLiveInfo{
+            const CallInfo* callinfo;
+            int32_t var_argument; /* NOTE! arguments are counted from the end! */
+            bool isStore;
+            bool tagAccess;
+            bool mustBeVarAccess;
+        } FuncLiveInfo;
+
+        static const FuncLiveInfo varPtrFunctions[] = {
             // beginCatch(core, ef, info, pc, &vars[i], &tags[i]) => store to &vars[i] and &tag[i]
-            LIns* varPtrArg = ins->arg(4);  // varPtrArg == vars, OR addp(vars, index)
-            if (varPtrArg == vars) {
-                varlivein.clear(0);
-                taglivein.clear(0);
-            } else if (varPtrArg->isop(LIR_addp)) {
-                analyze_addp_store(varPtrArg, vars, varlivein, taglivein);
+            { FUNCTIONID(beginCatch),                                1, true,  true,  true  }, 
+            // makeatom(core, &vars[index], tag[index]) => treat as load from &vars[index]
+            { FUNCTIONID(makeatom),                                  1, false, true, true  }, 
+            // restargHelper(Toplevel*, Multiname*, Atom, ArrayObject**, uint32_t, Atom*) => arrayObject** might be reference to a var
+            { FUNCTIONID(restargHelper),                             2, false, false, false }, 
+#ifdef VMCFG_FLOAT
+            // float4(float4_t* result, Atom val) => result might point to a local var.
+            { FUNCTIONID(float4),                                    1, true, false, false  },  
+            // Float4VectorObject::_getNativeUintProperty(this, result, index) => result might point to a local var.
+            { FUNCTIONID(Float4VectorObject_getNativeUintProperty),  1, true, false, false  },  
+            // Float4VectorObject::_getNativeIntProperty(this, result, index) => result might point to a local var.
+            { FUNCTIONID(Float4VectorObject_getNativeIntProperty),   1, true, false, false  },  
+            // Float4VectorObject::_getNativeDoubleProperty(this, result, index) => result might point to a local var.
+            { FUNCTIONID(Float4VectorObject_getNativeDoubleProperty),1, true, false, false  },  
+            // Float4VectorObject::_setFloat4UintProperty(this, index, value) => value might point to a local var.            
+            { FUNCTIONID(Float4VectorObject_setNativeUintProperty),  0, false, false, false },  
+            // Float4VectorObject::_setFloat4IntProperty(this, index, value) => value might point to a local var.            
+            { FUNCTIONID(Float4VectorObject_setNativeIntProperty),   0, false, false, false },  
+            // Float4VectorObject::_setFloat4DoubleProperty(this, index, value) => value might point to a local var.            
+            { FUNCTIONID(Float4VectorObject_setNativeDoubleProperty),0, false, false, false },
+#endif
+        };
+        const int varPtrFunctionsNum = (int) (sizeof(varPtrFunctions) / sizeof(FuncLiveInfo));
+        
+        const CallInfo* ci = ins->callInfo();
+        for(int i=0;i < varPtrFunctionsNum; i++ ) {
+            if(ci == varPtrFunctions[i].callinfo) {
+                uint32_t argIdx = varPtrFunctions[i].var_argument;
+                bool updated = false;
+                LIns* varPtrArg = ins->arg(argIdx);  // varPtrArg == vars, OR addp(vars, index)
+                if (varPtrArg == vars) {
+                    update_var_liveness(&varlivein, varPtrFunctions[i].tagAccess? &taglivein : NULL, 0, varPtrFunctions[i].isStore);
+                    updated = true;
+                } else 
+                if (varPtrArg->isop(LIR_addp)) {
+                    updated = analyze_addp(varPtrArg, vars, &varlivein, varPtrFunctions[i].tagAccess? &taglivein : NULL, varShift, varPtrFunctions[i].isStore);
+                } 
+                AvmAssert(updated || !varPtrFunctions[i].mustBeVarAccess);
+                return; // don't continue, we handled the call. 
             }
-        } else if (!ins->callInfo()->_isPure) {
+        }
+        
+        if (!ins->callInfo()->_isPure) {
             if (catcher) {
                 // non-cse call is like a conditional forward branch to the catcher label.
                 // this could be made more precise by checking whether this call
@@ -7076,23 +8401,6 @@ namespace avmplus
                 }
             }
 #endif
-        }
-        else if (ins->callInfo() == FUNCTIONID(makeatom)) {
-            // makeatom(core, &vars[index], tag[index]) => treat as load from &vars[index]
-            LIns* varPtrArg = ins->arg(1);  // varPtrArg == vars, OR addp(vars, index)
-            if (varPtrArg == vars)
-                varlivein.set(0);
-            else if (varPtrArg->isop(LIR_addp))
-                analyze_addp(varPtrArg, vars, varlivein);
-        }
-        else if (ins->callInfo() == FUNCTIONID(restargHelper)) {
-            // restargHelper(Toplevel*, Multiname*, Atom, ArrayObject**, uint32_t, Atom*)
-            // The ArrayObject** is a reference to a var
-            LIns* varPtrArg = ins->arg(3);  // varPtrArg == vars, OR addp(vars, index)
-            if (varPtrArg == vars)
-                varlivein.set(0);
-            else if (varPtrArg->isop(LIR_addp))
-                analyze_addp(varPtrArg, vars, varlivein);
         }
     }
 
@@ -7152,15 +8460,21 @@ namespace avmplus
                 case LIR_reti:
                 CASE64(LIR_retq:)
                 case LIR_retd:
+                case LIR_retf:
+                case LIR_retf4:
                     varlivein.reset();
                     taglivein.reset();
                     break;
                 CASE64(LIR_stq:)
                 case LIR_sti:
                 case LIR_std:
+                case LIR_std2f:
+                case LIR_stf:
+                case LIR_stf4:
                 case LIR_sti2c:
                     if (i->oprnd2() == vars) {
-                        int d = i->disp() / VARSIZE;
+                        AvmAssert( IS_ALIGNED(i->disp(), (1 << VARSHIFT(info))) );
+                        int d = i->disp() >> VARSHIFT(info);
                         varlivein.clear(d);
                     } else if (i->oprnd2() == tags) {
                         int d = i->disp(); // 1 byte per tag
@@ -7174,14 +8488,18 @@ namespace avmplus
                     // that the address will be used for a read rather than a store,
                     // other than that to do so would break the deadvars analysis
                     // because of the dodgy assumption made here.
-                    analyze_addp(i, vars, varlivein);
+                    analyze_addp(i, vars, &varlivein, NULL, VARSHIFT(info), false);
                     break;
                 CASE64(LIR_ldq:)
                 case LIR_ldi:
                 case LIR_ldd:
+                case LIR_ldf2d:
+                case LIR_ldf:
+                case LIR_ldf4:
                 case LIR_lduc2ui: case LIR_ldc2i:
                     if (i->oprnd1() == vars) {
-                        int d = i->disp() / VARSIZE;
+                        AvmAssert( IS_ALIGNED(i->disp(), (1 << VARSHIFT(info))) );
+                        int d = i->disp() >> VARSHIFT(info);
                         varlivein.set(d);
                     }
                     else if (i->oprnd1() == tags) {
@@ -7216,8 +8534,10 @@ namespace avmplus
                 CASE64(LIR_callq:)
                 case LIR_calli:
                 case LIR_calld:
+                case LIR_callf:
+                case LIR_callf4:
                 case LIR_callv:
-                    analyze_call(i, catcher, vars, DEBUGGER_ONLY(haveDebugger, dbg_framesize,)
+                    analyze_call(i, catcher, vars, DEBUGGER_ONLY(haveDebugger, dbg_framesize,) VARSHIFT(info),
                             varlivein, varlabels, taglivein, taglabels);
                     break;
                 }
@@ -7269,15 +8589,21 @@ namespace avmplus
                 case LIR_reti:
                 CASE64(LIR_retq:)
                 case LIR_retd:
+                case LIR_retf:
+                case LIR_retf4:
                     varlivein.reset();
                     taglivein.reset();
                     break;
                 CASE64(LIR_stq:)
                 case LIR_sti:
                 case LIR_std:
+                case LIR_std2f:
+                case LIR_stf:
+                case LIR_stf4:
                 case LIR_sti2c:
                     if (i->oprnd2() == vars) {
-                        int d = i->disp() / VARSIZE;
+                        AvmAssert( IS_ALIGNED(i->disp(), (1 << VARSHIFT(info))) );
+                        int d = i->disp() >> VARSHIFT(info);
                         if (!varlivein.get(d)) {
                             eraseIns(i, in.peek());
                             continue;
@@ -7300,14 +8626,18 @@ namespace avmplus
                     break;
                 case LIR_addp:
                     // treat pointer calculations into vars as a read from vars
-                    analyze_addp(i, vars, varlivein);
+                    analyze_addp(i, vars, &varlivein, NULL, VARSHIFT(info), false);
                     break;
                 CASE64(LIR_ldq:)
                 case LIR_ldi:
                 case LIR_ldd:
+                case LIR_ldf2d:
+                case LIR_ldf:
+                case LIR_ldf4:
                 case LIR_lduc2ui: case LIR_ldc2i:
                     if (i->oprnd1() == vars) {
-                        int d = i->disp() / VARSIZE;
+                        AvmAssert( IS_ALIGNED(i->disp(), (1 << VARSHIFT(info))) );
+                        int d = i->disp() >> VARSHIFT(info);
                         varlivein.set(d);
                     }
                     else if (i->oprnd1() == tags) {
@@ -7342,8 +8672,10 @@ namespace avmplus
                 CASE64(LIR_callq:)
                 case LIR_calli:
                 case LIR_calld:
+                case LIR_callf:
+                case LIR_callf4:
                 case LIR_callv:
-                    analyze_call(i, catcher, vars, DEBUGGER_ONLY(haveDebugger, dbg_framesize,)
+                    analyze_call(i, catcher, vars, DEBUGGER_ONLY(haveDebugger, dbg_framesize,) VARSHIFT(info),
                             varlivein, varlabels, taglivein, taglabels);
                     break;
             }

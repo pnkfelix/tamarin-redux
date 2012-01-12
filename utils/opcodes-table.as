@@ -50,6 +50,8 @@ const OP_dxns : int = 0x06;
 const OP_dxnslate : int = 0x07;
 const OP_kill : int = 0x08;
 const OP_label : int = 0x09;
+const OP_lf32x4 : int = 0x0a;
+const OP_sf32x4 : int = 0x0b;
 const OP_ifnlt : int = 0x0c;
 const OP_ifnle : int = 0x0d;
 const OP_ifngt : int = 0x0e;
@@ -72,6 +74,7 @@ const OP_nextname : int = 0x1e;
 const OP_hasnext : int = 0x1f;
 const OP_pushnull : int = 0x20;
 const OP_pushundefined : int = 0x21;
+const OP_pushfloat : int = 0x22;
 const OP_nextvalue : int = 0x23;
 const OP_pushbyte : int = 0x24;
 const OP_pushshort : int = 0x25;
@@ -116,6 +119,7 @@ const OP_sxi1 : int = 0x50;
 const OP_sxi8 : int = 0x51;
 const OP_sxi16 : int = 0x52;
 const OP_applytype : int = 0x53;
+const OP_pushfloat4 : int = 0x54;
 const OP_newobject : int = 0x55;
 const OP_newarray : int = 0x56;
 const OP_newactivation : int = 0x57;
@@ -148,6 +152,9 @@ const OP_convert_d : int = 0x75;
 const OP_convert_b : int = 0x76;
 const OP_convert_o : int = 0x77;
 const OP_checkfilter : int = 0x78;
+const OP_convert_f : int = 0x79;
+const OP_unplus : int = 0x7a;
+const OP_convert_f4 : int = 0x7b;
 const OP_coerce : int = 0x80;
 const OP_coerce_b : int = 0x81;
 const OP_coerce_a : int = 0x82;
@@ -219,8 +226,8 @@ const opNames : Array = [
     "dxnslate      ",
     "kill          ",
     "label         ",
-    "OP_0x0A       ",
-    "OP_0x0B       ",
+    "lf32x4        ",
+    "sf32x4        ",
     "ifnlt         ",
     "ifnle         ",
     "ifngt         ",
@@ -243,7 +250,7 @@ const opNames : Array = [
     "hasnext       ",
     "pushnull      ",
     "pushundefined ",
-    "OP_0x22       ",
+    "pushfloat     ",
     "nextvalue     ",
     "pushbyte      ",
     "pushshort     ",
@@ -293,7 +300,7 @@ const opNames : Array = [
     "sxi8          ",
     "sxi16         ",
     "applytype     ",
-    "OP_0x54       ",
+    "pushfloat4    ",
     "newobject     ",
     "newarray      ",
     "newactivation ",
@@ -330,9 +337,9 @@ const opNames : Array = [
     "convert_b     ",
     "convert_o     ",
     "checkfilter   ",
-    "OP_0x79       ",
-    "OP_0x7A       ",
-    "OP_0x7B       ",
+    "convert_f     ",
+    "unplus        ",
+    "convert_f4    ",
     "OP_0x7C       ",
     "OP_0x7D       ",
     "OP_0x7E       ",

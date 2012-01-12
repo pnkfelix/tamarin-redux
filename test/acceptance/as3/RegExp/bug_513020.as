@@ -1,3 +1,5 @@
+/* -*- c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 4 -*- */
+/* vi: set ts=4 sw=4 expandtab: (add to ~/.vimrc: set modeline modelines=5) */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,38 +40,34 @@
 
 var SECTION = "regress_513020";
 var VERSION = "AS3";
-var TITLE   = "[Regexp] String.match with global flag does not return null when nothing is found";
+var TITLE   = "[Regexp] String.match with global flag returns null when nothing is found";
 var bug = "513020";
 
 startTest();
 writeHeaderToLog(SECTION + " " + TITLE);
 
-import avmplus.System;
-
 var line:String = "aaa";
-var pattern:RegExp = /bbb/gi;
+var GIpattern:RegExp = /bbb/gi;
+var Ipattern:RegExp = /bbb/i;
 
 function MyMatch(myPattern:RegExp)
 {
-    var result = line.match(myPattern); // removing pattern does properly return null as documentation states
+    var result = line.match(myPattern);
     if(result == null)
         return "null";
     else
         return "not null";
 }
 
+AddTestCase(
+    "regex non-match returns not null with /gi",
+    "not null",
+    MyMatch(GIpattern));
 
-if (System.swfVersion >= 15) {
-    AddTestCase(
-        "regex non-match correctly returns null",
-        "null",
-        MyMatch(pattern));
-} else {
-    AddTestCase(
-        "Bug compatibility - regex non-match returns not null",
-        "not null",
-        MyMatch(pattern));
-}
+AddTestCase(
+    "regex non-match returns null with /i",
+    "null",
+    MyMatch(Ipattern));
 
 
 test();

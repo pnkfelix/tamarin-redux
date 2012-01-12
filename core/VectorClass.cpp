@@ -51,11 +51,19 @@ namespace avmplus
     template class TypedVectorClass<IntVectorObject>;
     template class TypedVectorClass<UIntVectorObject>;
     template class TypedVectorClass<DoubleVectorObject>;
+#ifdef VMCFG_FLOAT
+    template class TypedVectorClass<FloatVectorObject>;
+    template class TypedVectorClass<Float4VectorObject>;
+#endif
     template class TypedVectorClass<ObjectVectorObject>;
 
     template class TypedVectorObject< DataList<int32_t> >;
     template class TypedVectorObject< DataList<uint32_t> >;
     template class TypedVectorObject< DataList<double> >;
+#ifdef VMCFG_FLOAT
+    template class TypedVectorObject< DataList<float> >;
+    template class TypedVectorObject< DataList<float4_t, 16> >;
+#endif
     template class TypedVectorObject< AtomList >;
 }
 
@@ -211,6 +219,16 @@ namespace avmplus
         {
             result = toplevel->doubleVectorClass();
         }
+#ifdef VMCFG_FLOAT
+        else if (typeClass == toplevel->floatClass())
+        {
+            result = toplevel->floatVectorClass();
+        }
+        else if (typeClass == toplevel->float4Class())
+        {
+            result = toplevel->float4VectorClass();
+        }
+#endif // VMCFG_FLOAT
         else
         {
             // if we have an object, we must have an itraits (otherwise the typearg is not a Class)
@@ -339,6 +357,32 @@ namespace avmplus
     }
 
     // ----------------------------
+#ifdef VMCFG_FLOAT
+    FloatVectorClass::FloatVectorClass(VTable* vtable)
+        : TypedVectorClass<FloatVectorObject>(vtable)
+    {
+        toplevel()->builtinClasses()->fillInClass(avmplus::NativeID::abcclass___AS3___vec_Vector_float, this); 
+        this->m_typeTraits = toplevel()->floatClass()->traits()->itraits;
+    }
+
+    Atom FloatVectorClass::construct(int argc, Atom* argv)
+    {
+        return constructImpl(argc, argv);
+    }
+
+    Float4VectorClass::Float4VectorClass(VTable* vtable)
+        : TypedVectorClass<Float4VectorObject>(vtable)
+    {
+        toplevel()->builtinClasses()->fillInClass(avmplus::NativeID::abcclass___AS3___vec_Vector_float4, this); 
+        this->m_typeTraits = toplevel()->float4Class()->traits()->itraits;
+    }
+    
+    Atom Float4VectorClass::construct(int argc, Atom* argv)
+    {
+        return constructImpl(argc, argv);
+    }
+#endif
+    // ----------------------------
 
     ObjectVectorClass::ObjectVectorClass(VTable* vtable)
         : TypedVectorClass<ObjectVectorObject>(vtable)
@@ -393,6 +437,28 @@ namespace avmplus
         return (DoubleVectorObject*)_newVector();
     }
 
+    // ----------------------------
+#ifdef VMCFG_FLOAT
+    FloatVectorObject::FloatVectorObject(VTable* ivtable, ScriptObject* delegate)
+        : TypedVectorObject< DataList<float> >(ivtable, delegate)
+    {
+    }
+
+    FloatVectorObject* FloatVectorObject::newThisType()
+    {
+        return (FloatVectorObject*)_newVector();
+    }
+
+    Float4VectorObject::Float4VectorObject(VTable* ivtable, ScriptObject* delegate)
+        : TypedVectorObject< DataList<float4_t, 16> >(ivtable, delegate)
+    {
+    }
+    
+    Float4VectorObject* Float4VectorObject::newThisType()
+    {
+        return (Float4VectorObject*)_newVector();
+    }
+#endif // VMCFG_FLOAT
     // ----------------------------
 
     ObjectVectorObject::ObjectVectorObject(VTable* ivtable, ScriptObject* delegate)

@@ -395,12 +395,22 @@ namespace avmplus
         const int extra_count = argc > param_count ? argc - param_count : 0;
         return toplevel()->arrayClass()->newarray(extra, extra_count);
     }
-
 #endif // VMCFG_NANOJIT
 
+    // Keep in sync with related methods.  See comments at Toplevel::getproperty.
     /*bool*/ int32_t MethodEnv::haspropertylate_u(Atom obj, uint32_t index) const
     {
-        // keep in sync with Toplevel::in_operator
+#ifdef VMCFG_FLOAT
+        if (AvmCore::isFloat4(obj))
+        {
+            // See FIXME in Toplevel::getproperty() - do not absorb non-integer values outside
+            // the range [0,2^32-2], but let them pass through to the prototype lookup.
+            if (index != 4294967295U)
+                return int32_t(index <= 3);
+        }
+#endif
+        // Primitive types are not dynamic, so we can go directly
+        // to their __proto__ object.
         ScriptObject *o = (atomKind(obj) == kObjectType) ?
             AvmCore::atomToScriptObject(obj) :
             this->toplevel()->toPrototype(obj);
@@ -408,9 +418,20 @@ namespace avmplus
         return (int32_t)present;
     }
 
+    // Keep in sync with related methods.  See comments at Toplevel::getproperty.
     /*bool*/ int32_t MethodEnv::haspropertylate_i(Atom obj, int32_t index) const
     {
-        // keep in sync with Toplevel::in_operator
+#ifdef VMCFG_FLOAT
+        if (AvmCore::isFloat4(obj)) 
+        {
+            // See FIXME in Toplevel::getproperty() - do not absorb non-integer values outside
+            // the range [0,2^32-2], but let them pass through to the prototype lookup.
+            if (index >= 0)
+                return int32_t(index <= 3);
+        }
+#endif
+        // Primitive types are not dynamic, so we can go directly
+        // to their __proto__ object.
         ScriptObject *o = (atomKind(obj) == kObjectType) ?
             AvmCore::atomToScriptObject(obj) :
             this->toplevel()->toPrototype(obj);
@@ -424,28 +445,42 @@ namespace avmplus
         return (int32_t)present;
     }
 
+    // Numeric property name.  Except for float4, no fixed bindings have numeric names.
+    // Keep in sync with related methods.  See comments at Toplevel::getproperty.
     Atom MethodEnv::getpropertylate_i(Atom obj, int32_t index) const
     {
-        // here we put the case for bind-none, since we know there are no bindings
-        // with numeric names.
         if (atomKind(obj) == kObjectType)
         {
             if (index >= 0)
             {
-                // try dynamic lookup on instance.  even if the traits are sealed,
-                // we might need to search the prototype chain
+                // Try dynamic lookup on instance.  Even if the traits are sealed,
+                // we might need to search the prototype chain.
                 return AvmCore::atomToScriptObject(obj)->getUintProperty(index);
             }
             else
             {
-                // negative - we must intern the integer
+                // Negative - we must intern the integer.
                 return AvmCore::atomToScriptObject(obj)->getAtomProperty(this->core()->internInt(index)->atom());
             }
         }
-        else
+#ifdef VMCFG_FLOAT
+        else if (AvmCore::isFloat4(obj))
         {
-            // primitive types are not dynamic, so we can go directly
-            // to their __proto__ object
+            if (index >= 0 && index <= 3){
+                float4_t f4 = AvmCore::atomToFloat4(obj);
+                float* pf4 = reinterpret_cast<float*>(&f4);
+                return core()->floatToAtom(pf4[index]);
+            }
+            // See FIXME in Toplevel::getproperty() - do not absorb non-integer values outside
+            // the range [0,2^32-2], but let them pass through to the prototype lookup.
+            if (index >= 0)
+                toplevel()->throwRangeError(kOutOfRangeError, this->core()->internInt(index));
+        }
+#endif
+        // *No* else clause
+        {
+            // Primitive types are not dynamic, so we can go directly
+            // to their __proto__ object.
             AvmCore* core = this->core();
             Toplevel *toplevel = this->toplevel();
             ScriptObject *protoObject = toplevel->toPrototype(obj);
@@ -453,20 +488,35 @@ namespace avmplus
         }
     }
 
+    // Numeric property name.  Except for float4, no fixed bindings have numeric names.
+    // Keep in sync with related methods.  See comments at Toplevel::getproperty.
     Atom MethodEnv::getpropertylate_u(Atom obj, uint32_t index) const
     {
-        // here we put the case for bind-none, since we know there are no bindings
-        // with numeric names.
         if (atomKind(obj) == kObjectType)
         {
-            // try dynamic lookup on instance.  even if the traits are sealed,
-            // we might need to search the prototype chain
+            // Try dynamic lookup on instance.  Even if the traits are sealed,
+            // we might need to search the prototype chain.
             return AvmCore::atomToScriptObject(obj)->getUintProperty(index);
         }
-        else
+#ifdef VMCFG_FLOAT
+        else if (AvmCore::isFloat4(obj))
         {
-            // primitive types are not dynamic, so we can go directly
-            // to their __proto__ object
+            if (index <= 3)
+            {
+                float4_t f4 = AvmCore::atomToFloat4(obj);
+                float* pf4 = reinterpret_cast<float*>(&f4);
+                return core()->floatToAtom(pf4[index]);
+            }
+            // See FIXME in Toplevel::getproperty() - do not absorb non-integer values outside
+            // the range [0,2^32-2], but let them pass through to the prototype lookup.
+            if (index != 4294967295U)
+                toplevel()->throwRangeError(kOutOfRangeError, this->core()->internInt(index));
+        }
+#endif
+        // *No* else clause
+        {
+            // Primitive types are not dynamic, so we can go directly
+            // to their __proto__ object.
             AvmCore* core = this->core();
             Toplevel *toplevel = this->toplevel();
             ScriptObject *protoObject = toplevel->toPrototype(obj);
@@ -474,18 +524,18 @@ namespace avmplus
         }
     }
 
+    // Numeric property name.  Except for float4, no fixed bindings have numeric names.
+    // Keep in sync with related methods.  See comments at Toplevel::getproperty.
     Atom MethodEnv::getpropertylate_d(Atom obj, double index) const
     {
-        // here we put the case for bind-none, since we know there are no bindings
-        // with numeric names.
         if (atomKind(obj) == kObjectType)
         {
             // Use signed conversion, as it is faster on most platforms.
             int32_t index_i = int32_t(index);
             if (double(index_i) == index && index_i >= 0)
             {
-                // try dynamic lookup on instance.  even if the traits are sealed,
-                // we might need to search the prototype chain
+                // Try dynamic lookup on instance.  Even if the traits are sealed,
+                // we might need to search the prototype chain.
                 return AvmCore::atomToScriptObject(obj)->getUintProperty(uint32_t(index_i));
             }
             else
@@ -497,10 +547,28 @@ namespace avmplus
                 return AvmCore::atomToScriptObject(obj)->getAtomProperty(this->core()->internDouble(index)->atom());
             }
         }
-        else
+#ifdef VMCFG_FLOAT
+        else if (AvmCore::isFloat4(obj))
         {
-            // primitive types are not dynamic, so we can go directly
-            // to their __proto__ object
+            float4_t f4 = AvmCore::atomToFloat4(obj);
+            float* pf4 = reinterpret_cast<float*>(&f4);
+            if (index == 0.0) return core()->floatToAtom(pf4[0]);
+            if (index == 1.0) return core()->floatToAtom(pf4[1]);
+            if (index == 2.0) return core()->floatToAtom(pf4[2]);
+            if (index == 3.0) return core()->floatToAtom(pf4[3]);
+            // See FIXME in Toplevel::getproperty() - do not absorb non-integer values outside
+            // the range [0,2^32-2], but let them pass through to the prototype lookup.
+            if (index >= 0.0 && index <= 4294967294.0) {
+                uint32_t u = uint32_t(index);
+                if (double(u) == index) 
+                    toplevel()->throwRangeError(kOutOfRangeError, this->core()->internDouble(index));
+            }
+        }
+#endif
+        // *No* else clause
+        {
+            // Primitive types are not dynamic, so we can go directly
+            // to their __proto__ object.
             AvmCore* core = this->core();
             Toplevel *toplevel = this->toplevel();
             ScriptObject *protoObject = toplevel->toPrototype(obj);
@@ -596,6 +664,12 @@ namespace avmplus
             return AvmCore::atomToScriptObject(objAtom)->nextName(index);
         case kNamespaceType:
             return AvmCore::atomToNamespace(objAtom)->nextName(this->core(), index);
+#ifdef VMCFG_FLOAT
+        case kSpecialBibopType:
+            if (AvmCore::isFloat4(objAtom) && index <= 4) 
+                return atomFromIntptrValue(index-1);  
+            // Else fall through
+#endif // VMCFG_FLOAT
         default:
             ScriptObject* proto = toplevel()->toPrototype(objAtom);  // cn: types like Number are sealed, but their prototype could have dynamic properties
             return proto ? proto->nextName(index) : undefinedAtom;
@@ -625,6 +699,15 @@ namespace avmplus
             return AvmCore::atomToScriptObject(objAtom)->nextValue(index);
         case kNamespaceType:
             return AvmCore::atomToNamespace(objAtom)->nextValue(index);
+        case kSpecialBibopType:
+#ifdef VMCFG_FLOAT
+            if (AvmCore::isFloat4(objAtom) && index <= 4)
+            {
+                float* f4p = (float*)atomPtr(objAtom);
+                return toplevel()->core()->floatToAtom( f4p[index-1] );
+            }
+            // Else fall through
+#endif
         default:
             ScriptObject*  proto = toplevel()->toPrototype(objAtom);
             return (proto ? proto->nextValue(index) : undefinedAtom);
@@ -644,6 +727,12 @@ namespace avmplus
                 return AvmCore::atomToScriptObject(objAtom)->nextNameIndex(index);
             case kNamespaceType:
                 return AvmCore::atomToNamespace(objAtom)->nextNameIndex(index);
+#ifdef VMCFG_FLOAT
+            case kSpecialBibopType:
+                if (AvmCore::isFloat4(objAtom) && index <= 3)
+                    return index + 1;
+                // Else fall through
+#endif // VMCFG_FLOAT
             default:
                 ScriptObject* proto = toplevel()->toPrototype(objAtom);
                 int nextIndex = ( proto ? proto->nextNameIndex(index) : 0);
@@ -656,7 +745,7 @@ namespace avmplus
         }
     }
 
-    int MethodEnv::hasnextproto(Atom& objAtom, int& index) const
+    int32_t MethodEnv::hasnextproto(Atom& objAtom, int& index) const
     {
         if (index < 0)
             return 0;
@@ -680,6 +769,15 @@ namespace avmplus
                     delegate = toplevel()->namespaceClass()->prototypePtr();
                 }
                 break;
+#ifdef VMCFG_FLOAT
+            case kSpecialBibopType:
+                if (AvmCore::isFloat4(objAtom) && index <= 3)
+                {
+                    index++;
+                    return 1;   // I.e. "true"; but hasnextproto() traditionally returns int
+                }
+                // Else fall through
+#endif // VMCFG_FLOAT
             default:
                 {
                     ScriptObject* proto = toplevel()->toPrototype(objAtom);
@@ -956,6 +1054,45 @@ namespace avmplus
         }
     }
 
+#ifdef VMCFG_FLOAT
+    void MethodEnv::setpropertylate_f(Atom obj, float index_f, Atom value) const
+    {
+        if (AvmCore::isObject(obj))
+        {
+            ScriptObject* o = AvmCore::atomToScriptObject(obj);
+
+            // Use signed conversion, as it is faster on most platforms.
+            // We do not allocate objects large enough for an integral value
+            // that will not fit an int32 to index a vector or dense array,
+            // thus we'd have to use a string property name anyway in the
+            // cases where this conversion fails.
+            int32_t index_i = int32_t(index_f);
+            if (float(index_i) == index_f && index_i >= 0)
+            {
+                o->setUintProperty(uint32_t(index_i), value);
+                return;
+            }
+
+            // No need to worry about SWF10 compatibility (like setpropertylate_d does) 
+
+            // Negative, fractional, or out of range, so we must intern the float.
+            // Sufficiently large non-negative numbers will also take this slower path,
+            // but we know an exception will be thrown (Vector) or a dense representation
+            // will not be used (Array, others).
+            o->setAtomProperty(this->core()->internFloat(index_f)->atom(), value);
+        }
+        else
+        {
+            // obj represents a primitive Number, Boolean, int, float or String, and primitives
+            // are sealed and final.  Cannot add dynamic vars to them.
+
+            // throw a ReferenceError exception  Property not found and could not be created.
+            Multiname tempname(core()->getPublicNamespace(method->pool()), core()->internFloat(index_f));
+            toplevel()->throwReferenceError(kWriteSealedError, &tempname, toplevel()->toTraits(obj));
+        }
+    }
+#endif
+
     Atom MethodEnv::callsuper(const Multiname* multiname, int argc, Atom* atomv) const
     {
         VTable* base = this->vtable()->base;
@@ -1026,6 +1163,23 @@ namespace avmplus
                 }
             }
         }
+#ifdef VMCFG_FLOAT
+        else if (AvmCore::isFloat4(obj))
+        {
+            // See FIXME in Toplevel::getproperty() for an explanation of this logic.
+            if (multiname->isValidDynamicName())
+            {
+                uint32_t index;
+                if (AvmCore::getIndexFromAtom(multiname->getName()->atom(), &index))
+                {
+                    if (index <= 3)
+                        return falseAtom;
+                    return trueAtom;
+                }
+            }
+            toplevel->throwReferenceError(kDeleteSealedError, multiname, traits);
+        }
+#endif
         else
         {
             toplevel->throwReferenceError(kDeleteSealedError, multiname, traits);

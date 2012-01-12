@@ -64,36 +64,36 @@ namespace nanojit
         void reset();
 
         /** alloc memory, never return null. */
-        void* alloc(size_t nbytes) {
-            void* p;
-            nbytes = (nbytes + 7) & ~7; // round up
-            if (current_top + nbytes <= current_limit) {
-                p = current_top;
-                current_top += nbytes;
+        void* alloc(size_t nbytes, size_t align = 8) {
+            const size_t align_mask = align - 1;
+            NanoAssert((align & align_mask) == 0); // check alignment is power of 2
+            char* p = (char*)(((uintptr_t)current_top + align_mask) & ~align_mask);
+            if (p + nbytes <= current_limit) {
+                current_top = p + nbytes;
             } else {
-                p = allocSlow(nbytes, /* fallible = */false);
+                p = allocSlow(nbytes, align_mask, /* fallible = */false);
                 NanoAssert(p);
             }
-            return p;
+            return (void*)p;
         }
 
         /** alloc memory, maybe return null. */
-        void* fallibleAlloc(size_t nbytes) {
-            void* p;
-            nbytes = (nbytes + 7) & ~7; // round up
-            if (current_top + nbytes <= current_limit) {
-                p = current_top;
-                current_top += nbytes;
+        void* fallibleAlloc(size_t nbytes, size_t align = 8) {
+            const size_t align_mask = align - 1;
+            NanoAssert((align & align_mask) == 0); // check alignment is power of 2
+            char* p = (char*)(((uintptr_t)current_top + align_mask) & ~align_mask);
+            if (p + nbytes <= current_limit) {
+                current_top = p + nbytes;
             } else {
-                p = allocSlow(nbytes, /* fallible = */true);
+                p = allocSlow(nbytes, align_mask, /* fallible = */true);
             }
-            return p;
+            return (void*)p;
         }
 
         size_t getBytesAllocated(size_t(*my_malloc_usable_size)(void *));
 
     protected:
-        void* allocSlow(size_t nbytes, bool fallible = false);
+        char* allocSlow(size_t nbytes, size_t align_mask, bool fallible = false);
         bool fill(size_t minbytes, bool fallible);
 
         class Chunk {
@@ -120,12 +120,19 @@ namespace nanojit
     };
 }
 
+/** global new overload enabling this pattern:  new (allocator, align) T(...) */
+inline void* operator new(size_t size, nanojit::Allocator &a, size_t align) {
+    return a.alloc(size, align);
+}
+
+inline void* operator new(size_t size, nanojit::Allocator *a, size_t align) {
+    return a->alloc(size, align);
+}
+
 /** global new overload enabling this pattern:  new (allocator) T(...) */
 inline void* operator new(size_t size, nanojit::Allocator &a) {
     return a.alloc(size);
 }
-
-/** global new overload enabling this pattern:  new (allocator) T(...) */
 inline void* operator new(size_t size, nanojit::Allocator *a) {
     return a->alloc(size);
 }
@@ -134,10 +141,16 @@ inline void* operator new(size_t size, nanojit::Allocator *a) {
 inline void* operator new[](size_t size, nanojit::Allocator& a) {
     return a.alloc(size);
 }
-
-/** global new[] overload enabling this pattern: new (allocator) T[] */
 inline void* operator new[](size_t size, nanojit::Allocator* a) {
     return a->alloc(size);
+}
+
+/** global new[] overload enabling this pattern: new (allocator,align) T[] */
+inline void* operator new[](size_t size, nanojit::Allocator& a, size_t align) {
+    return a.alloc(size, align);
+}
+inline void* operator new[](size_t size, nanojit::Allocator* a, size_t align) {
+    return a->alloc(size, align);
 }
 
 #endif // __nanojit_Allocator__

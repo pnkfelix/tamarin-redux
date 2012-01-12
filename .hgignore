@@ -8,7 +8,6 @@ stale.xml
 .buildbot-sourcedata
 *.exe
 *.bat
-*.jar
 *.pyc
 *~
 *.mode1*
@@ -42,6 +41,7 @@ test/**.abc
 test/acceptance/test.*
 test/acceptance/test2.*
 test/util/emulator_files/**
+test/util/atsrunner/**
 test/util/flashrunner/working/**
 test/acceptance/*.html
 test/acceptance/ATS_SWFS/**
@@ -53,7 +53,7 @@ platform/win32/obj*/**
 platform/win32/x64/**
 platform/win32/Windows Mobile*
 platform/mac/*/build*/**
-objdir-*/**
+objdir*/**
 *_DBG.OBJ/**
 *_OPT.OBJ/**
 esc/build/results.log
@@ -68,6 +68,7 @@ axscript/vc2008/axtam.vcproj.*.user
 core/*.out
 shell/*.out
 build/buildbot/slaves/scripts/*
+utils/asc.jar
 utils/exactgc.abc
 utils/avmc/build/**
 utils/lastsizereport.txt
@@ -84,3 +85,6 @@ utils/wmremote/wmrunner/Release/**
 *.ipch
 .settings/**
 *.komodoproject
+platform/win32/*Amplifier*/**
+*.psess
+
