@@ -2193,6 +2193,7 @@ bool XMLObject::gcTrace(MMgc::GC* gc, size_t _xact_cursor)
 const uint32_t AbcEnv::gcTracePointerOffsets[] = {
     offsetof(AbcEnv, m_codeContext),
     offsetof(AbcEnv, m_domainEnv),
+    offsetof(AbcEnv, m_finddef_table),
 #if defined(DEBUGGER)
     offsetof(AbcEnv, m_invocationCounts),
 #endif
@@ -2204,7 +2205,7 @@ MMgc::GCTracerCheckResult AbcEnv::gcTraceOffsetIsTraced(uint32_t off) const
     MMgc::GCTracerCheckResult result;
     (void)off;
     (void)result;
-    return MMgc::GC::CheckOffsetIsInList(off,gcTracePointerOffsets,4);
+    return MMgc::GC::CheckOffsetIsInList(off,gcTracePointerOffsets,5);
 }
 #endif // DEBUG
 
@@ -2213,6 +2214,7 @@ bool AbcEnv::gcTrace(MMgc::GC* gc, size_t _xact_cursor)
     if (_xact_cursor == 0) {
         gc->TraceLocation(&m_codeContext);
         gc->TraceLocation(&m_domainEnv);
+        gc->TraceLocation(&m_finddef_table);
 #if defined(DEBUGGER)
         gc->TraceLocation(&m_invocationCounts);
 #endif
@@ -2863,7 +2865,6 @@ bool LivePoolNode::gcTrace(MMgc::GC* gc, size_t _xact_cursor)
 const uint32_t MethodEnv::gcTracePointerOffsets[] = {
     offsetof(MethodEnv, _scope),
     offsetof(MethodEnv, activationOrMCTable),
-    offsetof(MethodEnv, lookup_cache),
     offsetof(MethodEnv, method),
     0};
 
@@ -2874,7 +2875,7 @@ MMgc::GCTracerCheckResult MethodEnv::gcTraceOffsetIsTraced(uint32_t off) const
     (void)result;
     if((result = MethodEnvProcHolder::gcTraceOffsetIsTraced(off)) != MMgc::kOffsetNotFound)
         return result;
-    return MMgc::GC::CheckOffsetIsInList(off,gcTracePointerOffsets,4);
+    return MMgc::GC::CheckOffsetIsInList(off,gcTracePointerOffsets,3);
 }
 #endif // DEBUG
 
@@ -2886,7 +2887,6 @@ bool MethodEnv::gcTrace(MMgc::GC* gc, size_t _xact_cursor)
     (void)(avmplus_MethodEnvProcHolder_isExactInterlock != 0);
     gc->TraceLocation(&_scope);
     gc->TraceConservativeLocation(&activationOrMCTable);
-    gc->TraceLocation(&lookup_cache);
     gc->TraceLocation(&method);
     return false;
 }

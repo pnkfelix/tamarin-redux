@@ -70,6 +70,7 @@ namespace avmplus
         Toplevel* toplevel() const;
         Stringp traitsName() const;
         Namespacep traitsNs() const;
+        VTable* vtable() const;
 
         /**
          * Coerces an array of actual parameters to the types
@@ -236,6 +237,8 @@ namespace avmplus
         void debugExit(CallStackNode* callstack);
 
         ArrayObject *getLexicalScopes();
+
+        uint64_t invocationCount() const;
 #endif
 
     private:
@@ -260,48 +263,15 @@ namespace avmplus
         void setActivationOrMCTable(void *ptr, int32_t type);
 
     public:
-
-#ifdef DEBUGGER
-        uint64_t invocationCount() const;
-#endif
-
-#ifndef VMCFG_AOT
-    protected:
-#endif
-        VTable* vtable() const;
-
-    public:
-        // LookupCache is part of an ExactStructContainer<> array, hence the gcTrace method.
-        class LookupCache
-        {
-        public:
-            uint32_t timestamp;
-            GCMember<ScriptObject> object;
-            
-            REALLY_INLINE void gcTrace(MMgc::GC* gc)
-            {
-                gc->TraceLocation(&object);
-            }
-        };
-
-        // Populate lookup_cache, which should be NULL at the time of the call.
-        void createLookupCache();
-        
-        // Clear out the lookup cache elements
-        static void cleanLookupCache(ExactStructContainer<LookupCache>* self);
-
     // ------------------------ DATA SECTION BEGIN
         GC_DATA_BEGIN(MethodEnv)
 
-    public:
         MethodInfo* const           GC_POINTER(method);
     protected:
         // pointers are write-once so we don't need WB's
         ScopeChain* const           GC_POINTER(_scope);
     private:
         uintptr_t                   GC_CONSERVATIVE(activationOrMCTable);
-    public:
-        GCMember<ExactStructContainer<LookupCache> > GC_POINTER(lookup_cache);
 
         GC_DATA_END(MethodEnv)
     // ------------------------ DATA SECTION END

@@ -189,36 +189,41 @@ Atom op_in(E caller_env, Atom name, Atom obj) {
 }
 template Atom op_in(MethodEnv*, Atom, Atom);
 
-#ifdef VMCFG_NANOJIT
-ScriptObject* finddef_cache(MethodEnv* env, const Multiname* name, uint32_t slot)
-{
-    AvmAssert(env->method->lookup_cache_size() > 0);
-    AvmAssert(slot < (uint32_t)env->method->lookup_cache_size());
-    ExactStructContainer<MethodEnv::LookupCache>* cache = env->lookup_cache;
-    if (!cache) {
-        // todo - do this earlier.  This extra test in the fast path
-        // is repugnant but hasn't shown itself to be a problem in practice.
-        _nvprof("lookup_cache_bytes", sizeof(*cache) * env->method->lookup_cache_size());
-        env->createLookupCache();
-        cache = env->lookup_cache;
-    }
-
-    // check for valid cache
-    AvmCore* core = env->core();
-    if (core->lookupCacheIsValid(cache->get(slot).timestamp)) {
-        _nvprof("finddef P-fast", 1);
-        return cache->get(slot).object;
-    }
-
-    // miss
-    _nvprof("finddef P-fast", 0);
+/**
+ * finddef_miss handles the uncommon case when finddef_cache finds a null
+ * pointer.  Its a separate function to avoid polluting finddef_cache's
+ * stack frame with spilled registers from the slow path.
+ */
+NO_INLINE
+ScriptObject* FASTCALL finddef_miss(ScriptObject** obj_ptr, MethodFrame* frame) {
+    MethodEnv* env = frame->env();
+    FinddefTable& table = *env->abcEnv()->finddefTable();
+    // recover name_id by figuring out where obj_ptr points in the table.
+    // name_id is not passed in so we can comply with FASTCALL's 
+    // limit of two register args.
+    ScriptObject** obj0_ptr = (ScriptObject**) &table[0];
+    int name_id = int(obj_ptr - obj0_ptr);
+    // execute finddef and save the result
+    const Multiname* name = env->method->pool()->precomputedMultiname(name_id);
     ScriptObject* obj = env->finddef(name);
-    AvmAssert(obj != NULL); // or else finddef would have thrown an exception.
-    cache->get(slot).timestamp = core->lookupCacheTimestamp();
-    WBRC(core->gc, cache, &cache->get(slot).object, obj);
+    table[name_id].object = obj;
     return obj;
 }
-#endif // VMCFG_NANOJIT
+
+/**
+ * called by JIT or Interpreter code for OP_finddef.  The JIT code has a stashed
+ * pointer to the whole FinddefTable, and passes in a pointer to the desired
+ * element. (we do this to keep this call to 2 parameters).  We use 
+ * MethodFrame* here instead of MethodEnv* because its cheaper for the
+ * JIT to rematerialize MethodFrame* than to load MethodEnv*. from stack.
+ */
+ScriptObject* FASTCALL finddef_cache(ScriptObject** obj_ptr,
+                                     MethodFrame* frame) {
+    ScriptObject* obj = *obj_ptr;
+    if (obj)
+        return obj;
+    return finddef_miss(obj_ptr, frame);
+}
 
 Atom constructprop(Toplevel* toplevel, const Multiname* multiname, int argc, Atom* atomv, VTable* vtable)
 {
