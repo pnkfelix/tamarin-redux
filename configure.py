@@ -69,6 +69,10 @@ def _setSDKParams(sdk_version, os_ver, xcode_version):
         os_ver,sdk_number = '10.7','10.7'
         if xcode_version is None:
             xcode_version = '4'
+    elif sdk_version == '108':
+        os_ver,sdk_number = '10.8','10.8'
+        if xcode_version is None:
+            xcode_version = '5'
     else:
         print'Unknown SDK version -> %s. Expected values are 104u, 105, 106 or 107.' % sdk_version
         sys.exit(2)
@@ -229,12 +233,17 @@ if MMGC_DYNAMIC:
     MMGC_CPPFLAGS += "-DMMGC_IMPL "
     
 # For -Wreorder, see https://bugzilla.mozilla.org/show_bug.cgi?id=475750
-if config.getCompiler() == 'GCC':
+if config.getCompiler() == 'GCC' or config.getCompiler() == 'clang':
     if 'CXX' in os.environ:
         rawver = build.process.run_for_output(['$CXX', '--version'])
-    else:
+        vre = re.compile(".* ([3-9]\.[0-9]+\.[0-9]+)[ \n]")
+    elif config.getCompiler() == 'GCC':
         rawver = build.process.run_for_output(['gcc', '--version'])
-    vre = re.compile(".* ([3-9]\.[0-9]+\.[0-9]+)[ \n]")
+        vre = re.compile(".* ([3-9]\.[0-9]+\.[0-9]+)[ \n]")
+    elif config.getCompiler() == 'clang':
+        rawver = build.process.run_for_output(['clang', '--version'])
+        vre = re.compile(".* LLVM version ([3-9]\.[0-9]+)")
+
     ver = vre.match(rawver).group(1)
     ver_arr = ver.split('.')
     GCC_MAJOR_VERSION = int(ver_arr[0])

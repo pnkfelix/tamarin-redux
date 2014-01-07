@@ -213,6 +213,10 @@ class Configuration:
         # Hackery! Make assumptions that we want to build with GCC 3.3 on MacPPC
         # and GCC4 on MacIntel
         elif self._target[0] == 'darwin':
+            xcode_version = build.process.run_for_output(['xcodebuild', '-version'])
+            if re.search(r'Xcode 5', xcode_version):
+                self._compiler = 'clang'
+
             self._acvars.update({
                 'DLL_SUFFIX'   : 'dylib',
                 'CPPFLAGS'     : '-pipe',
@@ -351,6 +355,7 @@ class Configuration:
     def getCompiler(self):
         """Returns the compiler in use, as a string.
 Possible values are:
+- 'clang': LLVM
 - 'GCC': the GNU Compiler Collection, including GCC and G++
 - 'VS': Microsoft Visual Studio
 - 'SunStudio': Sun Studio"""
