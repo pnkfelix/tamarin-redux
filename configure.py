@@ -322,8 +322,11 @@ if config.getCompiler() == 'GCC' or config.getCompiler() == 'clang':
     else:
         APP_CXXFLAGS += "-Wall -Wcast-align -Wdisabled-optimization -Wextra -Wformat=2 -Winit-self -Winvalid-pch -Wno-invalid-offsetof -Wno-switch "\
                        "-Wparentheses -Wpointer-arith -Wreorder -Wsign-compare -Wunused-parameter -Wwrite-strings -Wno-ctor-dtor-privacy -Woverloaded-virtual "\
-                       "-Wsign-promo -Wno-char-subscripts -fmessage-length=0 -fno-exceptions -fno-rtti -fno-check-new -fstrict-aliasing -fsigned-char  "
-        APP_CXXFLAGS += _setGCCVersionedFlags(APP_CXXFLAGS, GCC_MAJOR_VERSION, GCC_MINOR_VERSION, cpu)
+                       "-Wsign-promo -Wno-char-subscripts -fmessage-length=0 -fno-exceptions -fno-rtti -fstrict-aliasing -fsigned-char  "
+
+        if config.getCompiler() == 'GCC':
+            APP_CXXFLAGS += " -fno-check-new "
+            APP_CXXFLAGS += _setGCCVersionedFlags(APP_CXXFLAGS, GCC_MAJOR_VERSION, GCC_MINOR_VERSION, cpu)
 
     if cpu == 'sh4':
         APP_CXXFLAGS += "-mieee -Wno-cast-align "
@@ -442,15 +445,17 @@ if the_os == "darwin":
                          '_MAC': None,
                          'AVMPLUS_MAC': None,
                          'TARGET_RT_MAC_MACHO': 1})
-    APP_CXXFLAGS += "-fpascal-strings -faltivec -fasm-blocks "
+    APP_CXXFLAGS += "-fpascal-strings -fasm-blocks "
 
     # If an sdk is selected align OS and gcc/g++ versions to it
     os_ver,sdk_path = _setSDKParams(o.mac_sdk, os_ver, o.mac_xcode)
     APP_CXXFLAGS += "-mmacosx-version-min=%s -isysroot %s " % (os_ver,sdk_path)
     config.subst("MACOSX_DEPLOYMENT_TARGET",os_ver)
 
-    if cpu == 'ppc64':
-        APP_CXXFLAGS += "-arch ppc64 "
+    if cpu == 'ppc':
+        APP_CXXFLAGS += " -faltivec "
+    elif cpu == 'ppc64':
+        APP_CXXFLAGS += " -faltivec -arch ppc64 "
         APP_CFLAGS += "-arch ppc64 "
         OS_LDFLAGS += "-arch ppc64 "
     elif cpu == 'x86_64':
